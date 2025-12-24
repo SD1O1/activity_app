@@ -1,15 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "./Sidebar";
+import AuthButtons from "../auth/AuthButtons";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function Header() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // mock auth for now
-  const isLoggedIn = true;
+  useEffect(() => {
+    // initial check
+    supabase.auth.getSession().then(({ data }) => {
+      setIsLoggedIn(!!data.session);
+    });
+
+    // listen for auth changes
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setIsLoggedIn(!!session);
+      }
+    );
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
 
   return (
     <>
@@ -29,21 +47,20 @@ export default function Header() {
 
         {/* RIGHT */}
         <div className="flex items-center gap-3">
-          {isLoggedIn && (
+          {isLoggedIn ? (
             <button onClick={() => router.push("/notifications")}>
               🔔
             </button>
+          ) : (
+            <AuthButtons />
           )}
-
-          <button onClick={() => router.push("/profile")}>
-            👤
-          </button>
         </div>
       </header>
 
       <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        isLoggedIn={isLoggedIn}
       />
     </>
   );

@@ -17,7 +17,7 @@ type ActivityCardProps = {
   }: ActivityCardProps) {
     return (
       <div onClick={onClick}
-       className="rounded-xl border bg-white p-4 shadow-sm">
+       className="cursor-pointer rounded-xl border bg-white p-4 shadow-sm">
         <div className="flex items-start justify-between">
           <div>
             <h3 className="font-semibold text-base">{title}</h3>

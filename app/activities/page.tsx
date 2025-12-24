@@ -1,56 +1,34 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import ActivityCard from "@/components/cards/ActivityCard";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import ActivitiesPageView from "@/components/activity/ActivitiesPageView";
 
 export default function ActivitiesPage() {
-  const router = useRouter();
+  const [activities, setActivities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchActivities = async () => {
+      const { data, error } = await supabase
+        .from("activities")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (!error) {
+        setActivities(data || []);
+      }
+
+      setLoading(false);
+    };
+
+    fetchActivities();
+  }, []);
 
   return (
-    <main className="min-h-screen bg-white">
-      {/* Top bar */}
-      <div className="flex items-center gap-3 px-4 py-4 border-b">
-        <button
-          onClick={() => router.back()}
-          className="text-xl"
-        >
-          ←
-        </button>
-        <div>
-          <h1 className="text-lg font-semibold">Evening Walk</h1>
-          <p className="text-xs text-gray-500">8 activities nearby</p>
-        </div>
-      </div>
-
-      {/* Activity list */}
-      <section className="px-4 py-4 flex flex-col gap-4">
-        <ActivityCard
-          title="Coffee & Walk by the Lake"
-          subtitle="Rahul"
-          time="Today, 6:00 PM"
-          distance="0.4 km"
-          type="group"
-          onClick={() => router.push("/activity")}
-        />
-
-        <ActivityCard
-          title="Quiet Evening Walk"
-          subtitle="Ankit"
-          time="Today, 7:30 PM"
-          distance="0.9 km"
-          type="group"
-          onClick={() => router.push("/activity")}
-        />
-
-        <ActivityCard
-          title="Sunset Walk + Conversation"
-          subtitle="Neha"
-          time="Tomorrow, 6:15 PM"
-          distance="1.2 km"
-          type="group"
-          onClick={() => router.push("/activity")}
-        />
-      </section>
-    </main>
+    <ActivitiesPageView
+      activities={activities}
+      loading={loading}
+    />
   );
 }

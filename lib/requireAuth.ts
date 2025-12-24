@@ -1,13 +1,16 @@
-import HomePage from "@/components/home/HomePage";
+import { redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabaseServer";
 
-export default async function Page() {
+export async function requireAuth() {
   const supabase = await createSupabaseServer();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // For now we just pass user down (can be null)
-  return <HomePage user={user} />;
+  if (!user) {
+    redirect("/");
+  }
+
+  return user;
 }

@@ -5,14 +5,35 @@ import ActivityCard from "@/components/cards/ActivityCard";
 import CategoriesRow from "@/components/home/CategoriesRow";
 import HomeActions from "./HomeActions";
 import TrySomethingNew from "./TrySomethingNew";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import SearchModal from "@/components/modals/SearchModal";
+import Footer from "@/components/layout/Footer";
+import { useRouter } from "next/navigation";
+import { User } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabaseClient";
 
-export default function HomePage() {
+type HomePageProps = {
+  user: User | null;
+};
+
+
+export default function HomePage({user}:HomePageProps) {
 
   const [openSearch, setOpenSearch] = useState(false);
+  const router = useRouter();
+  const [activities, setActivities] = useState<any[]>([]);
 
-
+  useEffect(() => {
+    supabase
+      .from("activities")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(10)
+      .then(({ data }) => {
+        if (data) setActivities(data);
+      });
+  }, []);
+  
   return (
     <main className="min-h-screen bg-white">
       <Header />
@@ -39,29 +60,17 @@ export default function HomePage() {
         </h2>
 
         <div className="space-y-4">
-          <ActivityCard
-            title="Walk"
-            subtitle="Near Central Park"
-            time="Today, 6:00 PM"
-            distance="0.8 km"
-            type="group"
-          />
-
-          <ActivityCard
-            title="Coffee & Co-working"
-            subtitle="Around Bandra"
-            time="Tomorrow, 10:00 AM"
-            distance="1.2 km"
-            type="one-on-one"
-          />
-
-          <ActivityCard
-            title="Morning Yoga"
-            subtitle="Nearby Park"
-            time="Tomorrow, 7:00 AM"
-            distance="0.5 km"
-            type="group"
-          />
+          {activities.slice(0, 5).map((activity) => (
+            <ActivityCard
+              key={activity.id}
+              title={activity.title}
+              subtitle={activity.category}
+              distance="Nearby"
+              time={new Date(activity.date).toLocaleString()}
+              type={activity.type}
+              onClick={() => router.push(`/activity/${activity.id}`)}
+            />
+          ))}
         </div>
       </section>
 
@@ -73,6 +82,7 @@ export default function HomePage() {
       <HomeActions onOpenSearch={() => setOpenSearch(true)} />
 
       <TrySomethingNew />
+      <Footer/>
 
     </main>
   );

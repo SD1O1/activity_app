@@ -1,3 +1,6 @@
+"use client";
+import { useRouter } from "next/navigation";
+
 export default function CategoriesRow() {
   const categories = [
     "Walk",
@@ -10,6 +13,8 @@ export default function CategoriesRow() {
     "Food",
   ];
 
+  const router = useRouter();
+
   return (
     <section className="px-4 mt-6">
       <h2 className="mb-3 text-lg font-semibold">Browse Categories</h2>
@@ -18,6 +23,7 @@ export default function CategoriesRow() {
         {categories.map((category) => (
           <div
             key={category}
+            onClick={() => router.push("/activities")}
             className="flex min-w-[72px] flex-col items-center"
           >
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-200">

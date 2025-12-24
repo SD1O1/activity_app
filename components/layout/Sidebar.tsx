@@ -1,27 +1,41 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 
 type SidebarProps = {
   open: boolean;
   onClose: () => void;
+  isLoggedIn: boolean;
 };
 
-export default function Sidebar({ open, onClose }: SidebarProps) {
+export default function Sidebar({ open, onClose, isLoggedIn }: SidebarProps) {
   const router = useRouter();
 
   if (!open) return null;
 
+  const logout = async () => {
+    await supabase.auth.signOut();
+    onClose();
+    router.push("/");
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex">
-      {/* SIDEBAR (LEFT) */}
+      {/* SIDEBAR */}
       <div className="w-64 bg-white p-4">
         <h3 className="font-semibold mb-4">Menu</h3>
 
         <ul className="space-y-3">
           <li onClick={() => router.push("/")}>Home</li>
           <li onClick={() => router.push("/activities")}>Activities</li>
-          <li onClick={() => router.push("/profile")}>Profile</li>
+
+          {isLoggedIn && (
+            <>
+              <li onClick={() => router.push("/profile")}>Profile</li>
+              <li onClick={logout}>Logout</li>
+            </>
+          )}
         </ul>
       </div>
 
