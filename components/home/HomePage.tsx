@@ -24,15 +24,23 @@ export default function HomePage({user}:HomePageProps) {
   const [activities, setActivities] = useState<any[]>([]);
 
   useEffect(() => {
-    supabase
-      .from("activities")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(10)
-      .then(({ data }) => {
-        if (data) setActivities(data);
-      });
-  }, []);
+    const fetchActivities = async () => {
+      const { data, error } = await supabase
+        .from("activities")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(10);
+  
+      if (error) {
+        console.error("Error fetching activities:", error);
+        return;
+      }
+  
+      setActivities(data || []);
+    };
+  
+    fetchActivities();
+  }, []);  
   
   return (
     <main className="min-h-screen bg-white">
@@ -66,7 +74,9 @@ export default function HomePage({user}:HomePageProps) {
               title={activity.title}
               subtitle={activity.category}
               distance="Nearby"
-              time={new Date(activity.date).toLocaleString()}
+              time={activity.starts_at
+                ? new Date(activity.starts_at).toLocaleString()
+                : "Time not set"}
               type={activity.type}
               onClick={() => router.push(`/activity/${activity.id}`)}
             />

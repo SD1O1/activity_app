@@ -43,10 +43,12 @@ export default function ActivitiesPageView({
                 title={activity.title}
                 subtitle={activity.category}
                 distance="Nearby"
-                time={new Date(activity.date).toLocaleString()}
+                time={activity.starts_at
+                  ? new Date(activity.starts_at).toLocaleString()
+                  : "Time not set"}
                 type={activity.type}
                 onClick={() =>
-                  router.push(`/activity?id=${activity.id}`)
+                  router.push(`/activity/${activity.id}`)
                 }
               />
             ))}

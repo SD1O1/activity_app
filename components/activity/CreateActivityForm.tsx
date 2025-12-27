@@ -8,8 +8,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
   const router = useRouter();
 
   const [questions, setQuestions] = useState<string[]>([
-    "What kind of conversation do you enjoy?",
-    "What do you do?",
+    "",
   ]);
 
   const [title, setTitle] = useState("");
@@ -18,6 +17,8 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
   const [date, setDate] = useState("");
   const [type, setType] = useState<"group" | "one-on-one">("group");
   const [loading, setLoading] = useState(false);
+  const [costRule, setCostRule] = useState("everyone_pays");
+  const [description, setDescription] = useState("");
 
   const handleCreate = async () => {
     setLoading(true);
@@ -25,9 +26,11 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
     const { error } = await supabase.from("activities").insert({
       title,
       category,
+      description,
       location,
-      date,
+      starts_at: date,
       type,
+      cost_rule: costRule,
       host_id: userId,
       questions,
     });
@@ -92,6 +95,24 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
         </div>
       </div>
 
+      {/* Location */}
+      <div className="mb-5">
+        <label className="text-sm font-medium">
+          Location
+        </label>
+
+        <input
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          placeholder="e.g. Marine Drive, Mumbai"
+          className="mt-2 w-full rounded-xl border px-4 py-3"
+        />
+
+        <p className="mt-1 text-xs text-gray-500">
+          Exact location will be shared after approval
+        </p>
+      </div>
+
       {/* Date & time */}
       <div className="mb-5">
         <label className="text-sm font-medium">Date & Time</label>
@@ -100,6 +121,34 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
           value={date}
           onChange={(e) => setDate(e.target.value)}
           className="mt-2 w-full rounded-xl border px-4 py-3"
+        />
+      </div>
+
+      <div className="mb-5">
+        <label className="text-sm font-medium">Cost</label>
+        <select
+          value={costRule}
+          onChange={(e) => setCostRule(e.target.value)}
+          className="mt-2 w-full rounded-xl border px-4 py-3"
+        >
+          <option value="everyone_pays">Everyone pays their own</option>
+          <option value="host_pays">Host will cover it</option>
+          <option value="split">Split equally</option>
+        </select>
+      </div>
+
+      {/* Description */}
+      <div className="mb-5">
+        <label className="text-sm font-medium">
+          About this activity
+        </label>
+
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Describe what this activity is about, what people should expect..."
+          rows={4}
+          className="mt-2 w-full rounded-xl border px-4 py-3 resize-none"
         />
       </div>
 
@@ -112,6 +161,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
         <div className="mt-3 space-y-3">
           {questions.map((q, index) => (
             <input
+              placeholder="e.g. What do you like to talk about?"
               key={index}
               value={q}
               onChange={(e) => {

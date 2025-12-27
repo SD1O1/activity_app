@@ -1,41 +1,42 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function AuthButtons() {
-  const signIn = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setLoggedIn(!!data.session);
     });
 
-    if (error) {
-      console.error("Google sign-in error:", error.message);
-    }
-  };
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setLoggedIn(!!session);
+    });
 
-  const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
+    return () => subscription.unsubscribe();
+  }, []);
 
-    if (error) {
-      console.error("Sign-out error:", error.message);
-    }
-  };
-
-  return (
-    <div className="flex gap-4">
+  if (!loggedIn) {
+    return (
       <button
-        onClick={signIn}
-        className="px-4 py-2 border rounded"
+        onClick={() => alert("Auth modal will open here")}
+        className="px-4 py-2 border"
       >
         Login
       </button>
+    );
+  }
 
-      <button
-        onClick={signOut}
-        className="px-4 py-2 border rounded"
-      >
-        Logout
-      </button>
-    </div>
+  return (
+    <button
+      onClick={() => supabase.auth.signOut()}
+      className="px-4 py-2 border"
+    >
+      Logout
+    </button>
   );
 }

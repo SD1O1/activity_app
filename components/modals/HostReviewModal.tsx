@@ -1,78 +1,98 @@
 "use client";
 
-type HostReviewModalProps = {
-    open: boolean;
-    onClose: () => void;
-    onAccept: () => void;
-  };
-  
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+
+type Props = {
+  open: boolean;
+  onClose: () => void;
+  activityId: string;
+  onResolved: () => Promise<void>;
+};
 
 export default function HostReviewModal({
   open,
   onClose,
-  onAccept,
-}: HostReviewModalProps) {
+  activityId,
+  onResolved,
+}: Props) {
+  const [requests, setRequests] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const load = async () => {
+      const { data } = await supabase
+        .from("join_requests")
+        .select("*")
+        .eq("activity_id", activityId)
+        .eq("status", "pending");
+
+      setRequests(data || []);
+    };
+
+    load();
+  }, [open, activityId]);
+
+  const resolve = async (requesterId: string, status: "approved" | "rejected") => {
+    await supabase
+      .from("join_requests")
+      .update({ status })
+      .eq("activity_id", activityId)
+      .eq("requester_id", requesterId)
+      .eq("status", "pending");
+
+    await supabase.from("notifications").insert({
+      user_id: requesterId,
+      type: status,
+      message:
+        status === "approved"
+          ? "Your request was approved"
+          : "Your request was declined",
+      activity_id: activityId,
+    });
+
+    setRequests((prev) =>
+      prev.filter((r) => r.requester_id !== requesterId)
+    );
+
+    await onResolved();
+  };
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-black/40">
-      <div className="w-full rounded-t-2xl bg-white p-4">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold">
-            Review Join Request
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-sm text-gray-500"
-          >
-            Close
-          </button>
-        </div>
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-end">
+      <div className="w-full bg-white rounded-t-2xl p-4">
+        <h2 className="mb-4 font-semibold">Join Requests</h2>
 
-        {/* Requester info */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-sm font-medium">
-            R
-          </div>
-          <div>
-            <p className="text-sm font-medium">Rahul, 27</p>
-            <p className="text-xs text-gray-500">Verified profile</p>
-          </div>
-        </div>
+        {requests.length === 0 && (
+          <p className="text-sm text-gray-500">No pending requests</p>
+        )}
 
-        {/* Answers */}
-        <div className="space-y-3 text-sm">
-          <div>
-            <p className="font-medium">
-              Why do you want to join?
-            </p>
-            <p className="text-gray-600">
-              Looking to meet new people and have good conversations.
-            </p>
-          </div>
-
-          <div>
-            <p className="font-medium">
-              What kind of conversation do you enjoy?
-            </p>
-            <p className="text-gray-600">
-              Startups, life experiences, and ideas.
-            </p>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="mt-6 flex gap-3">
-          <button className="w-full rounded-xl border py-3 text-sm font-medium">
-            Decline
-          </button>
-          <button 
-            onClick={onAccept}
-            className="w-full rounded-xl bg-black py-3 text-sm font-medium text-white"
+        {requests.map((r) => (
+          <div key={r.requester_id} className="mb-3 flex gap-2">
+            <button
+              onClick={() => resolve(r.requester_id, "rejected")}
+              className="flex-1 border rounded-xl py-2"
             >
-            Accept
-          </button>
-        </div>
+              Decline
+            </button>
+            <button
+              onClick={() => resolve(r.requester_id, "approved")}
+              className="flex-1 bg-black text-white rounded-xl py-2"
+            >
+              Approve
+            </button>
+          </div>
+        ))}
+
+        <button
+          onClick={onClose}
+          className="mt-4 w-full text-sm text-gray-500"
+        >
+          Close
+        </button>
       </div>
     </div>
   );
