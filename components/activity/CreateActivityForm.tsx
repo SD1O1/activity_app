@@ -23,6 +23,10 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
   const handleCreate = async () => {
     setLoading(true);
 
+    const cleanedQuestions = questions
+    .map(q => q.trim())
+    .filter(q => q.length > 0);
+
     const { error } = await supabase.from("activities").insert({
       title,
       category,
@@ -32,7 +36,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
       type,
       cost_rule: costRule,
       host_id: userId,
-      questions,
+      questions: cleanedQuestions,
     });
 
     setLoading(false);

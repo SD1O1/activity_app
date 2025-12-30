@@ -195,11 +195,13 @@ export default function ActivityDetail({ activity }: ActivityDetailProps) {
         onClose={() => setOpenJoin(false)}
         activityId={activity.id}
         hostId={activity.host_id}
+        questions={activity.questions || []} // 🔑 THIS WAS MISSING
         onSuccess={async () => {
-          await computeJoinStatus(); // 🔥 THIS IS THE FIX
+          await computeJoinStatus();
           setOpenJoin(false);
         }}
       />
+
 
       {/* Host Review Modal */}
       <HostReviewModal

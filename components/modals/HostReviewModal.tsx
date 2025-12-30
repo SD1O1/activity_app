@@ -17,24 +17,38 @@ export default function HostReviewModal({
   onResolved,
 }: Props) {
   const [requests, setRequests] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<string[]>([]);
 
   useEffect(() => {
     if (!open) return;
 
     const load = async () => {
-      const { data } = await supabase
+      // 1️⃣ Fetch activity questions
+      const { data: activity } = await supabase
+        .from("activities")
+        .select("questions")
+        .eq("id", activityId)
+        .single();
+
+      setQuestions(activity?.questions || []);
+
+      // 2️⃣ Fetch pending join requests WITH answers
+      const { data: joins } = await supabase
         .from("join_requests")
-        .select("*")
+        .select("requester_id, answers")
         .eq("activity_id", activityId)
         .eq("status", "pending");
 
-      setRequests(data || []);
+      setRequests(joins || []);
     };
 
     load();
   }, [open, activityId]);
 
-  const resolve = async (requesterId: string, status: "approved" | "rejected") => {
+  const resolve = async (
+    requesterId: string,
+    status: "approved" | "rejected"
+  ) => {
     await supabase
       .from("join_requests")
       .update({ status })
@@ -63,7 +77,7 @@ export default function HostReviewModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end">
-      <div className="w-full bg-white rounded-t-2xl p-4">
+      <div className="w-full bg-white rounded-t-2xl p-4 max-h-[85vh] overflow-y-auto">
         <h2 className="mb-4 font-semibold">Join Requests</h2>
 
         {requests.length === 0 && (
@@ -71,19 +85,41 @@ export default function HostReviewModal({
         )}
 
         {requests.map((r) => (
-          <div key={r.requester_id} className="mb-3 flex gap-2">
-            <button
-              onClick={() => resolve(r.requester_id, "rejected")}
-              className="flex-1 border rounded-xl py-2"
-            >
-              Decline
-            </button>
-            <button
-              onClick={() => resolve(r.requester_id, "approved")}
-              className="flex-1 bg-black text-white rounded-xl py-2"
-            >
-              Approve
-            </button>
+          <div
+            key={r.requester_id}
+            className="mb-4 rounded-xl border p-3 space-y-3"
+          >
+            {/* QUESTIONS & ANSWERS */}
+            {questions.length > 0 && (
+              <div className="space-y-2">
+                {questions.map((q, i) => (
+                  <div key={i}>
+                    <p className="text-xs font-medium text-gray-600">
+                      {q}
+                    </p>
+                    <p className="text-sm text-gray-900">
+                      {r.answers?.[i] || "—"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ACTIONS */}
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => resolve(r.requester_id, "rejected")}
+                className="flex-1 border rounded-xl py-2 text-sm"
+              >
+                Decline
+              </button>
+              <button
+                onClick={() => resolve(r.requester_id, "approved")}
+                className="flex-1 bg-black text-white rounded-xl py-2 text-sm"
+              >
+                Approve
+              </button>
+            </div>
           </div>
         ))}
 
