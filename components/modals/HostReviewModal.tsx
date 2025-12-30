@@ -49,13 +49,15 @@ export default function HostReviewModal({
     requesterId: string,
     status: "approved" | "rejected"
   ) => {
+    // 1️⃣ Update join request status
     await supabase
       .from("join_requests")
       .update({ status })
       .eq("activity_id", activityId)
       .eq("requester_id", requesterId)
       .eq("status", "pending");
-
+  
+    // 2️⃣ Notify requester
     await supabase.from("notifications").insert({
       user_id: requesterId,
       type: status,
@@ -65,13 +67,58 @@ export default function HostReviewModal({
           : "Your request was declined",
       activity_id: activityId,
     });
-
+  
+    // 3️⃣ If approved → ensure conversation + participants
+    if (status === "approved") {
+      let conversationId: string | null = null;
+  
+      // 3a️⃣ Check if conversation already exists
+      const { data: existingConversation, error: fetchError } =
+        await supabase
+          .from("conversations")
+          .select("id")
+          .eq("activity_id", activityId)
+          .maybeSingle();
+  
+      if (fetchError) {
+        console.error("Fetch conversation error:", fetchError);
+        return;
+      }
+  
+      if (existingConversation) {
+        conversationId = existingConversation.id;
+      } else {
+        // 3b️⃣ Create conversation
+        const { data: createdConversation, error: createError } =
+          await supabase
+            .from("conversations")
+            .insert({ activity_id: activityId })
+            .select("id")
+            .single();
+  
+        if (createError || !createdConversation) {
+          console.error("Create conversation error:", createError);
+          return;
+        }
+  
+        conversationId = createdConversation.id;
+      }
+  
+      // 3c️⃣ Add requester as participant
+      await supabase.from("conversation_participants").insert({
+        conversation_id: conversationId,
+        user_id: requesterId,
+      });
+    }
+  
+    // 4️⃣ Remove from local list
     setRequests((prev) =>
       prev.filter((r) => r.requester_id !== requesterId)
     );
-
+  
+    // 5️⃣ Refresh parent state
     await onResolved();
-  };
+  };  
 
   if (!open) return null;
 
