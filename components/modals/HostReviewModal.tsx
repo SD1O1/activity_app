@@ -49,7 +49,7 @@ export default function HostReviewModal({
     requesterId: string,
     status: "approved" | "rejected"
   ) => {
-    // 1️⃣ Update join request status
+    // 1️⃣ Update join request
     await supabase
       .from("join_requests")
       .update({ status })
@@ -57,7 +57,7 @@ export default function HostReviewModal({
       .eq("requester_id", requesterId)
       .eq("status", "pending");
   
-    // 2️⃣ Notify requester
+    // 🔔 Notify requester
     await supabase.from("notifications").insert({
       user_id: requesterId,
       type: status,
@@ -68,55 +68,64 @@ export default function HostReviewModal({
       activity_id: activityId,
     });
   
-    // 3️⃣ If approved → ensure conversation + participants
-    if (status === "approved") {
-      let conversationId: string | null = null;
+    // ⛔ If rejected → stop here
+    if (status === "rejected") {
+      setRequests((prev) =>
+        prev.filter((r) => r.requester_id !== requesterId)
+      );
+      await onResolved();
+      return;
+    }
   
-      // 3a️⃣ Check if conversation already exists
-      const { data: existingConversation, error: fetchError } =
-        await supabase
-          .from("conversations")
-          .select("id")
-          .eq("activity_id", activityId)
-          .maybeSingle();
+    // 2️⃣ Check if conversation already exists
+    const { data: existingConversation } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("activity_id", activityId)
+      .maybeSingle();
   
-      if (fetchError) {
-        console.error("Fetch conversation error:", fetchError);
+    let conversationId: string;
+  
+    if (existingConversation) {
+      conversationId = existingConversation.id;
+    } else {
+      // 3️⃣ Create conversation (HOST ONLY)
+      const { data: newConversation, error } = await supabase
+        .from("conversations")
+        .insert({
+          activity_id: activityId,
+        })
+        .select("id")
+        .single();
+  
+      if (error || !newConversation) {
+        console.error("Failed to create conversation", error);
         return;
       }
   
-      if (existingConversation) {
-        conversationId = existingConversation.id;
-      } else {
-        // 3b️⃣ Create conversation
-        const { data: createdConversation, error: createError } =
-          await supabase
-            .from("conversations")
-            .insert({ activity_id: activityId })
-            .select("id")
-            .single();
+      conversationId = newConversation.id;
   
-        if (createError || !createdConversation) {
-          console.error("Create conversation error:", createError);
-          return;
-        }
-  
-        conversationId = createdConversation.id;
+      // 4️⃣ Add HOST as participant
+      const { data: auth } = await supabase.auth.getUser();
+      if (auth.user) {
+        await supabase.from("conversation_participants").insert({
+          conversation_id: conversationId,
+          user_id: auth.user.id,
+        });
       }
-  
-      // 3c️⃣ Add requester as participant
-      await supabase.from("conversation_participants").insert({
-        conversation_id: conversationId,
-        user_id: requesterId,
-      });
     }
   
-    // 4️⃣ Remove from local list
+    // 5️⃣ Add REQUESTER as participant
+    await supabase.from("conversation_participants").insert({
+      conversation_id: conversationId,
+      user_id: requesterId,
+    });
+  
+    // 6️⃣ Update UI
     setRequests((prev) =>
       prev.filter((r) => r.requester_id !== requesterId)
     );
   
-    // 5️⃣ Refresh parent state
     await onResolved();
   };  
 

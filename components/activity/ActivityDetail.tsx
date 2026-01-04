@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/layout/Header";
 import JoinRequestModal from "@/components/modals/JoinRequestModal";
 import HostReviewModal from "@/components/modals/HostReviewModal";
-import ChatModal from "@/components/modals/ChatModal";
+import ChatModal from "@/components/modals/chat/ChatModal";
 import { supabase } from "@/lib/supabaseClient";
 
 type ViewerRole = "guest" | "host";
@@ -20,6 +20,7 @@ export default function ActivityDetail({ activity }: ActivityDetailProps) {
   const [openChat, setOpenChat] = useState(false);
   const [viewerRole, setViewerRole] = useState<ViewerRole>("guest");
   const [joinStatus, setJoinStatus] = useState<JoinStatus>("none");
+  const [hasUnread, setHasUnread] = useState(false);
 
   /**
    * 1️⃣ Determine viewer role (host vs guest)
@@ -76,7 +77,54 @@ export default function ActivityDetail({ activity }: ActivityDetailProps) {
     setJoinStatus(requests?.[0]?.status ?? "none");
   };
   
+  const checkUnread = useCallback(async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+  
+    const { data: conversation } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("activity_id", activity.id)
+      .maybeSingle();
+  
+    if (!conversation) {
+      setHasUnread(false);
+      return;
+    }
+  
+    const { data: participant } = await supabase
+      .from("conversation_participants")
+      .select("last_seen_at")
+      .eq("conversation_id", conversation.id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+  
+    const { data: latestMessage } = await supabase
+      .from("messages")
+      .select("created_at")
+      .eq("conversation_id", conversation.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+  
+    if (
+      latestMessage &&
+      (!participant?.last_seen_at ||
+        new Date(latestMessage.created_at) >
+          new Date(participant.last_seen_at))
+    ) {
+      setHasUnread(true);
+    } else {
+      setHasUnread(false);
+    }
+  }, [activity.id]);
 
+  useEffect(() => {
+    checkUnread();
+  }, [checkUnread]);  
+  
   /**
    * 3️⃣ Fetch join status on load
    */
@@ -160,9 +208,12 @@ export default function ActivityDetail({ activity }: ActivityDetailProps) {
             </p>
             <button
               onClick={() => setOpenChat(true)}
-              className="w-full rounded-xl bg-black py-3 text-white"
+              className="w-full rounded-xl bg-black py-3 text-white relative"
             >
               Open Chat
+              {hasUnread && (
+                <span className="absolute top-2 right-3 h-2 w-2 rounded-full bg-red-500" />
+              )}
             </button>
           </>
         )}
@@ -179,9 +230,12 @@ export default function ActivityDetail({ activity }: ActivityDetailProps) {
 
             <button
               onClick={() => setOpenChat(true)}
-              className="w-full rounded-xl border py-3"
+              className="w-full rounded-xl border py-3 relative"
             >
               Open Chat
+              {hasUnread && (
+                <span className="absolute top-2 right-3 h-2 w-2 rounded-full bg-red-500" />
+              )}
             </button>
           </>
         )}
@@ -215,7 +269,12 @@ export default function ActivityDetail({ activity }: ActivityDetailProps) {
 
       {/* Chat */}
       {canOpenChat && (
-        <ChatModal open={openChat} onClose={() => setOpenChat(false)} />
+        <ChatModal
+        open={openChat}
+        activityId={activity.id}
+        onClose={() => setOpenChat(false)}
+        onChatClosed={checkUnread} // 🔥 THIS IS THE KEY
+      />            
       )}
     </main>
   );
