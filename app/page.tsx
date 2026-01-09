@@ -1,13 +1,8 @@
+// app/page.tsx
 import HomePage from "@/components/home/HomePage";
-import { createSupabaseServer } from "@/lib/supabaseServer";
+import { requireCompletedProfile } from "@/lib/guard/onboardingGuard";
 
 export default async function Page() {
-  const supabase = await createSupabaseServer();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // For now we just pass user down (can be null)
-  return <HomePage user={user} />;
+  const { user } = await requireCompletedProfile();
+  return <HomePage/>;
 }

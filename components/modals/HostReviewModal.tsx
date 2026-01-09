@@ -7,6 +7,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   activityId: string;
+  hostId: string; // REQUIRED
   onResolved: () => Promise<void>;
 };
 
@@ -14,16 +15,18 @@ export default function HostReviewModal({
   open,
   onClose,
   activityId,
+  hostId,
   onResolved,
 }: Props) {
   const [requests, setRequests] = useState<any[]>([]);
   const [questions, setQuestions] = useState<string[]>([]);
+  const [resolving, setResolving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
 
     const load = async () => {
-      // 1️⃣ Fetch activity questions
+      // Fetch activity questions
       const { data: activity } = await supabase
         .from("activities")
         .select("questions")
@@ -32,7 +35,7 @@ export default function HostReviewModal({
 
       setQuestions(activity?.questions || []);
 
-      // 2️⃣ Fetch pending join requests WITH answers
+      // Fetch pending join requests
       const { data: joins } = await supabase
         .from("join_requests")
         .select("requester_id, answers")
@@ -49,6 +52,10 @@ export default function HostReviewModal({
     requesterId: string,
     status: "approved" | "rejected"
   ) => {
+    if (resolving || !hostId) return;
+
+    setResolving(true);
+
     // 1️⃣ Update join request
     await supabase
       .from("join_requests")
@@ -56,8 +63,8 @@ export default function HostReviewModal({
       .eq("activity_id", activityId)
       .eq("requester_id", requesterId)
       .eq("status", "pending");
-  
-    // 🔔 Notify requester
+
+    // 2️⃣ Notify requester
     await supabase.from("notifications").insert({
       user_id: requesterId,
       type: status,
@@ -67,67 +74,65 @@ export default function HostReviewModal({
           : "Your request was declined",
       activity_id: activityId,
     });
-  
-    // ⛔ If rejected → stop here
+
+    // ⛔ Stop here if rejected
     if (status === "rejected") {
       setRequests((prev) =>
         prev.filter((r) => r.requester_id !== requesterId)
       );
+      setResolving(false);
       await onResolved();
       return;
     }
-  
-    // 2️⃣ Check if conversation already exists
+
+    // 3️⃣ Check for existing conversation
     const { data: existingConversation } = await supabase
       .from("conversations")
       .select("id")
       .eq("activity_id", activityId)
       .maybeSingle();
-  
+
     let conversationId: string;
-  
+
     if (existingConversation) {
       conversationId = existingConversation.id;
     } else {
-      // 3️⃣ Create conversation (HOST ONLY)
+      // 4️⃣ Create conversation
       const { data: newConversation, error } = await supabase
         .from("conversations")
-        .insert({
-          activity_id: activityId,
-        })
+        .insert({ activity_id: activityId })
         .select("id")
         .single();
-  
+
       if (error || !newConversation) {
         console.error("Failed to create conversation", error);
+        setResolving(false);
         return;
       }
-  
+
       conversationId = newConversation.id;
-  
-      // 4️⃣ Add HOST as participant
-      const { data: auth } = await supabase.auth.getUser();
-      if (auth.user) {
-        await supabase.from("conversation_participants").insert({
-          conversation_id: conversationId,
-          user_id: auth.user.id,
-        });
-      }
+
+      // 5️⃣ Add HOST as participant
+      await supabase.from("conversation_participants").insert({
+        conversation_id: conversationId,
+        user_id: hostId,
+      });
     }
-  
-    // 5️⃣ Add REQUESTER as participant
+
+    // 6️⃣ Add REQUESTER as participant
     await supabase.from("conversation_participants").insert({
       conversation_id: conversationId,
       user_id: requesterId,
     });
-  
-    // 6️⃣ Update UI
+
+    // 7️⃣ Update UI
     setRequests((prev) =>
       prev.filter((r) => r.requester_id !== requesterId)
     );
-  
+
+    setResolving(false);
     await onResolved();
-  };  
+  };
 
   if (!open) return null;
 
@@ -145,7 +150,7 @@ export default function HostReviewModal({
             key={r.requester_id}
             className="mb-4 rounded-xl border p-3 space-y-3"
           >
-            {/* QUESTIONS & ANSWERS */}
+            {/* Questions & Answers */}
             {questions.length > 0 && (
               <div className="space-y-2">
                 {questions.map((q, i) => (
@@ -161,16 +166,22 @@ export default function HostReviewModal({
               </div>
             )}
 
-            {/* ACTIONS */}
+            {/* Actions */}
             <div className="flex gap-2 pt-2">
               <button
-                onClick={() => resolve(r.requester_id, "rejected")}
+                onClick={() =>
+                  resolve(r.requester_id, "rejected")
+                }
+                disabled={resolving}
                 className="flex-1 border rounded-xl py-2 text-sm"
               >
                 Decline
               </button>
               <button
-                onClick={() => resolve(r.requester_id, "approved")}
+                onClick={() =>
+                  resolve(r.requester_id, "approved")
+                }
+                disabled={resolving}
                 className="flex-1 bg-black text-white rounded-xl py-2 text-sm"
               >
                 Approve

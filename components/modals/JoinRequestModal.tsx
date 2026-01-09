@@ -8,7 +8,8 @@ type JoinRequestModalProps = {
   onClose: () => void;
   activityId: string;
   hostId: string;
-  questions: string[]; // 👈 REQUIRED
+  questions: string[];
+  userId: string | null;
   onSuccess: () => Promise<void>;
 };
 
@@ -18,6 +19,7 @@ export default function JoinRequestModal({
   activityId,
   hostId,
   questions,
+  userId,
   onSuccess,
 }: JoinRequestModalProps) {
   const [answers, setAnswers] = useState<string[]>(
@@ -28,70 +30,81 @@ export default function JoinRequestModal({
 
   if (!open) return null;
 
+  if (!userId) {
+    setError("You must be logged in");
+    return;
+  }  
+
   const handleSubmit = async () => {
     setError(null);
-
-    // 🔒 Mandatory validation ONLY if questions exist
+  
+    if (!userId) {
+      setError("You must be logged in");
+      return;
+    }
+  
     if (questions.length > 0) {
-      const hasEmpty = answers.some(
-        (a) => a.trim().length === 0
-      );
-
+      const hasEmpty = answers.some(a => a.trim().length === 0);
       if (hasEmpty) {
         setError("Please answer all questions before submitting.");
         return;
       }
     }
-
+  
     setLoading(true);
-
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) return;
-
-    // prevent duplicate requests
+  
     const { data: existing } = await supabase
       .from("join_requests")
       .select("id")
       .eq("activity_id", activityId)
-      .eq("requester_id", auth.user.id)
+      .eq("requester_id", userId)
       .maybeSingle();
-
+  
     if (existing) {
       setLoading(false);
       return;
     }
-
-    // create join request WITH answers
-    await supabase.from("join_requests").insert({
+  
+    const { error } = await supabase.from("join_requests").insert({
       activity_id: activityId,
-      requester_id: auth.user.id,
+      requester_id: userId,
       status: "pending",
       answers: questions.length > 0 ? answers : [],
     });
-
-    // notify host
+  
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
+  
     await supabase.from("notifications").insert({
       user_id: hostId,
       type: "join_request",
       message: "New join request for your activity",
       activity_id: activityId,
     });
-
+  
     setLoading(false);
     await onSuccess();
-  };
+  };  
 
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/40">
       <div className="w-full rounded-t-2xl bg-white p-4">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold">Request to Join</h2>
-          <button onClick={onClose} className="text-sm text-gray-500">
+          <h2 className="text-base font-semibold">
+            Request to Join
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-sm text-gray-500"
+          >
             Close
           </button>
         </div>
 
-        {/* QUESTIONS */}
+        {/* Questions */}
         {questions.length > 0 && (
           <div className="space-y-4">
             {questions.map((q, index) => (
@@ -113,7 +126,9 @@ export default function JoinRequestModal({
         )}
 
         {error && (
-          <p className="mt-3 text-sm text-red-600">{error}</p>
+          <p className="mt-3 text-sm text-red-600">
+            {error}
+          </p>
         )}
 
         <button

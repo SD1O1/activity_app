@@ -9,19 +9,22 @@ import { useEffect, useState } from "react";
 import SearchModal from "@/components/modals/SearchModal";
 import Footer from "@/components/layout/Footer";
 import { useRouter } from "next/navigation";
-import { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
+import AuthModal from "@/components/modals/AuthModal";
+import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
 
-type HomePageProps = {
-  user: User | null;
-};
-
-
-export default function HomePage({user}:HomePageProps) {
+export default function HomePage() {
+  const router = useRouter();
 
   const [openSearch, setOpenSearch] = useState(false);
-  const router = useRouter();
+  const [openAuthModal, setOpenAuthModal] = useState(false);
   const [activities, setActivities] = useState<any[]>([]);
+
+  const {
+    user,
+    profileCompleted,
+    loading,
+  } = useClientAuthProfile();
 
   useEffect(() => {
     const fetchActivities = async () => {
@@ -30,18 +33,13 @@ export default function HomePage({user}:HomePageProps) {
         .select("*")
         .order("created_at", { ascending: false })
         .limit(10);
-  
-      if (error) {
-        console.error("Error fetching activities:", error);
-        return;
-      }
-  
-      setActivities(data || []);
+
+      if (!error) setActivities(data || []);
     };
-  
+
     fetchActivities();
-  }, []);  
-  
+  }, []);
+
   return (
     <main className="min-h-screen bg-white">
       <Header />
@@ -57,7 +55,6 @@ export default function HomePage({user}:HomePageProps) {
         >
           What do you want to do?
         </div>
-
       </section>
 
       <CategoriesRow />
@@ -74,11 +71,15 @@ export default function HomePage({user}:HomePageProps) {
               title={activity.title}
               subtitle={activity.category}
               distance="Nearby"
-              time={activity.starts_at
-                ? new Date(activity.starts_at).toLocaleString()
-                : "Time not set"}
+              time={
+                activity.starts_at
+                  ? new Date(activity.starts_at).toLocaleString()
+                  : "Time not set"
+              }
               type={activity.type}
-              onClick={() => router.push(`/activity/${activity.id}`)}
+              onClick={() =>
+                router.push(`/activity/${activity.id}`)
+              }
             />
           ))}
         </div>
@@ -87,13 +88,23 @@ export default function HomePage({user}:HomePageProps) {
       <SearchModal
         open={openSearch}
         onClose={() => setOpenSearch(false)}
-       />
-       
-      <HomeActions onOpenSearch={() => setOpenSearch(true)} />
+      />
+
+      <HomeActions
+        user={user}
+        profileCompleted={profileCompleted}
+        loading={loading}
+        openAuthModal={() => setOpenAuthModal(true)}
+        onOpenSearch={() => setOpenSearch(true)}
+      />
 
       <TrySomethingNew />
-      <Footer/>
+      <Footer />
 
+      <AuthModal
+        open={openAuthModal}
+        onClose={() => setOpenAuthModal(false)}
+      />
     </main>
   );
 }
