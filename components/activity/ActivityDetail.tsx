@@ -12,6 +12,8 @@ import ActivityMeta from "./ActivityMeta";
 import ActivityAbout from "./ActivityAbout";
 import ActivityActions from "./ActivityActions";
 
+import ActivityLocationMap from "@/components/map/ActivityLocationMap";
+
 import { useViewerRole } from "@/hooks/useViewerRole";
 import { useJoinStatus } from "@/hooks/useJoinStatus";
 import { useUnreadChat } from "@/hooks/useUnreadChat";
@@ -34,13 +36,22 @@ export default function ActivityDetail({ activity }: Props) {
   const [openChat, setOpenChat] = useState(false);
   const [openAuth, setOpenAuth] = useState(false);
 
-  const {
-    user,
-    profileCompleted,
-    loading,
-  } = useClientAuthProfile();
-  
-  const userId = user?.id ?? null;  
+  const { user, profileCompleted, loading } =
+    useClientAuthProfile();
+
+  type ActivityTagRelation = {
+    activity_tags: {
+      id: string;
+      name: string;
+    };
+  };
+
+  const tags =
+    (activity.activity_tag_relations as
+      | ActivityTagRelation[]
+      | undefined)?.map((rel) => rel.activity_tags) ?? [];
+
+  const userId = user?.id ?? null;
 
   const canOpenChat =
     viewerRole === "host" ||
@@ -62,17 +73,49 @@ export default function ActivityDetail({ activity }: Props) {
     setOpenJoin(true);
   };
 
+  /* =========================
+     MAP LOGIC (FINAL)
+  ========================= */
+
+  const isHost = viewerRole === "host";
+  const isApprovedGuest = joinStatus === "approved";
+  const showExactMap = isHost || isApprovedGuest;
+
+  // Always provide a fallback so map can mount
+  const lat =
+    showExactMap && activity.exact_lat != null
+      ? activity.exact_lat
+      : activity.public_lat ?? activity.exact_lat;
+
+  const lng =
+    showExactMap && activity.exact_lng != null
+      ? activity.exact_lng
+      : activity.public_lng ?? activity.exact_lng;
+
   return (
     <main className="min-h-screen bg-white">
       <Header />
 
-      <ActivityHeader title={activity.title} type={activity.type} />
+      <ActivityHeader
+        title={activity.title}
+        type={activity.type}
+        tags={tags}
+      />
 
       <ActivityMeta
         startsAt={activity.starts_at}
-        location={activity.location}
+        location={activity.location_name}
         showLocation={joinStatus === "approved"}
         costRule={activity.cost_rule}
+        lat={lat}
+        lng={lng}
+      />
+
+      {/* MAP — ALWAYS RENDER */}
+      <ActivityLocationMap
+        lat={Number(lat)}
+        lng={Number(lng)}
+        blurred={!showExactMap}
       />
 
       <ActivityAbout description={activity.description} />
@@ -103,7 +146,7 @@ export default function ActivityDetail({ activity }: Props) {
         open={openReview}
         onClose={() => setOpenReview(false)}
         activityId={activity.id}
-        hostId={activity.host_id}   // ✅ ADD THIS
+        hostId={activity.host_id}
         onResolved={computeJoinStatus}
       />
 

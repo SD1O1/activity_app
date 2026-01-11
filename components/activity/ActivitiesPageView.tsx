@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ActivityCard from "@/components/cards/ActivityCard";
+import ActivitiesMap from "../map/ActivitesMap";
 
-type ActivitiesPageViewProps = {
+type Props = {
   activities: any[];
   loading: boolean;
 };
@@ -11,48 +13,94 @@ type ActivitiesPageViewProps = {
 export default function ActivitiesPageView({
   activities,
   loading,
-}: ActivitiesPageViewProps) {
+}: Props) {
   const router = useRouter();
 
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+
+  // 🔹 shrink map when user scrolls list (mobile UX)
+  const [mapCollapsed, setMapCollapsed] = useState(false);
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+
+    const onScroll = () => {
+      setMapCollapsed(el.scrollTop > 40);
+    };
+
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <main className="min-h-screen bg-white">
-      {/* Top bar */}
-      <div className="flex items-center gap-3 px-4 py-4 border-b">
-        <button onClick={() => router.back()} className="text-xl">
-          ←
-        </button>
-        <div>
-          <h1 className="text-lg font-semibold">Activities</h1>
-          <p className="text-xs text-gray-500">
-            {activities.length} activities nearby
-          </p>
-        </div>
+    <main className="min-h-screen bg-white flex flex-col">
+      {/* MAP */}
+      <div
+        className={`transition-all duration-300 ${
+          mapCollapsed ? "h-[180px]" : "h-[280px]"
+        }`}
+      >
+        <ActivitiesMap
+          activities={activities}
+          activeId={activeId}
+          onSelect={(id) => {
+            setActiveId(id);
+            document
+              .getElementById(`activity-${id}`)
+              ?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }}
+        />
       </div>
 
-      {/* Activity list */}
-      <section className="px-4 py-4 flex flex-col gap-4">
+      {/* LIST */}
+      <section
+        ref={listRef}
+        className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+      >
         {loading ? (
           <p className="text-center mt-10">Loading activities...</p>
         ) : activities.length === 0 ? (
           <p className="text-center mt-10">No activities yet.</p>
         ) : (
-          <div className="space-y-4">
-            {activities.map((activity) => (
-              <ActivityCard
+          activities.map((activity) => {
+            const tags =
+              activity.activity_tag_relations?.map(
+                (rel: any) => rel.activity_tags
+              ) ?? [];
+
+            return (
+              <div
                 key={activity.id}
-                title={activity.title}
-                subtitle={activity.category}
-                distance="Nearby"
-                time={activity.starts_at
-                  ? new Date(activity.starts_at).toLocaleString()
-                  : "Time not set"}
-                type={activity.type}
-                onClick={() =>
-                  router.push(`/activity/${activity.id}`)
-                }
-              />
-            ))}
-          </div>
+                id={`activity-${activity.id}`}
+                onClick={() => setActiveId(activity.id)}
+                className={`transition ${
+                  activeId === activity.id ? "ring-2 ring-black rounded-xl" : ""
+                }`}
+              >
+                <ActivityCard
+                  title={activity.title}
+                  subtitle={activity.category}
+                  distance={
+                    activity.distanceKm != null
+                      ? `${activity.distanceKm.toFixed(1)} km away`
+                      : "Nearby"
+                  }
+                  time={
+                    activity.starts_at
+                      ? new Date(activity.starts_at).toLocaleString()
+                      : "Time not set"
+                  }
+                  type={activity.type}
+                  tags={tags}
+                  onClick={() =>
+                    router.push(`/activity/${activity.id}`)
+                  }
+                />
+              </div>
+            );
+          })
         )}
       </section>
     </main>

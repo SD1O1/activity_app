@@ -17,7 +17,15 @@ export default function Page() {
     const fetchActivity = async () => {
       const { data } = await supabase
         .from("activities")
-        .select("*")
+        .select(`
+          *,
+          activity_tag_relations (
+            activity_tags (
+              id,
+              name
+            )
+          )
+        `)
         .eq("id", id)
         .single();
 

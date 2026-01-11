@@ -30,14 +30,24 @@ export function useChat(
     if (!open) return;
 
     const load = async () => {
-      const { data: convo } = await supabase
+      const { data: convo, error } = await supabase
         .from("conversations")
         .select("id")
         .eq("activity_id", activityId)
-        .single();
+        .maybeSingle();
 
-      if (!convo) return;
+      if (error) {
+        console.error("Conversation fetch error:", error);
+        return;
+      }
+
+      if (!convo) {
+        // No conversation exists yet
+        return;
+      }
+
       setConversationId(convo.id);
+
 
       const { data: msgs } = await supabase
         .from("messages")

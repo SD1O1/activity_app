@@ -1,17 +1,20 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
+
 import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 import ActivityCard from "@/components/cards/ActivityCard";
 import CategoriesRow from "@/components/home/CategoriesRow";
 import HomeActions from "./HomeActions";
 import TrySomethingNew from "./TrySomethingNew";
-import { useEffect, useState } from "react";
 import SearchModal from "@/components/modals/SearchModal";
-import Footer from "@/components/layout/Footer";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
 import AuthModal from "@/components/modals/AuthModal";
 import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
+
+import Map from "@/components/map/Map";
 
 export default function HomePage() {
   const router = useRouter();
@@ -20,21 +23,28 @@ export default function HomePage() {
   const [openAuthModal, setOpenAuthModal] = useState(false);
   const [activities, setActivities] = useState<any[]>([]);
 
-  const {
-    user,
-    profileCompleted,
-    loading,
-  } = useClientAuthProfile();
+  const { user, profileCompleted, loading } =
+    useClientAuthProfile();
 
   useEffect(() => {
     const fetchActivities = async () => {
       const { data, error } = await supabase
         .from("activities")
-        .select("*")
+        .select(`
+          *,
+          activity_tag_relations (
+            activity_tags (
+              id,
+              name
+            )
+          )
+        `)
         .order("created_at", { ascending: false })
         .limit(10);
 
-      if (!error) setActivities(data || []);
+      if (!error && data) {
+        setActivities(data);
+      }
     };
 
     fetchActivities();
@@ -44,6 +54,7 @@ export default function HomePage() {
     <main className="min-h-screen bg-white">
       <Header />
 
+      {/* Search */}
       <section className="px-4 py-6">
         <h1 className="text-2xl font-bold">
           Find your next adventure
@@ -59,30 +70,42 @@ export default function HomePage() {
 
       <CategoriesRow />
 
+      {/* Activities */}
       <section className="px-4">
         <h2 className="mb-3 text-lg font-semibold">
           Activities Near You
         </h2>
 
         <div className="space-y-4">
-          {activities.slice(0, 5).map((activity) => (
-            <ActivityCard
-              key={activity.id}
-              title={activity.title}
-              subtitle={activity.category}
-              distance="Nearby"
-              time={
-                activity.starts_at
-                  ? new Date(activity.starts_at).toLocaleString()
-                  : "Time not set"
-              }
-              type={activity.type}
-              onClick={() =>
-                router.push(`/activity/${activity.id}`)
-              }
-            />
-          ))}
+          {activities.map((activity) => {
+            const tags =
+              activity.activity_tag_relations?.map(
+                (rel: any) => rel.activity_tags
+              ) ?? [];
+
+            return (
+              <ActivityCard
+                key={activity.id}
+                title={activity.title}
+                subtitle={activity.category}
+                distance="Nearby"
+                time={
+                  activity.starts_at
+                    ? new Date(
+                        activity.starts_at
+                      ).toLocaleString()
+                    : "Time not set"
+                }
+                type={activity.type}
+                tags={tags}
+                onClick={() =>
+                  router.push(`/activity/${activity.id}`)
+                }
+              />
+            );
+          })}
         </div>
+
       </section>
 
       <SearchModal

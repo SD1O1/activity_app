@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import dynamic from "next/dynamic";
+
+const LocationPicker = dynamic(
+  () => import("@/components/map/LocationPicker"),
+  { ssr: false }
+);
 
 export default function CreateActivityForm({ userId }: { userId: string }) {
   const router = useRouter();
@@ -13,13 +19,83 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
 
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
-  const [location, setLocation] = useState("");
   const [date, setDate] = useState("");
   const [type, setType] = useState<"group" | "one-on-one">("group");
   const [loading, setLoading] = useState(false);
   const [costRule, setCostRule] = useState("everyone_pays");
   const [description, setDescription] = useState("");
 
+  type Tag = {
+    id: string;
+    name: string;
+  };
+  
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [tagError, setTagError] = useState("");
+  const [isSearchingTags, setIsSearchingTags] = useState(false);
+
+  const [tagQuery, setTagQuery] = useState("");
+  const [filteredTags, setFilteredTags] = useState<Tag[]>([]);
+
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+
+  const [location, setLocation] = useState<{
+    lat: number;
+    lng: number;
+    name: string;
+  } | null>(null);
+
+  const removeTag = (tagId: string) => {
+    setSelectedTags(prev => prev.filter(tag => tag.id !== tagId));
+  };  
+
+  const handleTagSearch = async (value: string) => {
+    setTagQuery(value);
+  
+    if (value.trim().length === 0) {
+      setFilteredTags([]);
+      setIsSearchingTags(false);
+      return;
+    }
+  
+    setIsSearchingTags(true);
+  
+    const { data } = await supabase
+      .from("activity_tags")
+      .select("id, name")
+      .ilike("name", `${value}%`)
+      .limit(10);
+  
+    setFilteredTags(data || []);
+  };  
+  
+  useEffect(() => {
+    supabase
+      .from("activity_tags")
+      .select("id, name")
+      .order("name")
+      .then(({ data }) => {
+        if (data) setAvailableTags(data);
+      });
+  }, []);  
+
+  const toggleTag = (tag: Tag) => {
+    if (selectedTags.some(t => t.id === tag.id)) {
+      setSelectedTags(selectedTags.filter(t => t.id !== tag.id));
+      setTagError("");
+      return;
+    }
+  
+    if (selectedTags.length >= 2) {
+      setTagError("You can select up to 2 tags only");
+      return;
+    }
+  
+    setSelectedTags([...selectedTags, tag]);
+    setTagError("");
+  };  
+  
   const handleCreate = async () => {
     setLoading(true);
 
@@ -27,24 +103,71 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
     .map(q => q.trim())
     .filter(q => q.length > 0);
 
-    const { error } = await supabase.from("activities").insert({
-      title,
-      category,
-      description,
-      location,
-      starts_at: date,
-      type,
-      cost_rule: costRule,
-      host_id: userId,
-      questions: cleanedQuestions,
-    });
-
-    setLoading(false);
-
-    if (error) {
-      alert(error.message);
+    if (!location) {
+      alert("Please choose a location");
+      setLoading(false);
       return;
     }
+    
+    function getPublicCoords(
+      lat: number,
+      lng: number
+    ) {
+      const OFFSET = 0.003; // ~300m
+    
+      const randomLat =
+        lat + (Math.random() - 0.5) * OFFSET;
+      const randomLng =
+        lng + (Math.random() - 0.5) * OFFSET;
+    
+      return {
+        public_lat: randomLat,
+        public_lng: randomLng,
+      };
+    }    
+
+    const { public_lat, public_lng } = getPublicCoords(location.lat, location.lng);
+    
+    const { data: activity, error } = await supabase
+      .from("activities")
+      .insert({
+        title,
+        category,
+        description,
+        location_name: location.name,
+        exact_lat: location.lat,
+        exact_lng: location.lng,
+        public_lat,
+        public_lng,
+        starts_at: date,
+        type,
+        cost_rule: costRule,
+        host_id: userId,
+        questions: cleanedQuestions,
+      })
+      .select()
+      .single();
+    
+    if (error || !activity) {
+      alert(error?.message || "Failed to create activity");
+      setLoading(false);
+      return;
+    }    
+
+    await supabase.from("activity_tag_relations").insert(
+      selectedTags.map(tag => ({
+        activity_id: activity.id,
+        tag_id: tag.id,
+      }))
+    );
+
+    if (selectedTags.length === 0) {
+        alert("Please select at least one activity tag");
+        setLoading(false);
+        return;
+      }
+
+    setLoading(false);
 
     router.push("/activities");
   };
@@ -65,15 +188,50 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
       </div>
 
       {/* Category */}
-      <div className="mb-5">
-        <label className="text-sm font-medium">Category</label>
-        <input
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          placeholder="Search categories"
-          className="mt-2 w-full rounded-xl border px-4 py-3"
-        />
+      <input
+        value={tagQuery}
+        onChange={(e) => handleTagSearch(e.target.value)}
+        placeholder="Search activity tags…"
+        className="mt-2 w-full rounded-xl border px-4 py-3"
+        disabled={selectedTags.length >= 2}
+      />
+
+      {filteredTags.length > 0 && (
+        <div className="mt-2 rounded-xl border bg-white shadow-sm">
+          {filteredTags.map(tag => (
+            <button
+              key={tag.id}
+              type="button"
+              onClick={() => {
+                toggleTag(tag);
+                setTagQuery("");
+                setFilteredTags([]);
+              }}
+              className="block w-full px-4 py-2 text-left hover:bg-gray-100"
+            >
+              {tag.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-3 flex gap-2 flex-wrap">
+        {selectedTags.map(tag => (
+          <span
+            key={tag.id}
+            className="flex items-center gap-1 rounded-full bg-black px-3 py-1 text-xs text-white"
+          >
+            {tag.name}
+            <button onClick={() => removeTag(tag.id)}>✕</button>
+          </span>
+        ))}
       </div>
+
+      {isSearchingTags && filteredTags.length === 0 && (
+        <div className="mt-2 rounded-xl border bg-white px-4 py-3 text-sm text-gray-500">
+          No matching tags found
+        </div>
+      )}
 
       {/* Activity type */}
       <div className="mb-5">
@@ -105,15 +263,16 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
           Location
         </label>
 
-        <input
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          placeholder="e.g. Marine Drive, Mumbai"
-          className="mt-2 w-full rounded-xl border px-4 py-3"
-        />
+        <button
+          type="button"
+          onClick={() => setShowLocationPicker(true)}
+          className="mt-2 w-full rounded-xl border px-4 py-3 text-left"
+        >
+          {location ? location.name : "Choose location"}
+        </button>
 
         <p className="mt-1 text-xs text-gray-500">
-          Exact location will be shared after approval
+          Exact location is shared only after approval
         </p>
       </div>
 
@@ -186,6 +345,31 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
           + Add another question
         </button>
       </div>
+
+      {showLocationPicker && (
+        <div className="fixed inset-0 z-50 bg-white">
+          <div className="flex items-center justify-between px-4 py-4 border-b">
+            <h2 className="text-lg font-semibold">
+              Choose location
+            </h2>
+            <button
+              onClick={() => setShowLocationPicker(false)}
+              className="text-xl"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="p-4">
+            <LocationPicker
+              onSelect={(loc) => {
+                setLocation(loc);
+                setShowLocationPicker(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       <button
         onClick={handleCreate}
