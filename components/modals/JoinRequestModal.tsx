@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { getBlockedUserIds } from "@/lib/blocking";
 
 type JoinRequestModalProps = {
   open: boolean;
@@ -31,63 +32,89 @@ export default function JoinRequestModal({
   if (!open) return null;
 
   if (!userId) {
-    setError("You must be logged in");
-    return;
-  }  
+    return (
+      <div className="fixed inset-0 z-50 flex items-end bg-black/40">
+        <div className="w-full rounded-t-2xl bg-white p-4">
+          <p className="text-sm text-red-600">
+            You must be logged in
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async () => {
     setError(null);
-  
+
     if (!userId) {
       setError("You must be logged in");
       return;
     }
-  
+
     if (questions.length > 0) {
-      const hasEmpty = answers.some(a => a.trim().length === 0);
+      const hasEmpty = answers.some(
+        (a) => a.trim().length === 0
+      );
       if (hasEmpty) {
-        setError("Please answer all questions before submitting.");
+        setError(
+          "Please answer all questions before submitting."
+        );
         return;
       }
     }
-  
+
     setLoading(true);
-  
+
+    // 🔒 BLOCK ENFORCEMENT (CRITICAL)
+    const { blockedUserIds } =
+      await getBlockedUserIds(supabase, userId);
+
+    if (blockedUserIds.includes(hostId)) {
+      setError(
+        "You cannot request to join this activity."
+      );
+      setLoading(false);
+      return;
+    }
+
+    // Prevent duplicate requests
     const { data: existing } = await supabase
       .from("join_requests")
       .select("id")
       .eq("activity_id", activityId)
       .eq("requester_id", userId)
       .maybeSingle();
-  
+
     if (existing) {
       setLoading(false);
       return;
     }
-  
-    const { error } = await supabase.from("join_requests").insert({
-      activity_id: activityId,
-      requester_id: userId,
-      status: "pending",
-      answers: questions.length > 0 ? answers : [],
-    });
-  
+
+    const { error } = await supabase
+      .from("join_requests")
+      .insert({
+        activity_id: activityId,
+        requester_id: userId,
+        status: "pending",
+        answers: questions.length > 0 ? answers : [],
+      });
+
     if (error) {
       setError(error.message);
       setLoading(false);
       return;
     }
-  
+
     await supabase.from("notifications").insert({
       user_id: hostId,
       type: "join_request",
       message: "New join request for your activity",
       activity_id: activityId,
     });
-  
+
     setLoading(false);
     await onSuccess();
-  };  
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/40">
@@ -109,7 +136,9 @@ export default function JoinRequestModal({
           <div className="space-y-4">
             {questions.map((q, index) => (
               <div key={index}>
-                <p className="mb-1 text-sm font-medium">{q}</p>
+                <p className="mb-1 text-sm font-medium">
+                  {q}
+                </p>
                 <textarea
                   value={answers[index]}
                   onChange={(e) => {

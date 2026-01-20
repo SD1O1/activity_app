@@ -1,26 +1,49 @@
-type ViewerRole = "guest" | "host";
+"use client";
+
+import { useEffect, useState } from "react";
+import { hasReported } from "@/lib/reporting";
+import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
+
 type JoinStatus = "none" | "pending" | "approved" | "rejected";
+type ViewerRole = "guest" | "host";
 
 type Props = {
+  activityId: string;
   viewerRole: ViewerRole;
   joinStatus: JoinStatus;
   hasUnread: boolean;
   onRequestJoin: () => void;
   onOpenChat: () => void;
   onOpenReview: () => void;
+  onReport: () => void;
 };
 
 export default function ActivityActions({
+  activityId,
   viewerRole,
   joinStatus,
   hasUnread,
   onRequestJoin,
   onOpenChat,
   onOpenReview,
+  onReport,
 }: Props) {
+  const [alreadyReported, setAlreadyReported] = useState(false);
+  const { user } = useClientAuthProfile();
+
+  useEffect(() => {
+    if (!user) return;
+
+    hasReported({
+      reporterId: user.id,
+      targetType: "activity",
+      targetId: activityId,
+    }).then(setAlreadyReported);
+  }, [user, activityId]);
+
   return (
     <section className="mt-8 px-4 pb-6 space-y-3">
-      {/* GUEST */}
+      {/* GUEST ACTIONS */}
       {viewerRole === "guest" && joinStatus === "none" && (
         <button
           onClick={onRequestJoin}
@@ -59,7 +82,7 @@ export default function ActivityActions({
         </>
       )}
 
-      {/* HOST */}
+      {/* HOST ACTIONS */}
       {viewerRole === "host" && (
         <>
           <button
@@ -79,6 +102,23 @@ export default function ActivityActions({
             )}
           </button>
         </>
+      )}
+
+      {/* REPORT (guest only, disabled if already reported) */}
+      {viewerRole === "guest" && (
+        <button
+          disabled={alreadyReported}
+          onClick={() => {
+            if (!alreadyReported) onReport();
+          }}
+          className={`w-full rounded-xl py-3 text-sm border ${
+            alreadyReported
+              ? "text-gray-400 cursor-not-allowed"
+              : "text-red-600"
+          }`}
+        >
+          {alreadyReported ? "Reported" : "Report activity"}
+        </button>
       )}
     </section>
   );

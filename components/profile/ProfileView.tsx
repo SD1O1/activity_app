@@ -88,6 +88,16 @@ export default function ProfileView() {
               {profile?.name || "Your name"}, {getAge(profile?.dob)}
             </h2>
 
+            {profile?.city?.trim() && (
+              <p className="mt-1 text-sm text-gray-500 flex items-center gap-1">
+                <span>📍</span>
+                <span>
+                  {profile.city.trim().charAt(0).toUpperCase() +
+                    profile.city.trim().slice(1)}
+                </span>
+              </p>
+            )}
+
             <p className="mt-1 text-sm text-gray-600 text-center">
               {profile?.bio || "Tell people something about you"}
             </p>

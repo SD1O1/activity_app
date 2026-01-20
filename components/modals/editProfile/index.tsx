@@ -31,6 +31,8 @@ export default function EditProfileModal({
     interests: [] as string[],
   });
 
+  const [phoneError, setPhoneError] = useState<string | undefined>(undefined);
+
   /* -------------------- load profile -------------------- */
   useEffect(() => {
     const loadProfile = async () => {
@@ -90,9 +92,11 @@ export default function EditProfileModal({
         <PhoneVerificationSection
           phone={form.phone}
           phoneVerified={form.phone_verified}
-          onChange={(phone) =>
-            updateForm({ phone, phone_verified: false })
-          }
+          error={phoneError}
+          onChange={(phone) => {
+            setPhoneError(undefined);
+            updateForm({ phone, phone_verified: false });
+          }}
           onVerified={() => updateForm({ phone_verified: true })}
         />
 
@@ -109,6 +113,23 @@ export default function EditProfileModal({
           <button
             disabled={saving}
             onClick={async () => {
+              // 🔴 Required field validation
+              if (!form.name.trim()) {
+                alert("Name cannot be empty");
+                return;
+              }
+
+              if (!form.city.trim()) {
+                alert("City cannot be empty");
+                return;
+              }
+
+              const digitsOnly = form.phone.replace(/\D/g, "");
+              if (digitsOnly.length < 10) {
+                alert("Enter a valid phone number");
+                return;
+              }
+
               if (!form.phone_verified) {
                 alert("Please verify your phone number");
                 return;
@@ -116,18 +137,43 @@ export default function EditProfileModal({
 
               setSaving(true);
 
-              await supabase
+              const { error } = await supabase
                 .from("profiles")
-                .update(form)
+                .update({
+                  name: form.name.trim(),
+                  bio: form.bio.trim(),
+                  city: form.city.trim(),
+                  phone: form.phone,
+                  phone_verified: form.phone_verified,
+                  interests: form.interests,
+                })
                 .eq("id", userId);
 
               setSaving(false);
+
+              if (error) {
+                if (
+                  error.code === "23505" ||
+                  error.message?.includes("profiles_phone_unique")
+                ) {
+                  setPhoneError(
+                    "This phone number is already associated with another account."
+                  );
+                  return;
+                }
+
+                console.error("Profile update failed", error);
+                alert("Failed to save profile. Please try again.");
+                return;
+              }
+
               onSaved();
             }}
             className="text-sm font-semibold text-black"
           >
             Save
           </button>
+
         </div>
       </div>
     </div>

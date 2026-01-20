@@ -2,12 +2,32 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { getBlockedUserIds } from "@/lib/blocking";
+import HostMiniProfile from "@/components/profile/HostMiniProfile";
+
+/* =========================
+   TYPES
+========================= */
+
+type RequesterProfile = {
+  id: string;
+  name: string | null;
+  avatar_url: string | null;
+  dob: string | null;
+  verified: boolean | null;
+};
+
+type JoinRequest = {
+  requester_id: string;
+  answers: string[];
+  profiles: RequesterProfile | null;
+};
 
 type Props = {
   open: boolean;
   onClose: () => void;
   activityId: string;
-  hostId: string; // REQUIRED
+  hostId: string;
   onResolved: () => Promise<void>;
 };
 
@@ -18,7 +38,7 @@ export default function HostReviewModal({
   hostId,
   onResolved,
 }: Props) {
-  const [requests, setRequests] = useState<any[]>([]);
+  const [requests, setRequests] = useState<JoinRequest[]>([]);
   const [questions, setQuestions] = useState<string[]>([]);
   const [resolving, setResolving] = useState(false);
 
@@ -35,14 +55,25 @@ export default function HostReviewModal({
 
       setQuestions(activity?.questions || []);
 
-      // Fetch pending join requests
+      // Fetch pending join requests WITH requester profile
       const { data: joins } = await supabase
-        .from("join_requests")
-        .select("requester_id, answers")
-        .eq("activity_id", activityId)
-        .eq("status", "pending");
-
-      setRequests(joins || []);
+      .from("join_requests")
+      .select(`
+        requester_id,
+        answers,
+        profiles:requester_id (
+          id,
+          name,
+          avatar_url,
+          dob,
+          verified
+        )
+      `)
+      .eq("activity_id", activityId)
+      .eq("status", "pending")
+      .returns<JoinRequest[]>(); // ✅ THIS IS THE FIX
+    
+    setRequests(joins || []);    
     };
 
     load();
@@ -56,7 +87,16 @@ export default function HostReviewModal({
 
     setResolving(true);
 
-    // 1️⃣ Update join request
+    // 🔒 BLOCK ENFORCEMENT
+    const { blockedUserIds } =
+      await getBlockedUserIds(supabase, hostId);
+
+    if (blockedUserIds.includes(requesterId)) {
+      setResolving(false);
+      return;
+    }
+
+    // Update join request
     await supabase
       .from("join_requests")
       .update({ status })
@@ -64,7 +104,7 @@ export default function HostReviewModal({
       .eq("requester_id", requesterId)
       .eq("status", "pending");
 
-    // 2️⃣ Notify requester
+    // Notify requester
     await supabase.from("notifications").insert({
       user_id: requesterId,
       type: status,
@@ -73,9 +113,9 @@ export default function HostReviewModal({
           ? "Your request was approved"
           : "Your request was declined",
       activity_id: activityId,
+      actor_id: hostId,
     });
 
-    // ⛔ Stop here if rejected
     if (status === "rejected") {
       setRequests((prev) =>
         prev.filter((r) => r.requester_id !== requesterId)
@@ -85,7 +125,7 @@ export default function HostReviewModal({
       return;
     }
 
-    // 3️⃣ Check for existing conversation
+    // Conversation logic (unchanged)
     const { data: existingConversation } = await supabase
       .from("conversations")
       .select("id")
@@ -97,35 +137,34 @@ export default function HostReviewModal({
     if (existingConversation) {
       conversationId = existingConversation.id;
     } else {
-      // 4️⃣ Create conversation
-      const { data: newConversation, error } = await supabase
+      const { data: newConversation } = await supabase
         .from("conversations")
         .insert({ activity_id: activityId })
         .select("id")
         .single();
 
-      if (error || !newConversation) {
-        console.error("Failed to create conversation", error);
+      if (!newConversation) {
         setResolving(false);
         return;
       }
 
       conversationId = newConversation.id;
 
-      // 5️⃣ Add HOST as participant
-      await supabase.from("conversation_participants").insert({
-        conversation_id: conversationId,
-        user_id: hostId,
-      });
+      await supabase
+        .from("conversation_participants")
+        .insert({
+          conversation_id: conversationId,
+          user_id: hostId,
+        });
     }
 
-    // 6️⃣ Add REQUESTER as participant
-    await supabase.from("conversation_participants").insert({
-      conversation_id: conversationId,
-      user_id: requesterId,
-    });
+    await supabase
+      .from("conversation_participants")
+      .insert({
+        conversation_id: conversationId,
+        user_id: requesterId,
+      });
 
-    // 7️⃣ Update UI
     setRequests((prev) =>
       prev.filter((r) => r.requester_id !== requesterId)
     );
@@ -142,7 +181,9 @@ export default function HostReviewModal({
         <h2 className="mb-4 font-semibold">Join Requests</h2>
 
         {requests.length === 0 && (
-          <p className="text-sm text-gray-500">No pending requests</p>
+          <p className="text-sm text-gray-500">
+            No pending requests
+          </p>
         )}
 
         {requests.map((r) => (
@@ -150,7 +191,16 @@ export default function HostReviewModal({
             key={r.requester_id}
             className="mb-4 rounded-xl border p-3 space-y-3"
           >
-            {/* Questions & Answers */}
+            {/* REQUESTER INFO */}
+            {r.profiles && (
+              <HostMiniProfile
+                host={r.profiles}
+                clickable
+                size="sm"
+              />
+            )}
+
+            {/* QUESTIONS */}
             {questions.length > 0 && (
               <div className="space-y-2">
                 {questions.map((q, i) => (
@@ -158,7 +208,7 @@ export default function HostReviewModal({
                     <p className="text-xs font-medium text-gray-600">
                       {q}
                     </p>
-                    <p className="text-sm text-gray-900">
+                    <p className="text-sm">
                       {r.answers?.[i] || "—"}
                     </p>
                   </div>
@@ -166,7 +216,7 @@ export default function HostReviewModal({
               </div>
             )}
 
-            {/* Actions */}
+            {/* ACTIONS */}
             <div className="flex gap-2 pt-2">
               <button
                 onClick={() =>

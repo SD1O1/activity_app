@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import Header from "@/components/layout/Header";
 import JoinRequestModal from "@/components/modals/JoinRequestModal";
 import HostReviewModal from "@/components/modals/HostReviewModal";
 import ChatModal from "@/components/modals/chat/ChatModal";
 import AuthModal from "@/components/modals/AuthModal";
+import ReportModal from "@/components/modals/ReportModal";
+import HostMiniProfile from "../profile/HostMiniProfile";
 
 import ActivityHeader from "./ActivityHeader";
 import ActivityMeta from "./ActivityMeta";
@@ -18,9 +21,18 @@ import { useViewerRole } from "@/hooks/useViewerRole";
 import { useJoinStatus } from "@/hooks/useJoinStatus";
 import { useUnreadChat } from "@/hooks/useUnreadChat";
 import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
+import { supabase } from "@/lib/supabaseClient";
 
 type Props = {
   activity: any;
+};
+
+type HostProfile = {
+  id: string;
+  name: string;
+  username: string;
+  avatar_url: string | null;
+  verified: boolean;
 };
 
 export default function ActivityDetail({ activity }: Props) {
@@ -35,23 +47,15 @@ export default function ActivityDetail({ activity }: Props) {
   const [openReview, setOpenReview] = useState(false);
   const [openChat, setOpenChat] = useState(false);
   const [openAuth, setOpenAuth] = useState(false);
+  const [openReport, setOpenReport] = useState(false);
+  const router = useRouter();
 
-  const { user, profileCompleted, loading } =
-    useClientAuthProfile();
-
-  type ActivityTagRelation = {
-    activity_tags: {
-      id: string;
-      name: string;
-    };
-  };
+  const { user, profileCompleted, loading } = useClientAuthProfile();
 
   const tags =
-    (activity.activity_tag_relations as
-      | ActivityTagRelation[]
-      | undefined)?.map((rel) => rel.activity_tags) ?? [];
-
-  const userId = user?.id ?? null;
+    activity.activity_tag_relations?.map(
+      (rel: any) => rel.activity_tags
+    ) ?? [];
 
   const canOpenChat =
     viewerRole === "host" ||
@@ -73,15 +77,11 @@ export default function ActivityDetail({ activity }: Props) {
     setOpenJoin(true);
   };
 
-  /* =========================
-     MAP LOGIC (FINAL)
-  ========================= */
-
+  /* MAP LOGIC */
   const isHost = viewerRole === "host";
   const isApprovedGuest = joinStatus === "approved";
   const showExactMap = isHost || isApprovedGuest;
 
-  // Always provide a fallback so map can mount
   const lat =
     showExactMap && activity.exact_lat != null
       ? activity.exact_lat
@@ -102,6 +102,17 @@ export default function ActivityDetail({ activity }: Props) {
         tags={tags}
       />
 
+      {/* HOST SUMMARY */}
+      <div className="px-4 mt-4">
+      {activity.host && (
+        <HostMiniProfile
+          host={activity.host}
+          clickable
+          size="md"
+        />
+      )}
+      </div>
+
       <ActivityMeta
         startsAt={activity.starts_at}
         location={activity.location_name}
@@ -111,7 +122,6 @@ export default function ActivityDetail({ activity }: Props) {
         lng={lng}
       />
 
-      {/* MAP — ALWAYS RENDER */}
       <ActivityLocationMap
         lat={Number(lat)}
         lng={Number(lng)}
@@ -121,12 +131,14 @@ export default function ActivityDetail({ activity }: Props) {
       <ActivityAbout description={activity.description} />
 
       <ActivityActions
+        activityId={activity.id}
         viewerRole={viewerRole}
         joinStatus={joinStatus}
         hasUnread={hasUnread}
         onRequestJoin={handleRequestJoin}
         onOpenChat={() => setOpenChat(true)}
         onOpenReview={() => setOpenReview(true)}
+        onReport={() => setOpenReport(true)}
       />
 
       <JoinRequestModal
@@ -135,7 +147,7 @@ export default function ActivityDetail({ activity }: Props) {
         activityId={activity.id}
         hostId={activity.host_id}
         questions={activity.questions || []}
-        userId={userId}
+        userId={user?.id ?? null}
         onSuccess={async () => {
           await computeJoinStatus();
           setOpenJoin(false);
@@ -159,10 +171,17 @@ export default function ActivityDetail({ activity }: Props) {
         />
       )}
 
-      <AuthModal
-        open={openAuth}
-        onClose={() => setOpenAuth(false)}
-      />
+      <AuthModal open={openAuth} onClose={() => setOpenAuth(false)} />
+
+      {user && (
+        <ReportModal
+          open={openReport}
+          onClose={() => setOpenReport(false)}
+          targetType="activity"
+          targetId={activity.id}
+          reporterId={user.id}
+        />
+      )}
     </main>
   );
 }

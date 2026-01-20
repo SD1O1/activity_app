@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import NotificationItem from "./NotificationItem";
 import { useNotifications } from "./NotificationContext";
+import { getBlockedUserIds } from "@/lib/blocking";
 
 type FilterType = "all" | "join" | "approved" | "chat";
 
@@ -33,13 +34,39 @@ export default function NotificationsView() {
 
       clearUnreadCount();
 
+      // 🔒 block filtering
+      const { blockedUserIds } = await getBlockedUserIds(
+        supabase,
+        user.id
+      );
+
       const { data: list } = await supabase
         .from("notifications")
-        .select("*")
+        .select(`
+          id,
+          type,
+          message,
+          created_at,
+          activity_id,
+          actor_id,
+          is_read,
+          profiles:actor_id (
+            id,
+            name,
+            avatar_url
+          )
+        `)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
-      setNotifications(list || []);
+      const filtered =
+        list?.filter(
+          (n) =>
+            !n.actor_id ||
+            !blockedUserIds.includes(n.actor_id)
+        ) || [];
+
+      setNotifications(filtered);
     };
 
     loadNotifications();
@@ -67,7 +94,7 @@ export default function NotificationsView() {
             <button
               key={tab.key}
               onClick={() => setActiveFilter(tab.key as FilterType)}
-              className={`px-3 py-1.5 text-sm rounded-full border transition ${
+              className={`px-3 py-1.5 text-sm rounded-full border ${
                 activeFilter === tab.key
                   ? "bg-black text-white border-black"
                   : "bg-white text-gray-600 border-gray-300"
@@ -79,7 +106,7 @@ export default function NotificationsView() {
         </div>
       </div>
 
-      {/* EMPTY STATE */}
+      {/* LIST */}
       {filteredNotifications.length === 0 ? (
         <div className="flex h-[50vh] items-center justify-center text-sm text-gray-500">
           No notifications in this category
@@ -89,11 +116,11 @@ export default function NotificationsView() {
           {filteredNotifications.map((n) => (
             <NotificationItem
               key={n.id}
+              actorName={n.profiles?.name}
+              actorAvatar={n.profiles?.avatar_url}
               message={n.message}
-              actor_name={n.actor_name}
-              actor_avatar={n.actor_avatar}
               time={formatTime(n.created_at)}
-              is_read={true}
+              isRead={n.is_read}
               onClick={() => {
                 if (n.activity_id) {
                   router.push(`/activity/${n.activity_id}`);

@@ -27,6 +27,7 @@ export default function ChatModal({
     bottomRef,
     getMessageStatusText,
     myId,
+    participants,
   } = useChat(open, activityId);
 
   if (!open) return null;
@@ -51,6 +52,7 @@ export default function ChatModal({
         <ChatMessages
           messages={messages}
           myId={myId}
+          participants={participants}
           bottomRef={bottomRef}
           getMessageStatusText={getMessageStatusText}
         />

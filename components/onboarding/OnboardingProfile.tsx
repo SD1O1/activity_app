@@ -41,6 +41,7 @@ export default function OnboardingProfile() {
   const fullPhone = `${form.countryCode}${form.phone}`;
 
   const [userId, setUserId] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -176,6 +177,17 @@ export default function OnboardingProfile() {
   .eq("id", auth.user.id);
 
   if (profileError) {
+    if (
+      profileError.code === "23505" ||
+      profileError.message?.includes("profiles_phone_unique")
+    ) {
+      setPhoneError(
+        "This phone number is already associated with another account."
+      );
+      setStep(0); // bring user back to phone step
+      return;
+    }
+  
     console.error("Profile update failed:", profileError);
     alert("Failed to save profile. Please try again.");
     return;
@@ -197,19 +209,15 @@ export default function OnboardingProfile() {
         <PhoneSlide
           countryCode={form.countryCode}
           phone={form.phone}
+          error={phoneError ?? undefined}
           onCountryCodeChange={(code) =>
             setForm((p) => ({ ...p, countryCode: code }))
           }
-          onPhoneChange={(phone) =>
-            setForm((p) => ({ ...p, phone }))
-          }
+          onPhoneChange={(phone) => {
+            setPhoneError(null);
+            setForm((p) => ({ ...p, phone }));
+          }}          
         />
-      )}
-
-      {form.phone.length > 0 && form.phone.length !== 10 && (
-        <p className="text-xs text-red-500 mt-1">
-          Enter a valid 10-digit phone number
-        </p>
       )}
 
       {step === 1 && (

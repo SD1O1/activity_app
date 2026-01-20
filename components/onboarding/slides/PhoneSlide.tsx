@@ -1,6 +1,7 @@
 type PhoneSlideProps = {
   countryCode: string;
   phone: string;
+  error?: string; // 👈 ADD THIS
   onCountryCodeChange: (code: string) => void;
   onPhoneChange: (phone: string) => void;
 };
@@ -8,6 +9,7 @@ type PhoneSlideProps = {
 export default function PhoneSlide({
   countryCode,
   phone,
+  error,
   onCountryCodeChange,
   onPhoneChange,
 }: PhoneSlideProps) {
@@ -45,6 +47,13 @@ export default function PhoneSlide({
           Phone number must be exactly 10 digits
         </p>
       )}
+
+      {error && (
+        <p className="text-xs text-red-600 mt-2">
+          {error}
+        </p>
+      )}
+
     </div>
   );
 }

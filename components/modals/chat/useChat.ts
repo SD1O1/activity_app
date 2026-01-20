@@ -4,13 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { Message, Participant } from "./types";
 
-export function useChat(
-  open: boolean,
-  activityId: string
-) {
+type ParticipantWithAvatar = Participant & {
+  avatar_url?: string | null;
+};
+
+export function useChat(open: boolean, activityId: string) {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [participants, setParticipants] = useState<ParticipantWithAvatar[]>([]);
   const [text, setText] = useState("");
   const [myId, setMyId] = useState<string | null>(null);
   const [isOtherTyping, setIsOtherTyping] = useState(false);
@@ -25,48 +26,70 @@ export function useChat(
     });
   }, []);
 
-  /* LOAD DATA */
+  /* LOAD CHAT DATA */
   useEffect(() => {
-    if (!open) return;
+    if (!open || !activityId || !myId) return;
 
     const load = async () => {
-      const { data: convo, error } = await supabase
+      // 1️⃣ Get conversation
+      const { data: convos, error } = await supabase
         .from("conversations")
         .select("id")
-        .eq("activity_id", activityId)
-        .maybeSingle();
+        .eq("activity_id", activityId);
 
-      if (error) {
-        console.error("Conversation fetch error:", error);
-        return;
-      }
+      if (error || !convos || convos.length === 0) return;
 
-      if (!convo) {
-        // No conversation exists yet
-        return;
-      }
+      const convoId = convos[0].id;
+      setConversationId(convoId);
 
-      setConversationId(convo.id);
-
-
+      // 2️⃣ Load messages
       const { data: msgs } = await supabase
         .from("messages")
         .select("*")
-        .eq("conversation_id", convo.id)
+        .eq("conversation_id", convoId)
         .order("created_at", { ascending: true });
 
       setMessages(msgs || []);
 
+      // 3️⃣ Load participants (NO JOIN)
       const { data: parts } = await supabase
         .from("conversation_participants")
         .select("user_id, last_seen_at")
-        .eq("conversation_id", convo.id);
+        .eq("conversation_id", convoId);
 
-      setParticipants(parts || []);
+      if (!parts || parts.length === 0) {
+        setParticipants([]);
+        return;
+      }
+
+      // 4️⃣ Load avatars separately
+      const userIds = parts.map(p => p.user_id);
+
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, avatar_url, username")
+        .in("id", userIds);
+
+        const profileMap = new Map(
+          (profiles || []).map(p => [
+            p.id,
+            { avatar_url: p.avatar_url, username: p.username },
+          ])
+        );
+        
+        setParticipants(
+          parts.map(p => ({
+            user_id: p.user_id,
+            last_seen_at: p.last_seen_at,
+            avatar_url: profileMap.get(p.user_id)?.avatar_url ?? null,
+            username: profileMap.get(p.user_id)?.username ?? null,
+          }))
+        );
+        
     };
 
     load();
-  }, [open, activityId]);
+  }, [open, activityId, myId]);
 
   /* REALTIME: MESSAGES */
   useEffect(() => {
@@ -82,8 +105,8 @@ export function useChat(
           table: "messages",
           filter: `conversation_id=eq.${conversationId}`,
         },
-        (payload) => {
-          setMessages((prev) => [...prev, payload.new as Message]);
+        payload => {
+          setMessages(prev => [...prev, payload.new as Message]);
         }
       )
       .subscribe();
@@ -93,7 +116,7 @@ export function useChat(
     };
   }, [conversationId]);
 
-  /* REALTIME: PARTICIPANTS */
+  /* REALTIME: PARTICIPANTS (SEEN UPDATES) */
   useEffect(() => {
     if (!conversationId) return;
 
@@ -107,15 +130,16 @@ export function useChat(
           table: "conversation_participants",
           filter: `conversation_id=eq.${conversationId}`,
         },
-        (payload) => {
+        payload => {
           const updated = payload.new as Participant;
 
-          setParticipants((prev) => {
-            const exists = prev.find(p => p.user_id === updated.user_id);
-            return exists
-              ? prev.map(p => p.user_id === updated.user_id ? updated : p)
-              : [...prev, updated];
-          });
+          setParticipants(prev =>
+            prev.map(p =>
+              p.user_id === updated.user_id
+                ? { ...p, last_seen_at: updated.last_seen_at }
+                : p
+            )
+          );
         }
       )
       .subscribe();
@@ -125,12 +149,25 @@ export function useChat(
     };
   }, [conversationId]);
 
-  /* FORCE RERENDER FOR SEEN */
+  /* MARK SEEN (ONLY WHEN CHAT IS OPEN) */
   useEffect(() => {
-    setMessages(prev => [...prev]);
-  }, [participants]);
+    if (!open) return;
+    if (!conversationId || !myId || messages.length === 0) return;
 
-  /* TYPING */
+    const lastIncoming = [...messages]
+      .reverse()
+      .find(m => m.sender_id !== myId);
+
+    if (!lastIncoming) return;
+
+    supabase
+      .from("conversation_participants")
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq("conversation_id", conversationId)
+      .eq("user_id", myId);
+  }, [open, conversationId, myId, messages.length]);
+
+  /* TYPING INDICATOR */
   useEffect(() => {
     if (!conversationId || !myId) return;
 
@@ -153,61 +190,44 @@ export function useChat(
     };
   }, [conversationId, myId]);
 
-  /* MARK SEEN */
-  useEffect(() => {
-    if (!open || !conversationId || !myId || messages.length === 0) return;
-
-    const lastIncoming = [...messages]
-      .reverse()
-      .find(m => m.sender_id !== myId);
-
-    if (!lastIncoming) return;
-
-    supabase
-      .from("conversation_participants")
-      .update({ last_seen_at: new Date().toISOString() })
-      .eq("conversation_id", conversationId)
-      .eq("user_id", myId)
-      .then(async () => {
-        const { data } = await supabase
-          .from("conversation_participants")
-          .select("user_id, last_seen_at")
-          .eq("conversation_id", conversationId);
-
-        if (data) setParticipants(data);
-      });
-  }, [open, conversationId, myId, messages.length]);
-
   /* SCROLL */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  /* MESSAGE META */
+  /* MESSAGE META (Seen / Sent — last message only) */
   const getMessageStatusText = (message: Message) => {
     if (!myId || message.sender_id !== myId) return null;
-
-    const other = participants.find(p => p.user_id !== myId);
+  
     const sentTime = new Date(message.created_at).toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
+  
+    const other = participants.find(p => p.user_id !== myId);
+  
+    if (!other?.last_seen_at) {
+      return `Sent at ${sentTime}`;
+    }
+  
+    const seenAt = new Date(other.last_seen_at);
+  
+    const isSeen =
+      seenAt.getTime() >= new Date(message.created_at).getTime();
+  
+    if (!isSeen) {
+      return `Sent at ${sentTime}`;
+    }
+  
+    const seenTime = seenAt.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  
+    return `Seen at ${seenTime}`;
+  };  
 
-    if (!other?.last_seen_at) return `Sent at ${sentTime}`;
-
-    const seen =
-      new Date(other.last_seen_at).getTime() >=
-      new Date(message.created_at).getTime();
-
-    return seen
-      ? `Seen at ${new Date(other.last_seen_at).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}`
-      : `Sent at ${sentTime}`;
-  };
-
-  /* SEND */
+  /* SEND MESSAGE */
   const send = async () => {
     if (!text.trim() || !conversationId || !myId) return;
 
@@ -238,5 +258,6 @@ export function useChat(
     bottomRef,
     getMessageStatusText,
     myId,
+    participants,
   };
 }

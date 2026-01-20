@@ -8,5 +8,7 @@ export type Message = {
   export type Participant = {
     user_id: string;
     last_seen_at: string | null;
-  };
+    avatar_url?: string | null;
+    username?: string | null;
+  };  
   

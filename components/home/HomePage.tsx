@@ -14,8 +14,6 @@ import SearchModal from "@/components/modals/SearchModal";
 import AuthModal from "@/components/modals/AuthModal";
 import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
 
-import Map from "@/components/map/Map";
-
 export default function HomePage() {
   const router = useRouter();
 
@@ -28,10 +26,18 @@ export default function HomePage() {
 
   useEffect(() => {
     const fetchActivities = async () => {
-      const { data, error } = await supabase
+      // 1️⃣ Fetch activities
+      const { data: activityRows, error } = await supabase
         .from("activities")
         .select(`
-          *,
+          id,
+          title,
+          category,
+          type,
+          starts_at,
+          public_lat,
+          public_lng,
+          host_id,
           activity_tag_relations (
             activity_tags (
               id,
@@ -42,9 +48,34 @@ export default function HomePage() {
         .order("created_at", { ascending: false })
         .limit(10);
 
-      if (!error && data) {
-        setActivities(data);
+      if (error || !activityRows) {
+        console.error("HOME ACTIVITY FETCH ERROR:", error);
+        setActivities([]);
+        return;
       }
+
+      // 2️⃣ Collect host IDs
+      const hostIds = Array.from(
+        new Set(activityRows.map((a) => a.host_id))
+      );
+
+      // 3️⃣ Fetch host profiles
+      const { data: hosts } = await supabase
+        .from("profiles")
+        .select("id, name, avatar_url, dob, verified")
+        .in("id", hostIds);
+
+      const hostMap = Object.fromEntries(
+        (hosts || []).map((h) => [h.id, h])
+      );
+
+      // 4️⃣ Attach host to each activity
+      const enrichedActivities = activityRows.map((a) => ({
+        ...a,
+        host: hostMap[a.host_id] || null,
+      }));
+
+      setActivities(enrichedActivities);
     };
 
     fetchActivities();
@@ -89,15 +120,10 @@ export default function HomePage() {
                 title={activity.title}
                 subtitle={activity.category}
                 distance="Nearby"
-                time={
-                  activity.starts_at
-                    ? new Date(
-                        activity.starts_at
-                      ).toLocaleString()
-                    : "Time not set"
-                }
+                time={new Date(activity.starts_at).toLocaleString()}
                 type={activity.type}
                 tags={tags}
+                host={activity.host}   // ✅ CONSISTENT
                 onClick={() =>
                   router.push(`/activity/${activity.id}`)
                 }
@@ -105,7 +131,6 @@ export default function HomePage() {
             );
           })}
         </div>
-
       </section>
 
       <SearchModal

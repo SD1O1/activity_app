@@ -83,20 +83,15 @@ export default function ActivitiesPageView({
                   title={activity.title}
                   subtitle={activity.category}
                   distance={
-                    activity.distanceKm != null
+                    activity.distanceKm
                       ? `${activity.distanceKm.toFixed(1)} km away`
                       : "Nearby"
                   }
-                  time={
-                    activity.starts_at
-                      ? new Date(activity.starts_at).toLocaleString()
-                      : "Time not set"
-                  }
+                  time={new Date(activity.starts_at).toLocaleString()}
                   type={activity.type}
                   tags={tags}
-                  onClick={() =>
-                    router.push(`/activity/${activity.id}`)
-                  }
+                  onClick={() => router.push(`/activity/${activity.id}`)}
+                  host={activity.host}
                 />
               </div>
             );
