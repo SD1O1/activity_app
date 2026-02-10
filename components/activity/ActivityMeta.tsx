@@ -8,7 +8,9 @@ type Props = {
   costRule: string;
   showLocation: boolean;
 
-  // 👇 ADD THESE
+  memberCount?: number;
+  maxMembers?: number;
+
   lat?: number | null;
   lng?: number | null;
 };
@@ -38,6 +40,8 @@ export default function ActivityMeta({
   location,
   costRule,
   showLocation,
+  memberCount,
+  maxMembers,
   lat,
   lng,
 }: Props) {
@@ -79,6 +83,13 @@ export default function ActivityMeta({
       <p>
         📍 {location}
       </p>
+
+      {typeof memberCount === "number" &&
+      typeof maxMembers === "number" && (
+        <p>
+          👥 {memberCount} / {maxMembers} joined
+        </p>
+      )}
 
       {/* DISTANCE */}
       {lat && lng && (

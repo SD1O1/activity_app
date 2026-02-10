@@ -19,6 +19,7 @@ export default function Page() {
 
     const fetchActivity = async () => {
       setLoading(true);
+      setNotFound(false);
 
       try {
         // 🔹 viewer (may be null)
@@ -26,38 +27,35 @@ export default function Page() {
           data: { user: viewer },
         } = await supabase.auth.getUser();
 
-        // 🔹 blocked users
-        const { blockedUserIds } = viewer
-          ? await getBlockedUserIds(supabase, viewer.id)
-          : { blockedUserIds: [] };
-
-        // 🔹 fetch activity (NO JOIN)
+        // 🔹 fetch activity
         const { data: activityData, error } = await supabase
-          .from("activities")
-          .select(`
-            id,
-            title,
-            description,
-            category,
-            type,
-            starts_at,
-            location_name,
-            cost_rule,
-            exact_lat,
-            exact_lng,
-            public_lat,
-            public_lng,
-            host_id,
-            questions,
-            activity_tag_relations (
-              activity_tags (
-                id,
-                name
-              )
+        .from("activities")
+        .select(`
+          id,
+          title,
+          description,
+          type,
+          status,
+          starts_at,
+          location_name,
+          cost_rule,
+          exact_lat,
+          exact_lng,
+          public_lat,
+          public_lng,
+          host_id,
+          questions,
+          member_count,
+          max_members,
+          activity_tag_relations (
+            activity_tags (
+              id,
+              name
             )
-          `)
-          .eq("id", id)
-          .single();
+          )
+        `)
+        .eq("id", id)
+        .single();
 
         if (error || !activityData) {
           setNotFound(true);
@@ -65,24 +63,27 @@ export default function Page() {
           return;
         }
 
-        // 🔒 block enforcement
-        if (
-          blockedUserIds.length > 0 &&
-          blockedUserIds.includes(activityData.host_id)
-        ) {
-          setNotFound(true);
-          setLoading(false);
-          return;
+        // 🔒 BLOCK ENFORCEMENT (❗ but NEVER block host)
+        if (viewer && viewer.id !== activityData.host_id) {
+          const { blockedUserIds } = await getBlockedUserIds(
+            supabase,
+            viewer.id
+          );
+
+          if (blockedUserIds.includes(activityData.host_id)) {
+            setNotFound(true);
+            setLoading(false);
+            return;
+          }
         }
 
-        // 🔹 preload host profile (SAFE & FAST)
+        // 🔹 preload host profile
         const { data: host } = await supabase
           .from("profiles")
           .select("id, username, name, avatar_url, verified")
           .eq("id", activityData.host_id)
           .single();
 
-        // 🔹 attach host directly (NO delay later)
         setActivity({
           ...activityData,
           host: host || null,

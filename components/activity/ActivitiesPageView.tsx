@@ -18,8 +18,6 @@ export default function ActivitiesPageView({
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
-
-  // 🔹 shrink map when user scrolls list (mobile UX)
   const [mapCollapsed, setMapCollapsed] = useState(false);
 
   useEffect(() => {
@@ -43,7 +41,9 @@ export default function ActivitiesPageView({
         }`}
       >
         <ActivitiesMap
-          activities={activities}
+          activities={activities.filter(
+            a => a.public_lat != null && a.public_lng != null
+          )}
           activeId={activeId}
           onSelect={(id) => {
             setActiveId(id);
@@ -76,22 +76,26 @@ export default function ActivitiesPageView({
                 id={`activity-${activity.id}`}
                 onClick={() => setActiveId(activity.id)}
                 className={`transition ${
-                  activeId === activity.id ? "ring-2 ring-black rounded-xl" : ""
+                  activeId === activity.id
+                    ? "ring-2 ring-black rounded-xl"
+                    : ""
                 }`}
               >
                 <ActivityCard
                   title={activity.title}
-                  subtitle={activity.category}
-                  distance={
-                    activity.distanceKm
-                      ? `${activity.distanceKm.toFixed(1)} km away`
-                      : "Nearby"
+                  subtitle={activity.category ?? "Activity"} // ✅ SAFE FALLBACK
+                  distance="Nearby"
+                  time={
+                    activity.starts_at
+                      ? new Date(activity.starts_at).toLocaleString()
+                      : ""
                   }
-                  time={new Date(activity.starts_at).toLocaleString()}
                   type={activity.type}
                   tags={tags}
-                  onClick={() => router.push(`/activity/${activity.id}`)}
-                  host={activity.host}
+                  host={activity.host ?? null}
+                  onClick={() =>
+                    router.push(`/activity/${activity.id}`)
+                  }
                 />
               </div>
             );

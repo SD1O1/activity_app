@@ -7,7 +7,11 @@ import AuthModal from "@/components/modals/AuthModal";
 import { supabase } from "@/lib/supabaseClient";
 import { useNotifications } from "@/components/notifications/NotificationContext";
 
-export default function Header() {
+type HeaderProps = {
+  rightSlot?: React.ReactNode;
+};
+
+export default function Header({ rightSlot }: HeaderProps) {
   const router = useRouter();
   const { unreadCount } = useNotifications();
 
@@ -15,16 +19,11 @@ export default function Header() {
   const [openAuth, setOpenAuth] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  /* ---------------------------------------------
-     AUTH STATE (CORRECT & REQUIRED)
-  --------------------------------------------- */
   useEffect(() => {
-    // initial session check
     supabase.auth.getSession().then(({ data }) => {
       setIsLoggedIn(!!data.session);
     });
 
-    // listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -52,27 +51,33 @@ export default function Header() {
 
         {/* RIGHT */}
         <div className="flex items-center gap-3">
-          {!isLoggedIn && (
-            <button
-              onClick={() => setOpenAuth(true)}
-              className="text-sm border px-3 py-1 rounded"
-            >
-              Login
-            </button>
-          )}
-
-          {isLoggedIn && (
-            <button
-              onClick={() => router.push("/notifications")}
-              className="relative"
-            >
-              🔔
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 min-w-[16px] rounded-full bg-red-500 text-white text-xs flex items-center justify-center px-1">
-                  {unreadCount}
-                </span>
+          {rightSlot ? (
+            rightSlot
+          ) : (
+            <>
+              {!isLoggedIn && (
+                <button
+                  onClick={() => setOpenAuth(true)}
+                  className="text-sm border px-3 py-1 rounded"
+                >
+                  Login
+                </button>
               )}
-            </button>
+
+              {isLoggedIn && (
+                <button
+                  onClick={() => router.push("/notifications")}
+                  className="relative"
+                >
+                  🔔
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-4 min-w-[16px] rounded-full bg-red-500 text-white text-xs flex items-center justify-center px-1">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+              )}
+            </>
           )}
         </div>
       </header>

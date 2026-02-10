@@ -17,6 +17,9 @@ export default function NotificationItem({
   actorAvatar,
   onClick,
 }: Props) {
+  const displayName = actorName || "Someone";
+  const initial = displayName.charAt(0).toUpperCase();
+
   return (
     <div
       onClick={onClick}
@@ -24,24 +27,30 @@ export default function NotificationItem({
         isRead ? "bg-white" : "bg-gray-100"
       }`}
     >
-      <div className="h-10 w-10 rounded-full bg-gray-300 overflow-hidden flex-shrink-0">
-        {actorAvatar && (
+      {/* AVATAR */}
+      <div className="h-10 w-10 rounded-full bg-gray-300 overflow-hidden flex-shrink-0 flex items-center justify-center text-sm font-medium text-gray-700">
+        {actorAvatar ? (
           <img
             src={actorAvatar}
-            alt={actorName}
+            alt={displayName}
             className="h-full w-full object-cover"
           />
+        ) : (
+          <span>{initial}</span>
         )}
       </div>
 
+      {/* CONTENT */}
       <div className="flex-1">
         <p className="text-sm text-gray-900">
           <span className="font-medium">
-            {actorName || "Someone"}
+            {displayName}
           </span>{" "}
           {message}
         </p>
-        <p className="mt-1 text-xs text-gray-500">{time}</p>
+        <p className="mt-1 text-xs text-gray-500">
+          {time}
+        </p>
       </div>
     </div>
   );

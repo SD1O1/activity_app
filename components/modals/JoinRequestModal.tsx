@@ -46,7 +46,11 @@ export default function JoinRequestModal({
   const handleSubmit = async () => {
     setError(null);
 
-    if (!userId) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
       setError("You must be logged in");
       return;
     }
@@ -65,9 +69,9 @@ export default function JoinRequestModal({
 
     setLoading(true);
 
-    // 🔒 BLOCK ENFORCEMENT (CRITICAL)
+    // 🔒 BLOCK ENFORCEMENT
     const { blockedUserIds } =
-      await getBlockedUserIds(supabase, userId);
+      await getBlockedUserIds(supabase, user.id);
 
     if (blockedUserIds.includes(hostId)) {
       setError(
@@ -77,38 +81,33 @@ export default function JoinRequestModal({
       return;
     }
 
-    // Prevent duplicate requests
-    const { data: existing } = await supabase
+    // ✅ UPSERT join request (THIS IS THE FIX)
+    const { error: upsertError } = await supabase
       .from("join_requests")
-      .select("id")
-      .eq("activity_id", activityId)
-      .eq("requester_id", userId)
-      .maybeSingle();
+      .upsert(
+        {
+          activity_id: activityId,
+          requester_id: user.id,
+          status: "pending",
+          answers: questions.length > 0 ? answers : [],
+        },
+        {
+          onConflict: "activity_id,requester_id",
+        }
+      );
 
-    if (existing) {
+    if (upsertError) {
+      setError(upsertError.message);
       setLoading(false);
       return;
     }
 
-    const { error } = await supabase
-      .from("join_requests")
-      .insert({
-        activity_id: activityId,
-        requester_id: userId,
-        status: "pending",
-        answers: questions.length > 0 ? answers : [],
-      });
-
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-      return;
-    }
-
+    // 🔔 Notification (optional but fine)
     await supabase.from("notifications").insert({
       user_id: hostId,
+      actor_id: user.id,
       type: "join_request",
-      message: "New join request for your activity",
+      message: "sent a join request",
       activity_id: activityId,
     });
 
@@ -131,7 +130,6 @@ export default function JoinRequestModal({
           </button>
         </div>
 
-        {/* Questions */}
         {questions.length > 0 && (
           <div className="space-y-4">
             {questions.map((q, index) => (

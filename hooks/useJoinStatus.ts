@@ -16,19 +16,46 @@ export function useJoinStatus(activityId: string, hostId: string) {
       return;
     }
 
+    // Host is always approved
     if (user.id === hostId) {
       setJoinStatus("approved");
       return;
     }
 
-    const { data } = await supabase
+    // 1️⃣ Check active membership FIRST (source of truth)
+    const { data: member } = await supabase
+      .from("activity_members")
+      .select("id")
+      .eq("activity_id", activityId)
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (member) {
+      setJoinStatus("approved");
+      return;
+    }
+
+    // 2️⃣ Fall back to join_requests
+    const { data: request } = await supabase
       .from("join_requests")
       .select("status")
       .eq("activity_id", activityId)
       .eq("requester_id", user.id)
-      .limit(1);
+      .maybeSingle();
 
-    setJoinStatus(data?.[0]?.status ?? "none");
+    if (request?.status === "pending") {
+      setJoinStatus("pending");
+      return;
+    }
+
+    if (request?.status === "rejected") {
+      setJoinStatus("rejected");
+      return;
+    }
+
+    // 3️⃣ Otherwise: not joined
+    setJoinStatus("none");
   };
 
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { getBlockedUserIds } from "@/lib/blocking";
+import { useParams } from "next/navigation";
 import HostMiniProfile from "@/components/profile/HostMiniProfile";
 
 /* =========================
@@ -11,6 +11,7 @@ import HostMiniProfile from "@/components/profile/HostMiniProfile";
 
 type RequesterProfile = {
   id: string;
+  username: string | null;
   name: string | null;
   avatar_url: string | null;
   dob: string | null;
@@ -18,15 +19,15 @@ type RequesterProfile = {
 };
 
 type JoinRequest = {
+  id: string; // join_requests.id
   requester_id: string;
   answers: string[];
-  profiles: RequesterProfile | null;
+  profile: RequesterProfile | null;
 };
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  activityId: string;
   hostId: string;
   onResolved: () => Promise<void>;
 };
@@ -34,19 +35,25 @@ type Props = {
 export default function HostReviewModal({
   open,
   onClose,
-  activityId,
   hostId,
   onResolved,
 }: Props) {
+  const params = useParams();
+  const activityId = params?.id as string | undefined;
+
   const [requests, setRequests] = useState<JoinRequest[]>([]);
   const [questions, setQuestions] = useState<string[]>([]);
   const [resolving, setResolving] = useState(false);
 
+  /* =========================
+     LOAD PENDING REQUESTS
+  ========================= */
+
   useEffect(() => {
-    if (!open) return;
+    if (!open || !activityId) return;
 
     const load = async () => {
-      // Fetch activity questions
+      // 1️⃣ Load activity questions
       const { data: activity } = await supabase
         .from("activities")
         .select("questions")
@@ -55,125 +62,91 @@ export default function HostReviewModal({
 
       setQuestions(activity?.questions || []);
 
-      // Fetch pending join requests WITH requester profile
+      // 2️⃣ Load pending join requests
       const { data: joins } = await supabase
-      .from("join_requests")
-      .select(`
-        requester_id,
-        answers,
-        profiles:requester_id (
-          id,
-          name,
-          avatar_url,
-          dob,
-          verified
-        )
-      `)
-      .eq("activity_id", activityId)
-      .eq("status", "pending")
-      .returns<JoinRequest[]>(); // ✅ THIS IS THE FIX
-    
-    setRequests(joins || []);    
+        .from("join_requests")
+        .select("id, requester_id, answers")
+        .eq("activity_id", activityId)
+        .eq("status", "pending");
+
+      if (!joins || joins.length === 0) {
+        setRequests([]);
+        return;
+      }
+
+      // 3️⃣ Load requester profiles (IMPORTANT: include username)
+      const requesterIds = joins.map(j => j.requester_id);
+
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, username, name, avatar_url, dob, verified")
+        .in("id", requesterIds);
+
+      const profileMap = new Map(
+        (profiles || []).map(p => [p.id, p])
+      );
+
+      setRequests(
+        joins.map(j => ({
+          ...j,
+          profile: profileMap.get(j.requester_id) || null,
+        }))
+      );
     };
 
     load();
   }, [open, activityId]);
 
-  const resolve = async (
-    requesterId: string,
-    status: "approved" | "rejected"
-  ) => {
-    if (resolving || !hostId) return;
+  /* =========================
+     APPROVE / REJECT
+  ========================= */
 
+  const handleApprove = async (joinRequestId: string) => {
+    if (resolving) return;
     setResolving(true);
 
-    // 🔒 BLOCK ENFORCEMENT
-    const { blockedUserIds } =
-      await getBlockedUserIds(supabase, hostId);
-
-    if (blockedUserIds.includes(requesterId)) {
-      setResolving(false);
-      return;
-    }
-
-    // Update join request
-    await supabase
-      .from("join_requests")
-      .update({ status })
-      .eq("activity_id", activityId)
-      .eq("requester_id", requesterId)
-      .eq("status", "pending");
-
-    // Notify requester
-    await supabase.from("notifications").insert({
-      user_id: requesterId,
-      type: status,
-      message:
-        status === "approved"
-          ? "Your request was approved"
-          : "Your request was declined",
-      activity_id: activityId,
-      actor_id: hostId,
+    const res = await fetch("/api/activities/approve-join", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ joinRequestId }),
     });
 
-    if (status === "rejected") {
-      setRequests((prev) =>
-        prev.filter((r) => r.requester_id !== requesterId)
-      );
+    if (!res.ok) {
+      console.error("Approve failed");
       setResolving(false);
-      await onResolved();
       return;
     }
 
-    // Conversation logic (unchanged)
-    const { data: existingConversation } = await supabase
-      .from("conversations")
-      .select("id")
-      .eq("activity_id", activityId)
-      .maybeSingle();
-
-    let conversationId: string;
-
-    if (existingConversation) {
-      conversationId = existingConversation.id;
-    } else {
-      const { data: newConversation } = await supabase
-        .from("conversations")
-        .insert({ activity_id: activityId })
-        .select("id")
-        .single();
-
-      if (!newConversation) {
-        setResolving(false);
-        return;
-      }
-
-      conversationId = newConversation.id;
-
-      await supabase
-        .from("conversation_participants")
-        .insert({
-          conversation_id: conversationId,
-          user_id: hostId,
-        });
-    }
-
-    await supabase
-      .from("conversation_participants")
-      .insert({
-        conversation_id: conversationId,
-        user_id: requesterId,
-      });
-
-    setRequests((prev) =>
-      prev.filter((r) => r.requester_id !== requesterId)
-    );
+    // Remove by join request ID
+    setRequests(prev => prev.filter(r => r.id !== joinRequestId));
 
     setResolving(false);
     await onResolved();
   };
 
+  const handleReject = async (
+    joinRequestId: string,
+    requesterId: string
+  ) => {
+    if (resolving || !activityId) return;
+    setResolving(true);
+
+    await supabase
+      .from("join_requests")
+      .update({ status: "rejected" })
+      .eq("id", joinRequestId);
+
+    // Remove by join request ID (IMPORTANT FIX)
+    setRequests(prev => prev.filter(r => r.id !== joinRequestId));
+
+    setResolving(false);
+  };
+
   if (!open) return null;
+
+  /* =========================
+     UI
+  ========================= */
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end">
@@ -186,21 +159,19 @@ export default function HostReviewModal({
           </p>
         )}
 
-        {requests.map((r) => (
+        {requests.map(r => (
           <div
-            key={r.requester_id}
+            key={r.id}
             className="mb-4 rounded-xl border p-3 space-y-3"
           >
-            {/* REQUESTER INFO */}
-            {r.profiles && (
+            {r.profile && (
               <HostMiniProfile
-                host={r.profiles}
+                host={r.profile}
                 clickable
                 size="sm"
               />
             )}
 
-            {/* QUESTIONS */}
             {questions.length > 0 && (
               <div className="space-y-2">
                 {questions.map((q, i) => (
@@ -216,21 +187,19 @@ export default function HostReviewModal({
               </div>
             )}
 
-            {/* ACTIONS */}
             <div className="flex gap-2 pt-2">
               <button
                 onClick={() =>
-                  resolve(r.requester_id, "rejected")
+                  handleReject(r.id, r.requester_id)
                 }
                 disabled={resolving}
                 className="flex-1 border rounded-xl py-2 text-sm"
               >
                 Decline
               </button>
+
               <button
-                onClick={() =>
-                  resolve(r.requester_id, "approved")
-                }
+                onClick={() => handleApprove(r.id)}
                 disabled={resolving}
                 className="flex-1 bg-black text-white rounded-xl py-2 text-sm"
               >

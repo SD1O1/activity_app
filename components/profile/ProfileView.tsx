@@ -5,44 +5,124 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import EditProfileModal from "../modals/editProfile";
 import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
+import ActivityCard from "@/components/cards/ActivityCard";
 
 export default function ProfileView() {
   const router = useRouter();
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  
   const { user } = useClientAuthProfile();
   const userId = user?.id;
 
+  const [profile, setProfile] = useState<any>(null);
+  const [hostedActivities, setHostedActivities] = useState<any[]>([]);
+  const [joinedActivities, setJoinedActivities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+
+  const [activityTab, setActivityTab] = useState<"hosted" | "joined">("hosted");
+
+  /* -------------------- LOAD PROFILE -------------------- */
   const loadProfile = async () => {
     if (!userId) return;
-  
-    setLoading(true);
-  
-    const { data, error } = await supabase
+
+    const { data } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", userId)
       .single();
-  
-    if (error) {
-      console.error("Failed to load profile:", error);
-      setLoading(false);
-      return;
-    }
-  
-    setProfile(data);
-    setLoading(false);
-  };  
 
-  useEffect(() => {
-    loadProfile();
-  }, [userId]);  
-
-  const refetchProfile = async () => {
-    await loadProfile();
+    if (data) setProfile(data);
   };
+
+  /* -------------------- LOAD HOSTED ACTIVITIES -------------------- */
+  const loadHostedActivities = async () => {
+    if (!userId) return;
+
+    const { data } = await supabase
+      .from("activities")
+      .select(`
+        id,
+        title,
+        type,
+        starts_at,
+        location_name,
+        host_id,
+        status,
+        activity_tag_relations (
+          activity_tags (
+            id,
+            name
+          )
+        )
+      `)
+      .eq("host_id", userId)
+      .neq("status", "deleted")
+      .order("starts_at", { ascending: true });
+
+    if (data) {
+      setHostedActivities(
+        data.map((a) => ({
+          ...a,
+          host: profile,
+        }))
+      );
+    }
+  };
+
+  /* -------------------- LOAD JOINED ACTIVITIES -------------------- */
+  const loadJoinedActivities = async () => {
+    if (!userId) return;
+
+    const { data } = await supabase
+      .from("activity_members")
+      .select(`
+        activity_id,
+        activities (
+          id,
+          title,
+          type,
+          starts_at,
+          location_name,
+          host_id,
+          status,
+          activity_tag_relations (
+            activity_tags (
+              id,
+              name
+            )
+          )
+        )
+      `)
+      .eq("user_id", userId)
+      .eq("status", "active");
+
+    if (!data) return;
+
+    const joined = data
+      .map((m: any) => m.activities)
+      .filter(
+        (a: any) =>
+          a &&
+          a.status !== "deleted" &&
+          a.host_id !== userId
+      );
+
+    setJoinedActivities(joined);
+  };
+
+  /* -------------------- INIT -------------------- */
+  useEffect(() => {
+    if (!userId) return;
+
+    const loadAll = async () => {
+      setLoading(true);
+      await loadProfile();
+      await loadHostedActivities();
+      await loadJoinedActivities();
+      setLoading(false);
+    };
+
+    loadAll();
+  }, [userId]);
 
   const getAge = (dob?: string) => {
     if (!dob) return "--";
@@ -50,66 +130,57 @@ export default function ProfileView() {
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
     return age;
   };
 
+  if (loading) {
+    return (
+      <p className="p-6 text-sm text-gray-500">
+        Loading profile…
+      </p>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-white relative">
-      {/* Profile header */}
+      {/* PROFILE HEADER */}
       <section className="flex flex-col items-center px-4 py-6">
-        <div className="relative">
-          <div className="h-24 w-24 rounded-full bg-gray-300 overflow-hidden">
-            {profile?.avatar_url && (
-              <img
-                src={profile.avatar_url}
-                alt="Profile"
-                className="h-full w-full object-cover"
-              />
-            )}
-          </div>
-
-          {profile?.verification_status === "verified" && (
-            <span className="absolute bottom-0 right-0 bg-black text-white text-xs px-2 py-0.5 rounded-full">
-              ✓
-            </span>
+        <div className="h-24 w-24 rounded-full bg-gray-300 overflow-hidden">
+          {profile?.avatar_url && (
+            <img
+              src={profile.avatar_url}
+              alt="Profile"
+              className="h-full w-full object-cover"
+            />
           )}
         </div>
 
-        {loading ? (
-          <p className="mt-4 text-sm text-gray-500">
-            Loading profile…
+        <h2 className="mt-4 text-lg font-semibold">
+          {profile?.name || "Your name"}, {getAge(profile?.dob)}
+        </h2>
+
+        {profile?.city && (
+          <p className="mt-1 text-sm text-gray-500">
+            📍 {profile.city}
           </p>
-        ) : (
-          <>
-            <h2 className="mt-4 text-lg font-semibold">
-              {profile?.name || "Your name"}, {getAge(profile?.dob)}
-            </h2>
-
-            {profile?.city?.trim() && (
-              <p className="mt-1 text-sm text-gray-500 flex items-center gap-1">
-                <span>📍</span>
-                <span>
-                  {profile.city.trim().charAt(0).toUpperCase() +
-                    profile.city.trim().slice(1)}
-                </span>
-              </p>
-            )}
-
-            <p className="mt-1 text-sm text-gray-600 text-center">
-              {profile?.bio || "Tell people something about you"}
-            </p>
-          </>
         )}
+
+        <p className="mt-2 text-sm text-gray-600 text-center">
+          {profile?.bio || "Tell people something about you"}
+        </p>
+
+        <button
+          onClick={() => setIsEditOpen(true)}
+          className="mt-3 text-sm font-semibold underline"
+        >
+          Edit profile
+        </button>
       </section>
 
-      {/* Interests */}
+      {/* INTERESTS */}
       <section className="px-4 mt-6">
-        <h3 className="text-sm font-semibold mb-2">
-          Interests
-        </h3>
+        <h3 className="text-sm font-semibold mb-2">Interests</h3>
 
         {profile?.interests?.length ? (
           <div className="flex flex-wrap gap-2">
@@ -127,53 +198,104 @@ export default function ProfileView() {
             No interests added yet
           </p>
         )}
-
-        <p className="mt-3 text-xs text-gray-400">
-          All users verify their phone numbers. Profile photo verification is shown by a checkmark.
-        </p>
       </section>
 
-      {/* Activities Created */}
+      {/* ACTIVITY TOGGLE */}
       <section className="px-4 mt-8">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold">
-            Activities Created
-          </h3>
-          <span className="text-xs text-gray-500">
-            0
-          </span>
-        </div>
+        <div className="flex rounded-xl border overflow-hidden">
+          <button
+            onClick={() => setActivityTab("hosted")}
+            className={`flex-1 py-3 text-sm font-semibold ${
+              activityTab === "hosted"
+                ? "bg-black text-white"
+                : "bg-white text-gray-600"
+            }`}
+          >
+            Hosted ({hostedActivities.length})
+          </button>
 
-        <div className="space-y-3">
-          <div className="rounded-lg border p-3 text-sm text-gray-500">
-            No activities created yet
-          </div>
+          <button
+            onClick={() => setActivityTab("joined")}
+            className={`flex-1 py-3 text-sm font-semibold ${
+              activityTab === "joined"
+                ? "bg-black text-white"
+                : "bg-white text-gray-600"
+            }`}
+          >
+            Joined ({joinedActivities.length})
+          </button>
         </div>
       </section>
 
-      {/* Activities Completed */}
-      <section className="px-4 mt-8">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold">
-            Activities Completed
-          </h3>
-          <span className="text-xs text-gray-500">
-            0
-          </span>
-        </div>
+      {/* ACTIVITIES LIST */}
+      <section className="px-4 mt-6">
+        {activityTab === "hosted" && (
+          <>
+            {hostedActivities.length === 0 ? (
+              <div className="rounded-lg border p-3 text-sm text-gray-500">
+                You haven’t created any activities yet.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {hostedActivities.map((activity) => (
+                  <ActivityCard
+                    key={activity.id}
+                    title={activity.title}
+                    subtitle="Hosted by you"
+                    distance=""
+                    time={new Date(activity.starts_at).toLocaleString()}
+                    type={activity.type}
+                    tags={
+                      activity.activity_tag_relations?.map(
+                        (rel: any) => rel.activity_tags
+                      ) ?? []
+                    }
+                    host={profile}
+                    hideHost
+                    onClick={() =>
+                      router.push(`/activity/${activity.id}`)
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
 
-        <div className="space-y-3">
-          <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-400">
-            No completed activities yet
-          </div>
-        </div>
-
-        <p className="mt-2 text-xs text-gray-400">
-          Completed activities help others understand how active you are on the app.
-        </p>
+        {activityTab === "joined" && (
+          <>
+            {joinedActivities.length === 0 ? (
+              <div className="rounded-lg border p-3 text-sm text-gray-500">
+                You haven’t joined any activities yet.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {joinedActivities.map((activity) => (
+                  <ActivityCard
+                    key={activity.id}
+                    title={activity.title}
+                    subtitle="You joined this activity"
+                    distance=""
+                    time={new Date(activity.starts_at).toLocaleString()}
+                    type={activity.type}
+                    tags={
+                      activity.activity_tag_relations?.map(
+                        (rel: any) => rel.activity_tags
+                      ) ?? []
+                    }
+                    onClick={() =>
+                      router.push(`/activity/${activity.id}`)
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </section>
 
-      {/* Create activity */}
+
+      {/* CREATE ACTIVITY */}
       <button
         onClick={() => router.push("/create")}
         className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-black text-white text-2xl flex items-center justify-center"
@@ -181,25 +303,18 @@ export default function ProfileView() {
         +
       </button>
 
-      {/* Edit profile */}
-      <button
-        onClick={() => setIsEditOpen(true)}
-        className="mt-3 text-sm font-semibold text-black underline"
-      >
-        Edit profile
-      </button>
-
       {isEditOpen && userId && (
         <EditProfileModal
           userId={userId}
           onClose={() => setIsEditOpen(false)}
-          onSaved={() => {
+          onSaved={async () => {
             setIsEditOpen(false);
-            refetchProfile();
+            await loadProfile();
+            await loadHostedActivities();
+            await loadJoinedActivities();
           }}
         />
       )}
-
     </main>
   );
 }

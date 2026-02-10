@@ -21,6 +21,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
   const [category, setCategory] = useState("");
   const [date, setDate] = useState("");
   const [type, setType] = useState<"group" | "one-on-one">("group");
+  const [maxMembers, setMaxMembers] = useState<number>(2);
   const [loading, setLoading] = useState(false);
   const [costRule, setCostRule] = useState("everyone_pays");
   const [description, setDescription] = useState("");
@@ -129,22 +130,22 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
     const { public_lat, public_lng } = getPublicCoords(location.lat, location.lng);
     
     const { data: activity, error } = await supabase
-      .from("activities")
-      .insert({
-        title,
-        category,
-        description,
-        location_name: location.name,
-        exact_lat: location.lat,
-        exact_lng: location.lng,
-        public_lat,
-        public_lng,
-        starts_at: date,
-        type,
-        cost_rule: costRule,
-        host_id: userId,
-        questions: cleanedQuestions,
-      })
+    .from("activities")
+    .insert({
+      title,
+      description,
+      location_name: location.name,
+      exact_lat: location.lat,
+      exact_lng: location.lng,
+      public_lat,
+      public_lng,
+      starts_at: date,
+      type,
+      cost_rule: costRule,
+      host_id: userId,
+      questions: cleanedQuestions,
+      max_members: type === "one-on-one" ? 2 : maxMembers,
+    })
       .select()
       .single();
     
@@ -256,6 +257,28 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
           </button>
         </div>
       </div>
+
+      {type === "group" && (
+        <div className="mb-5">
+          <label className="text-sm font-medium">
+            How many people are you looking for?
+          </label>
+
+          <input
+            type="number"
+            min={2}
+            value={maxMembers}
+            onChange={(e) => setMaxMembers(Number(e.target.value))}
+            className="mt-2 w-full rounded-xl border px-4 py-3"
+            placeholder="e.g. 5"
+          />
+
+          <p className="mt-1 text-xs text-gray-500">
+            Including you
+          </p>
+        </div>
+      )}
+
 
       {/* Location */}
       <div className="mb-5">

@@ -26,13 +26,17 @@ export default function HomePage() {
 
   useEffect(() => {
     const fetchActivities = async () => {
-      // 1️⃣ Fetch activities
-      const { data: activityRows, error } = await supabase
+      // 🔹 viewer (may be null)
+      const {
+        data: { user: viewer },
+      } = await supabase.auth.getUser();
+
+      // 🔹 fetch activities
+      let query = supabase
         .from("activities")
         .select(`
           id,
           title,
-          category,
           type,
           starts_at,
           public_lat,
@@ -45,8 +49,16 @@ export default function HomePage() {
             )
           )
         `)
+        .eq("status", "open")
         .order("created_at", { ascending: false })
         .limit(10);
+
+      // 🔹 HIDE OWN ACTIVITIES (INTENTIONAL)
+      if (viewer) {
+        query = query.neq("host_id", viewer.id);
+      }
+
+      const { data: activityRows, error } = await query;
 
       if (error || !activityRows) {
         console.error("HOME ACTIVITY FETCH ERROR:", error);
@@ -54,12 +66,12 @@ export default function HomePage() {
         return;
       }
 
-      // 2️⃣ Collect host IDs
+      // 🔹 collect host IDs
       const hostIds = Array.from(
         new Set(activityRows.map((a) => a.host_id))
       );
 
-      // 3️⃣ Fetch host profiles
+      // 🔹 fetch host profiles
       const { data: hosts } = await supabase
         .from("profiles")
         .select("id, name, avatar_url, dob, verified")
@@ -69,7 +81,7 @@ export default function HomePage() {
         (hosts || []).map((h) => [h.id, h])
       );
 
-      // 4️⃣ Attach host to each activity
+      // 🔹 attach host to activity
       const enrichedActivities = activityRows.map((a) => ({
         ...a,
         host: hostMap[a.host_id] || null,
@@ -123,7 +135,7 @@ export default function HomePage() {
                 time={new Date(activity.starts_at).toLocaleString()}
                 type={activity.type}
                 tags={tags}
-                host={activity.host}   // ✅ CONSISTENT
+                host={activity.host}
                 onClick={() =>
                   router.push(`/activity/${activity.id}`)
                 }

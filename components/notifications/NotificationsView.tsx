@@ -21,11 +21,12 @@ export default function NotificationsView() {
 
   useEffect(() => {
     const loadNotifications = async () => {
-      const { data } = await supabase.auth.getUser();
-      const user = data.user;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
-      // mark all as read
+      /* mark all as read */
       await supabase
         .from("notifications")
         .update({ is_read: true })
@@ -34,13 +35,14 @@ export default function NotificationsView() {
 
       clearUnreadCount();
 
-      // 🔒 block filtering
+      /* blocked users */
       const { blockedUserIds } = await getBlockedUserIds(
         supabase,
         user.id
       );
 
-      const { data: list } = await supabase
+      /* fetch notifications (NO JOIN) */
+      const { data: list, error } = await supabase
         .from("notifications")
         .select(`
           id,
@@ -49,28 +51,51 @@ export default function NotificationsView() {
           created_at,
           activity_id,
           actor_id,
-          is_read,
-          profiles:actor_id (
-            id,
-            name,
-            avatar_url
-          )
+          is_read
         `)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
-      const filtered =
-        list?.filter(
+      if (error || !list) {
+        setNotifications([]);
+        return;
+      }
+
+      /* collect valid actor ids */
+      const actorIds = Array.from(
+        new Set(list.map((n) => n.actor_id).filter(Boolean))
+      );
+
+      /* fetch actor profiles safely */
+      let actorMap: Record<string, any> = {};
+      if (actorIds.length > 0) {
+        const { data: actors } = await supabase
+          .from("profiles")
+          .select("id, name, avatar_url")
+          .in("id", actorIds);
+
+        actorMap = Object.fromEntries(
+          (actors || []).map((a) => [a.id, a])
+        );
+      }
+
+      /* enrich + block filter */
+      const enriched = list
+        .filter(
           (n) =>
             !n.actor_id ||
             !blockedUserIds.includes(n.actor_id)
-        ) || [];
+        )
+        .map((n) => ({
+          ...n,
+          actor: n.actor_id ? actorMap[n.actor_id] : null,
+        }));
 
-      setNotifications(filtered);
+      setNotifications(enriched);
     };
 
     loadNotifications();
-  }, []);
+  }, [clearUnreadCount]);
 
   const filteredNotifications = notifications.filter((n) => {
     if (activeFilter === "all") return true;
@@ -116,8 +141,8 @@ export default function NotificationsView() {
           {filteredNotifications.map((n) => (
             <NotificationItem
               key={n.id}
-              actorName={n.profiles?.name}
-              actorAvatar={n.profiles?.avatar_url}
+              actorName={n.actor?.name}
+              actorAvatar={n.actor?.avatar_url}
               message={n.message}
               time={formatTime(n.created_at)}
               isRead={n.is_read}

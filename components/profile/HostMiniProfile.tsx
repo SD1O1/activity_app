@@ -19,7 +19,7 @@ export default function HostMiniProfile({
   const handleClick = () => {
     if (!clickable) return;
     if (!host.username) return; // ✅ guard
-    router.push(`/profile/u/${host.username}`);
+    router.push(`/u/${host.username}`);
   };
 
   return (

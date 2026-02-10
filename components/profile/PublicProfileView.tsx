@@ -2,8 +2,9 @@ import { notFound } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabaseServer";
 import { PublicProfileHeader } from "./PublicProfileHeader";
 import { ProfileCredibility } from "./ProfileCredibility";
+import Link from "next/link";
 
-// Utility to calculate age
+/* Utility to calculate age */
 function getAge(dob: string | null) {
   if (!dob) return null;
   const birth = new Date(dob);
@@ -25,12 +26,12 @@ export async function PublicProfileView({
 }: PublicProfileViewProps) {
   const supabase = await createSupabaseServer();
 
-  // 1️⃣ Get viewer (logged-in user, may be null)
+  /* 1️⃣ Viewer (may be null) */
   const {
     data: { user: viewer },
   } = await supabase.auth.getUser();
 
-  // 2️⃣ Fetch profile by username
+  /* 2️⃣ Fetch profile */
   const { data: profile, error } = await supabase
     .from("profiles")
     .select(`
@@ -53,7 +54,7 @@ export async function PublicProfileView({
     notFound();
   }
 
-  // 3️⃣ ENFORCE BLOCKING (critical)
+  /* 3️⃣ Blocking enforcement */
   if (viewer) {
     const { data: block } = await supabase
       .from("blocks")
@@ -72,13 +73,13 @@ export async function PublicProfileView({
   const isSelf = viewer?.id === profile.id;
   const age = getAge(profile.dob);
 
-  // 4️⃣ Credibility counts
+  /* 4️⃣ Credibility counts */
   const [{ count: hostedCount }, { count: joinedCount }] =
     await Promise.all([
       supabase
         .from("activities")
         .select("id", { count: "exact", head: true })
-        .eq("created_by", profile.id),
+        .eq("host_id", profile.id),
 
       supabase
         .from("join_requests")
@@ -86,6 +87,21 @@ export async function PublicProfileView({
         .eq("user_id", profile.id)
         .eq("status", "approved"),
     ]);
+
+  /* 5️⃣ Hosted activities (public-safe) */
+  const { data: hostedActivities } = await supabase
+    .from("activities")
+    .select(`
+      id,
+      title,
+      type,
+      starts_at,
+      location_name,
+      public_lat,
+      public_lng
+    `)
+    .eq("host_id", profile.id)
+    .order("starts_at", { ascending: true });
 
   return (
     <div className="p-6 space-y-6">
@@ -106,6 +122,7 @@ export async function PublicProfileView({
         joinedCount={joinedCount ?? 0}
       />
 
+      {/* About */}
       {profile.bio && (
         <div>
           <h2 className="font-medium mb-1">About</h2>
@@ -113,6 +130,7 @@ export async function PublicProfileView({
         </div>
       )}
 
+      {/* Interests */}
       {profile.interests && profile.interests.length > 0 && (
         <div>
           <h2 className="font-medium mb-2">Interests</h2>
@@ -128,6 +146,43 @@ export async function PublicProfileView({
           </div>
         </div>
       )}
+
+      {/* Hosted activities */}
+      <div>
+        <h2 className="font-medium mb-2">
+          Hosted activities
+        </h2>
+
+        {!hostedActivities || hostedActivities.length === 0 ? (
+          <p className="text-sm text-gray-500">
+            No activities hosted yet.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {hostedActivities.map((activity) => (
+              <Link
+              key={activity.id}
+              href={`/activity/${activity.id}`}
+              className="block rounded-lg border p-3 hover:bg-gray-50"
+            >
+              <h3 className="font-medium">
+                {activity.title}
+              </h3>
+            
+              <p className="text-xs text-gray-500 mt-1">
+                {new Date(activity.starts_at).toLocaleString()}
+              </p>
+            
+              {activity.location_name && (
+                <p className="text-xs text-gray-400 mt-1">
+                  📍 {activity.location_name}
+                </p>
+              )}
+            </Link>            
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,5 +1,4 @@
 import HostMiniProfile from "@/components/profile/HostMiniProfile";
-
 import { Host } from "@/types/host";
 
 type ActivityCardProps = {
@@ -9,7 +8,8 @@ type ActivityCardProps = {
   time: string;
   type: "group" | "one-on-one";
   tags?: { id: string; name: string }[];
-  host?: Host; // 🔥 FIXED
+  host?: Host;
+  hideHost?: boolean; // 👈 NEW
   onClick?: () => void;
 };
 
@@ -20,6 +20,7 @@ export default function ActivityCard({
   time,
   type,
   host,
+  hideHost = false, // 👈 DEFAULT
   onClick,
   tags,
 }: ActivityCardProps) {
@@ -28,16 +29,14 @@ export default function ActivityCard({
       onClick={onClick}
       className="cursor-pointer rounded-xl border bg-white p-4 shadow-sm space-y-3"
     >
-      {/* HOST */}
-      {host ? (
-  <HostMiniProfile
-    host={host}
-    clickable
-    size="sm"
-  />
-) : null}
-
-
+      {/* HOST (optional) */}
+      {!hideHost && host && (
+        <HostMiniProfile
+          host={host}
+          clickable
+          size="sm"
+        />
+      )}
 
       {/* TITLE + TYPE */}
       <div className="flex items-start justify-between gap-3">
