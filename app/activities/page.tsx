@@ -6,9 +6,10 @@ import ActivitiesPageView from "@/components/activity/ActivitiesPageView";
 import { useSearchParams } from "next/navigation";
 import { getBlockedUserIds } from "@/lib/blocking";
 import { cityToLatLng, getBoundingBox } from "@/lib/geo";
+import { ActivityListItem } from "@/types/activity";
 
 export default function ActivitiesPage() {
-  const [activities, setActivities] = useState<any[]>([]);
+  const [activities, setActivities] = useState<ActivityListItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const searchParams = useSearchParams();

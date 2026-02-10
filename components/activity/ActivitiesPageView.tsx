@@ -4,18 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ActivityCard from "@/components/cards/ActivityCard";
 import ActivitiesMap from "../map/ActivitesMap";
+import { ActivityListItem, ActivityTagRelation } from "@/types/activity";
 
 type Props = {
-  activities: any[];
+  activities: ActivityListItem[];
   loading: boolean;
 };
 
-export default function ActivitiesPageView({
-  activities,
-  loading,
-}: Props) {
+export default function ActivitiesPageView({ activities, loading }: Props) {
   const router = useRouter();
-
   const [activeId, setActiveId] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const [mapCollapsed, setMapCollapsed] = useState(false);
@@ -34,31 +31,18 @@ export default function ActivitiesPageView({
 
   return (
     <main className="min-h-screen bg-white flex flex-col">
-      {/* MAP */}
-      <div
-        className={`transition-all duration-300 ${
-          mapCollapsed ? "h-[180px]" : "h-[280px]"
-        }`}
-      >
+      <div className={`transition-all duration-300 ${mapCollapsed ? "h-[180px]" : "h-[280px]"}`}>
         <ActivitiesMap
-          activities={activities.filter(
-            a => a.public_lat != null && a.public_lng != null
-          )}
+          activities={activities.filter((activity) => activity.public_lat != null && activity.public_lng != null)}
           activeId={activeId}
           onSelect={(id) => {
             setActiveId(id);
-            document
-              .getElementById(`activity-${id}`)
-              ?.scrollIntoView({ behavior: "smooth", block: "center" });
+            document.getElementById(`activity-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
           }}
         />
       </div>
 
-      {/* LIST */}
-      <section
-        ref={listRef}
-        className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
-      >
+      <section ref={listRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {loading ? (
           <p className="text-center mt-10">Loading activities...</p>
         ) : activities.length === 0 ? (
@@ -66,36 +50,24 @@ export default function ActivitiesPageView({
         ) : (
           activities.map((activity) => {
             const tags =
-              activity.activity_tag_relations?.map(
-                (rel: any) => rel.activity_tags
-              ) ?? [];
+              activity.activity_tag_relations?.map((rel: ActivityTagRelation) => rel.activity_tags) ?? [];
 
             return (
               <div
                 key={activity.id}
                 id={`activity-${activity.id}`}
                 onClick={() => setActiveId(activity.id)}
-                className={`transition ${
-                  activeId === activity.id
-                    ? "ring-2 ring-black rounded-xl"
-                    : ""
-                }`}
+                className={`transition ${activeId === activity.id ? "ring-2 ring-black rounded-xl" : ""}`}
               >
                 <ActivityCard
                   title={activity.title}
-                  subtitle={activity.category ?? "Activity"} // ✅ SAFE FALLBACK
+                  subtitle={activity.category ?? "Activity"}
                   distance="Nearby"
-                  time={
-                    activity.starts_at
-                      ? new Date(activity.starts_at).toLocaleString()
-                      : ""
-                  }
+                  time={activity.starts_at ? new Date(activity.starts_at).toLocaleString() : ""}
                   type={activity.type}
                   tags={tags}
                   host={activity.host ?? null}
-                  onClick={() =>
-                    router.push(`/activity/${activity.id}`)
-                  }
+                  onClick={() => router.push(`/activity/${activity.id}`)}
                 />
               </div>
             );

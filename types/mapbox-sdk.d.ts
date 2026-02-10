@@ -1,4 +1,5 @@
 declare module "@mapbox/mapbox-sdk/services/geocoding" {
-    const geocoding: any;
-    export default geocoding;
-  }  
+  type GeocodingClient = (...args: never[]) => unknown;
+  const geocoding: GeocodingClient;
+  export default geocoding;
+}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 export type JoinStatus = "none" | "pending" | "approved" | "rejected";
@@ -6,7 +6,7 @@ export type JoinStatus = "none" | "pending" | "approved" | "rejected";
 export function useJoinStatus(activityId: string, hostId: string) {
   const [joinStatus, setJoinStatus] = useState<JoinStatus>("none");
 
-  const computeJoinStatus = async () => {
+  const computeJoinStatus = useCallback(async () => {
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -16,13 +16,11 @@ export function useJoinStatus(activityId: string, hostId: string) {
       return;
     }
 
-    // Host is always approved
     if (user.id === hostId) {
       setJoinStatus("approved");
       return;
     }
 
-    // 1️⃣ Check active membership FIRST (source of truth)
     const { data: member } = await supabase
       .from("activity_members")
       .select("id")
@@ -36,7 +34,6 @@ export function useJoinStatus(activityId: string, hostId: string) {
       return;
     }
 
-    // 2️⃣ Fall back to join_requests
     const { data: request } = await supabase
       .from("join_requests")
       .select("status")
@@ -54,13 +51,16 @@ export function useJoinStatus(activityId: string, hostId: string) {
       return;
     }
 
-    // 3️⃣ Otherwise: not joined
     setJoinStatus("none");
-  };
+  }, [activityId, hostId]);
 
   useEffect(() => {
-    computeJoinStatus();
-  }, [activityId]);
+    const task = setTimeout(() => {
+      void computeJoinStatus();
+    }, 0);
+
+    return () => clearTimeout(task);
+  }, [computeJoinStatus]);
 
   return { joinStatus, computeJoinStatus };
 }

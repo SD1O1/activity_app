@@ -7,7 +7,7 @@ import clsx from "clsx";
    INPUT
    ========================= */
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {}
+type InputProps = InputHTMLAttributes<HTMLInputElement>;
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, disabled, ...props }, ref) => {
@@ -36,8 +36,7 @@ Input.displayName = "Input";
    TEXTAREA
    ========================= */
 
-interface TextareaProps
-  extends TextareaHTMLAttributes<HTMLTextAreaElement> {}
+type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement>;
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, disabled, ...props }, ref) => {

@@ -8,7 +8,11 @@ export function useUnreadChat(activityId: string) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+
+    if (!user) {
+      setHasUnread(false);
+      return;
+    }
 
     const { data: conversation } = await supabase
       .from("conversations")
@@ -36,20 +40,21 @@ export function useUnreadChat(activityId: string) {
       .limit(1)
       .maybeSingle();
 
-    if (
-      latestMessage &&
-      (!participant?.last_seen_at ||
-        new Date(latestMessage.created_at) >
-          new Date(participant.last_seen_at))
-    ) {
-      setHasUnread(true);
-    } else {
-      setHasUnread(false);
-    }
+    setHasUnread(
+      Boolean(
+        latestMessage &&
+          (!participant?.last_seen_at ||
+            new Date(latestMessage.created_at) > new Date(participant.last_seen_at))
+      )
+    );
   }, [activityId]);
 
   useEffect(() => {
-    checkUnread();
+    const task = setTimeout(() => {
+      void checkUnread();
+    }, 0);
+
+    return () => clearTimeout(task);
   }, [checkUnread]);
 
   return { hasUnread, checkUnread };

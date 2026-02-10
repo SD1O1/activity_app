@@ -4,36 +4,22 @@ import Header from "@/components/layout/Header";
 import ProfileView from "@/components/profile/ProfileView";
 import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import AuthModal from "@/components/modals/AuthModal";
 
 export default function ProfilePage() {
   const router = useRouter();
   const { user, profileCompleted, loading } = useClientAuthProfile();
-  const [openAuth, setOpenAuth] = useState(false);
+  const shouldOpenAuth = !loading && !user;
 
   useEffect(() => {
-    if (loading) return;
-
-    if (!user) {
-      setOpenAuth(true);
-      return;
-    }
-
-    if (!profileCompleted) {
+    if (!loading && user && !profileCompleted) {
       router.replace("/onboarding/profile");
     }
   }, [user, profileCompleted, loading, router]);
 
   if (loading || !user || !profileCompleted) {
-    return (
-      <>
-        <AuthModal
-          open={openAuth}
-          onClose={() => setOpenAuth(false)}
-        />
-      </>
-    );
+    return <AuthModal open={shouldOpenAuth} onClose={() => router.push("/")} />;
   }
 
   return (

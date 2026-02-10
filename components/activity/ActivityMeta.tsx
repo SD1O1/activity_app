@@ -6,23 +6,14 @@ type Props = {
   startsAt: string;
   location: string;
   costRule: string;
-  showLocation: boolean;
-
   memberCount?: number;
   maxMembers?: number;
-
   lat?: number | null;
   lng?: number | null;
 };
 
-/* Haversine distance (km) */
-function getDistanceKm(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-) {
-  const R = 6371; // Earth radius in km
+function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
 
@@ -35,40 +26,20 @@ function getDistanceKm(
   return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
-export default function ActivityMeta({
-  startsAt,
-  location,
-  costRule,
-  showLocation,
-  memberCount,
-  maxMembers,
-  lat,
-  lng,
-}: Props) {
+export default function ActivityMeta({ startsAt, location, costRule, memberCount, maxMembers, lat, lng }: Props) {
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
-  const [distanceError, setDistanceError] = useState(false);
+  const [distanceError, setDistanceError] = useState(
+    typeof navigator !== "undefined" ? !navigator.geolocation : false
+  );
 
   useEffect(() => {
-    if (lat == null || lng == null) return;
-
-    if (!navigator.geolocation) {
-      setDistanceError(true);
-      return;
-    }
+    if (lat == null || lng == null || !navigator.geolocation) return;
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const userLat = pos.coords.latitude;
-        const userLng = pos.coords.longitude;
-
-        const d = getDistanceKm(
-          userLat,
-          userLng,
-          lat,
-          lng
-        );
-
+        const d = getDistanceKm(pos.coords.latitude, pos.coords.longitude, lat, lng);
         setDistanceKm(d);
+        setDistanceError(false);
       },
       () => {
         setDistanceError(true);
@@ -79,27 +50,17 @@ export default function ActivityMeta({
   return (
     <section className="mt-6 px-4 space-y-2 text-sm text-gray-700">
       <p>🕒 {new Date(startsAt).toLocaleString()}</p>
+      <p>📍 {location}</p>
 
-      <p>
-        📍 {location}
-      </p>
-
-      {typeof memberCount === "number" &&
-      typeof maxMembers === "number" && (
+      {typeof memberCount === "number" && typeof maxMembers === "number" && (
         <p>
           👥 {memberCount} / {maxMembers} joined
         </p>
       )}
 
-      {/* DISTANCE */}
-      {lat && lng && (
+      {lat != null && lng != null && (
         <p>
-          📏{" "}
-          {distanceKm != null
-            ? `${distanceKm.toFixed(1)} km away`
-            : distanceError
-            ? "Distance unavailable"
-            : "Calculating distance…"}
+          📏 {distanceKm != null ? `${distanceKm.toFixed(1)} km away` : distanceError ? "Distance unavailable" : "Calculating distance…"}
         </p>
       )}
 

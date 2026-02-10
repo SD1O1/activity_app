@@ -9,35 +9,22 @@ import ChatModal from "@/components/modals/chat/ChatModal";
 import AuthModal from "@/components/modals/AuthModal";
 import ReportModal from "@/components/modals/ReportModal";
 import EditActivityModal from "../modals/EditActivityModal";
-
 import HostMiniProfile from "../profile/HostMiniProfile";
-
 import ActivityHeader from "./ActivityHeader";
 import ActivityMeta from "./ActivityMeta";
 import ActivityAbout from "./ActivityAbout";
 import ActivityActions from "./ActivityActions";
-
 import ActivityLocationMap from "@/components/map/ActivityLocationMap";
 import ParticipantsRow from "./ParticipantsRow";
-
 import ActivityActionsMenu from "@/components/activity/ActivityActionsMenu";
-
 import { useViewerRole } from "@/hooks/useViewerRole";
 import { useJoinStatus } from "@/hooks/useJoinStatus";
 import { useUnreadChat } from "@/hooks/useUnreadChat";
 import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
-import { supabase } from "@/lib/supabaseClient";
+import { ActivityDetailItem, ActivityTagRelation } from "@/types/activity";
 
 type Props = {
-  activity: any;
-};
-
-type HostProfile = {
-  id: string;
-  name: string;
-  username: string;
-  avatar_url: string | null;
-  verified: boolean;
+  activity: ActivityDetailItem;
 };
 
 type Participant = {
@@ -50,10 +37,7 @@ type Participant = {
 
 export default function ActivityDetail({ activity }: Props) {
   const viewerRole = useViewerRole(activity.host_id);
-  const { joinStatus, computeJoinStatus } = useJoinStatus(
-    activity.id,
-    activity.host_id
-  );
+  const { joinStatus, computeJoinStatus } = useJoinStatus(activity.id, activity.host_id);
   const { hasUnread, checkUnread } = useUnreadChat(activity.id);
 
   const [openJoin, setOpenJoin] = useState(false);
@@ -61,39 +45,28 @@ export default function ActivityDetail({ activity }: Props) {
   const [openChat, setOpenChat] = useState(false);
   const [openAuth, setOpenAuth] = useState(false);
   const [openReport, setOpenReport] = useState(false);
-  const router = useRouter();
-
-  const { user, profileCompleted, loading } = useClientAuthProfile();  
-  const [participants, setParticipants] = useState<Participant[]>([]);
-
   const [openEdit, setOpenEdit] = useState(false);
-  
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const router = useRouter();
+  const { user, profileCompleted, loading } = useClientAuthProfile();
+
   useEffect(() => {
-    if (!activity?.id) return;
-  
+    if (!activity.id) return;
+
     const loadParticipants = async () => {
-      const res = await fetch(
-        `/api/activities/${activity.id}/participants`
-      );
-  
+      const res = await fetch(`/api/activities/${activity.id}/participants`);
       if (!res.ok) return;
-  
-      const data = await res.json();
+
+      const data: Participant[] = await res.json();
       setParticipants(data);
     };
-  
-    loadParticipants();
-  }, [activity?.id]);
-  
 
-  const tags =
-    activity.activity_tag_relations?.map(
-      (rel: any) => rel.activity_tags
-    ) ?? [];
+    void loadParticipants();
+  }, [activity.id]);
 
-  const canOpenChat =
-    viewerRole === "host" ||
-    (viewerRole === "guest" && joinStatus === "approved");
+  const tags = activity.activity_tag_relations?.map((rel: ActivityTagRelation) => rel.activity_tags) ?? [];
+
+  const canOpenChat = viewerRole === "host" || (viewerRole === "guest" && joinStatus === "approved");
 
   const handleRequestJoin = () => {
     if (loading) return;
@@ -112,13 +85,9 @@ export default function ActivityDetail({ activity }: Props) {
   };
 
   const handleRemove = async (userId: string) => {
-    if (!activity?.id) return;
-  
-    const confirmed = confirm(
-      "Are you sure you want to remove this user?"
-    );
+    const confirmed = confirm("Are you sure you want to remove this user?");
     if (!confirmed) return;
-  
+
     const res = await fetch("/api/activities/remove-member", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -127,32 +96,22 @@ export default function ActivityDetail({ activity }: Props) {
         userId,
       }),
     });
-  
+
     if (!res.ok) {
       alert("Failed to remove member");
       return;
     }
-  
-    // Optimistic UI update
-    setParticipants(prev =>
-      prev.filter(p => p.id !== userId)
-    );
-  };  
 
-  /* MAP LOGIC */
+    setParticipants((prev) => prev.filter((participant) => participant.id !== userId));
+  };
+
   const isHost = viewerRole === "host";
   const isApprovedGuest = joinStatus === "approved";
   const showExactMap = isHost || isApprovedGuest;
 
-  const lat =
-    showExactMap && activity.exact_lat != null
-      ? activity.exact_lat
-      : activity.public_lat ?? activity.exact_lat;
+  const lat = showExactMap && activity.exact_lat != null ? activity.exact_lat : activity.public_lat ?? activity.exact_lat;
 
-  const lng =
-    showExactMap && activity.exact_lng != null
-      ? activity.exact_lng
-      : activity.public_lng ?? activity.exact_lng;
+  const lng = showExactMap && activity.exact_lng != null ? activity.exact_lng : activity.public_lng ?? activity.exact_lng;
 
   return (
     <main className="min-h-screen bg-white">
@@ -172,39 +131,23 @@ export default function ActivityDetail({ activity }: Props) {
         }
       />
 
-      <ActivityHeader
-        title={activity.title}
-        type={activity.type}
-        tags={tags}
-      />
+      <ActivityHeader title={activity.title} type={activity.type} tags={tags} />
 
-      {/* HOST SUMMARY */}
       <div className="px-4 mt-4">
-      {activity.host && (
-        <HostMiniProfile
-          host={activity.host}
-          clickable
-          size="md"
-        />
-      )}
+        {activity.host && <HostMiniProfile host={activity.host} clickable size="md" />}
       </div>
 
       <ActivityMeta
         startsAt={activity.starts_at}
         location={activity.location_name}
         costRule={activity.cost_rule}
-        showLocation={true}
         memberCount={activity.member_count}
         maxMembers={activity.max_members}
         lat={activity.public_lat}
         lng={activity.public_lng}
       />
 
-      <ActivityLocationMap
-        lat={Number(lat)}
-        lng={Number(lng)}
-        blurred={!showExactMap}
-      />
+      <ActivityLocationMap lat={Number(lat)} lng={Number(lng)} blurred={!showExactMap} />
 
       <ActivityAbout description={activity.description} />
 
@@ -216,7 +159,7 @@ export default function ActivityDetail({ activity }: Props) {
         onRequestJoin={handleRequestJoin}
         onOpenChat={() => setOpenChat(true)}
         onOpenReview={() => setOpenReview(true)}
-        activityStatus={activity.status} // ✅ ADD THIS
+        activityStatus={activity.status}
       />
 
       <EditActivityModal
@@ -249,23 +192,18 @@ export default function ActivityDetail({ activity }: Props) {
       />
 
       {canOpenChat && (
-        <ChatModal
-          open={openChat}
-          activityId={activity.id}
-          onClose={() => setOpenChat(false)}
-          onChatClosed={checkUnread}
-        />
+        <ChatModal open={openChat} activityId={activity.id} onClose={() => setOpenChat(false)} onChatClosed={checkUnread} />
       )}
 
       {user && (
         <ParticipantsRow
-        participants={participants}
-        currentUserId={user?.id}
-        isHost={user?.id === activity.host_id}
-        isJoined={joinStatus === "approved"}
-        onOpenProfile={(id) => router.push(`/profile/${id}`)}
-        onRemove={handleRemove}
-        />            
+          participants={participants}
+          currentUserId={user.id}
+          isHost={user.id === activity.host_id}
+          isJoined={joinStatus === "approved"}
+          onOpenProfile={(participantId) => router.push(`/profile/${participantId}`)}
+          onRemove={handleRemove}
+        />
       )}
 
       <AuthModal open={openAuth} onClose={() => setOpenAuth(false)} />

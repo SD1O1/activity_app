@@ -5,12 +5,13 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import ActivityDetail from "@/components/activity/ActivityDetail";
 import { getBlockedUserIds } from "@/lib/blocking";
+import { ActivityDetailItem } from "@/types/activity";
 
 export default function Page() {
   const params = useParams();
   const id = params?.id as string | undefined;
 
-  const [activity, setActivity] = useState<any>(null);
+  const [activity, setActivity] = useState<ActivityDetailItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -22,15 +23,13 @@ export default function Page() {
       setNotFound(false);
 
       try {
-        // 🔹 viewer (may be null)
         const {
           data: { user: viewer },
         } = await supabase.auth.getUser();
 
-        // 🔹 fetch activity
         const { data: activityData, error } = await supabase
-        .from("activities")
-        .select(`
+          .from("activities")
+          .select(`
           id,
           title,
           description,
@@ -54,8 +53,8 @@ export default function Page() {
             )
           )
         `)
-        .eq("id", id)
-        .single();
+          .eq("id", id)
+          .single();
 
         if (error || !activityData) {
           setNotFound(true);
@@ -63,12 +62,8 @@ export default function Page() {
           return;
         }
 
-        // 🔒 BLOCK ENFORCEMENT (❗ but NEVER block host)
         if (viewer && viewer.id !== activityData.host_id) {
-          const { blockedUserIds } = await getBlockedUserIds(
-            supabase,
-            viewer.id
-          );
+          const { blockedUserIds } = await getBlockedUserIds(supabase, viewer.id);
 
           if (blockedUserIds.includes(activityData.host_id)) {
             setNotFound(true);
@@ -77,7 +72,6 @@ export default function Page() {
           }
         }
 
-        // 🔹 preload host profile
         const { data: host } = await supabase
           .from("profiles")
           .select("id, username, name, avatar_url, verified")
@@ -97,11 +91,11 @@ export default function Page() {
       }
     };
 
-    fetchActivity();
+    void fetchActivity();
   }, [id]);
 
   if (loading) return <p className="p-6">Loading…</p>;
-  if (notFound) return <p className="p-6">Activity not found.</p>;
+  if (notFound || !activity) return <p className="p-6">Activity not found.</p>;
 
   return <ActivityDetail activity={activity} />;
 }
