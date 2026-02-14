@@ -247,15 +247,21 @@ export function useChat(open: boolean, activityId: string) {
     setMessages(prev => [...prev, msg]);
 
     // 🔔 notify server ONLY
+    const receiverIds = participants
+    .filter(p => p.user_id !== myId)
+    .map(p => p.user_id);
+
+    if (receiverIds.length > 0) {
     fetch("/api/notifications/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        conversationId,
+        receiverIds,
         actorId: myId,
         activityId,
       }),
     });
+    }
 
     typingChannelRef.current?.untrack();
   };
