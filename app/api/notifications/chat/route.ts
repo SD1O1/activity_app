@@ -1,22 +1,74 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import {
+  createSupabaseAdmin,
+  createSupabaseServer,
+} from "@/lib/supabaseServer";
 
 export async function POST(req: Request) {
-  const { receiverIds, actorId, activityId } = await req.json();
+  const { conversationId, activityId } = await req.json();
 
-  if (!receiverIds?.length || !actorId) {
+  const supabase = await createSupabaseServer();
+  const admin = createSupabaseAdmin();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!conversationId) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const { data: callerMembership } = await admin
+    .from("conversation_participants")
+    .select("user_id")
+    .eq("conversation_id", conversationId)
+    .eq("user_id", user.id)
+    .maybeSingle();
 
-  await supabase.from("notifications").insert(
-    receiverIds.map((uid: string) => ({
-      user_id: uid,
-      actor_id: actorId,
+  if (!callerMembership) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (activityId) {
+    const { data: convo } = await admin
+      .from("conversations")
+      .select("activity_id")
+      .eq("id", conversationId)
+      .single();
+
+    if (!convo || convo.activity_id !== activityId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
+  const { data: participants, error: participantsError } = await admin
+    .from("conversation_participants")
+    .select("user_id")
+    .eq("conversation_id", conversationId)
+    .neq("user_id", user.id);
+
+  if (participantsError) {
+    console.error("chat notification participants query failed", {
+      conversationId,
+      userId: user.id,
+      participantsError,
+    });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+
+  if (!participants?.length) {
+    return NextResponse.json({ success: true });
+  }
+
+  await admin.from("notifications").insert(
+    participants.map((p) => ({
+      user_id: p.user_id,
+      actor_id: user.id,
       type: "chat",
       message: "sent you a message",
       activity_id: activityId,

@@ -1,31 +1,45 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServer } from "@/lib/supabaseServer";
+import {
+  createSupabaseAdmin,
+  createSupabaseServer,
+} from "@/lib/supabaseServer";
 
 export async function POST(
   _req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
-  const supabase = createSupabaseServer();
+  const supabase = await createSupabaseServer();
+  const admin = createSupabaseAdmin();
 
-  const { data: activity } = await supabase
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { data: activity } = await admin
     .from("activities")
-    .select("starts_at, status")
+    .select("starts_at, status, host_id")
     .eq("id", id)
     .single();
 
   if (!activity) {
-    return NextResponse.json({ success: false });
+    return NextResponse.json({ error: "Activity not found" }, { status: 404 });
+  }
+
+  if (activity.host_id !== user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const now = new Date();
   const startsAt = new Date(activity.starts_at);
 
   if (startsAt < now && activity.status !== "completed") {
-    await supabase
-      .from("activities")
-      .update({ status: "completed" })
-      .eq("id", id);
+    await admin.from("activities").update({ status: "completed" }).eq("id", id);
   }
 
   return NextResponse.json({ success: true });

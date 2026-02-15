@@ -1,56 +1,44 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServer } from "@/lib/supabaseServer";
+import {
+  createSupabaseAdmin,
+  createSupabaseServer,
+} from "@/lib/supabaseServer";
 
 export async function POST(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  // ✅ FIX: params must be awaited
   const { id: activityId } = await context.params;
-
-  const supabase = createSupabaseServer();
+  const supabase = await createSupabaseServer();
+  const admin = createSupabaseAdmin();
   const body = await req.json();
 
-  const {
-    title,
-    description,
-    type,
-    max_members,
-    cost_rule,
-    host_id,
-  } = body;
+  const { title, description, type, max_members, cost_rule } = body;
 
-  if (!host_id) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // 1️⃣ Fetch activity
-  const { data: activity, error: fetchError } = await supabase
+  const { data: activity, error: fetchError } = await admin
     .from("activities")
     .select("id, host_id")
     .eq("id", activityId)
     .single();
 
   if (fetchError || !activity) {
-    return NextResponse.json(
-      { error: "Activity not found" },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: "Activity not found" }, { status: 404 });
   }
 
-  // 2️⃣ Host-only check
-  if (activity.host_id !== host_id) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+  if (activity.host_id !== user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // 3️⃣ Update
-  const { error: updateError } = await supabase
+  const { error: updateError } = await admin
     .from("activities")
     .update({
       title,
@@ -62,14 +50,13 @@ export async function POST(
     .eq("id", activityId);
 
   if (updateError) {
-    return NextResponse.json(
-      { error: updateError.message },
-      { status: 500 }
-    );
+    console.error("activity update failed", {
+      activityId,
+      userId: user.id,
+      updateError,
+    });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
-  return NextResponse.json(
-    { success: true },
-    { status: 200 }
-  );
+  return NextResponse.json({ success: true }, { status: 200 });
 }
