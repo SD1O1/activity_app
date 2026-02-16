@@ -74,6 +74,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: removeError.message }, { status: 500 });
     }
 
+    const { error: clearJoinRequestError } = await admin
+      .from("join_requests")
+      .delete()
+      .eq("activity_id", activityId)
+      .eq("requester_id", targetUserId);
+
+    if (clearJoinRequestError) {
+      return NextResponse.json({ error: clearJoinRequestError.message }, { status: 500 });
+    }
+
     if (activity.member_count > 0) {
       await admin
         .from("activities")
@@ -90,28 +100,40 @@ export async function POST(req: Request) {
       await admin.from("activities").update({ status: "open" }).eq("id", activityId);
     }
 
-    const { data: conversation } = await admin
+    const { data: conversation, error: conversationError } = await admin
       .from("conversations")
       .select("id")
       .eq("activity_id", activityId)
       .single();
 
+    if (conversationError && conversationError.code !== "PGRST116") {
+      return NextResponse.json({ error: conversationError.message }, { status: 500 });
+    }
+
     if (conversation) {
-      await admin
+      const { error: participantRemovalError } = await admin
         .from("conversation_participants")
         .delete()
         .eq("conversation_id", conversation.id)
         .eq("user_id", targetUserId);
+
+      if (participantRemovalError) {
+        return NextResponse.json({ error: participantRemovalError.message }, { status: 500 });
+      }
     }
 
     if (callerIsHost && targetUserId !== user.id) {
-      await admin.from("notifications").insert({
+      const { error: notifyError } = await admin.from("notifications").insert({
         user_id: targetUserId,
         actor_id: user.id,
         type: "removed_from_activity",
         message: "You were removed from an activity by the host.",
         activity_id: activityId,
       });
+
+      if (notifyError) {
+        return NextResponse.json({ error: notifyError.message }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ success: true });

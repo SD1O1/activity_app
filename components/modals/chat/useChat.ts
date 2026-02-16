@@ -197,7 +197,7 @@ export function useChat(open: boolean, activityId: string) {
     };
   }, [conversationId, myId]);
 
-  /* ───────── SCROLL ───────── */
+  /* ───────── SCROLL ──────── */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -248,19 +248,18 @@ export function useChat(open: boolean, activityId: string) {
 
     // 🔔 notify server ONLY
     const receiverIds = participants
-    .filter(p => p.user_id !== myId)
-    .map(p => p.user_id);
+      .filter((p) => p.user_id !== myId)
+      .map((p) => p.user_id);
 
     if (receiverIds.length > 0) {
-    fetch("/api/notifications/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        receiverIds,
-        actorId: myId,
-        activityId,
-      }),
-    });
+      fetch("/api/notifications/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId,
+          activityId,
+        }),
+      });
     }
 
     typingChannelRef.current?.untrack();

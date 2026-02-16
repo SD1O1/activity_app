@@ -130,43 +130,86 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
     const { public_lat, public_lng } = getPublicCoords(location.lat, location.lng);
     
     const { data: activity, error } = await supabase
-    .from("activities")
-    .insert({
-      title,
-      description,
-      location_name: location.name,
-      exact_lat: location.lat,
-      exact_lng: location.lng,
-      public_lat,
-      public_lng,
-      starts_at: date,
-      type,
-      cost_rule: costRule,
-      host_id: userId,
-      questions: cleanedQuestions,
-      max_members: type === "one-on-one" ? 2 : maxMembers,
-    })
+      .from("activities")
+      .insert({
+        title,
+        description,
+        location_name: location.name,
+        exact_lat: location.lat,
+        exact_lng: location.lng,
+        public_lat,
+        public_lng,
+        starts_at: date,
+        type,
+        cost_rule: costRule,
+        host_id: userId,
+        questions: cleanedQuestions,
+        max_members: type === "one-on-one" ? 2 : maxMembers,
+      })
       .select()
       .single();
-    
+
     if (error || !activity) {
       alert(error?.message || "Failed to create activity");
       setLoading(false);
       return;
-    }    
+    }
 
-    await supabase.from("activity_tag_relations").insert(
+    const { data: conversation, error: conversationError } = await supabase
+      .from("conversations")
+      .insert({
+        activity_id: activity.id,
+      })
+      .select("id")
+      .single();
+
+    if (conversationError || !conversation) {
+      await supabase.from("activities").delete().eq("id", activity.id);
+      alert(conversationError?.message || "Failed to initialize activity chat");
+      setLoading(false);
+      return;
+    }
+
+    const { error: hostParticipantError } = await supabase
+      .from("conversation_participants")
+      .insert({
+        conversation_id: conversation.id,
+        user_id: userId,
+        last_seen_at: null,
+      });
+
+    if (hostParticipantError) {
+      await supabase.from("conversations").delete().eq("id", conversation.id);
+      await supabase.from("activities").delete().eq("id", activity.id);
+      alert(hostParticipantError.message || "Failed to initialize activity chat participants");
+      setLoading(false);
+      return;
+    }
+
+    if (selectedTags.length === 0) {
+      await supabase.from("conversation_participants").delete().eq("conversation_id", conversation.id);
+      await supabase.from("conversations").delete().eq("id", conversation.id);
+      await supabase.from("activities").delete().eq("id", activity.id);
+      alert("Please select at least one activity tag");
+      setLoading(false);
+      return;
+    }
+
+    const { error: tagInsertError } = await supabase.from("activity_tag_relations").insert(
       selectedTags.map(tag => ({
         activity_id: activity.id,
         tag_id: tag.id,
       }))
     );
 
-    if (selectedTags.length === 0) {
-        alert("Please select at least one activity tag");
-        setLoading(false);
-        return;
-      }
+    if (tagInsertError) {
+      await supabase.from("conversation_participants").delete().eq("conversation_id", conversation.id);
+      await supabase.from("conversations").delete().eq("id", conversation.id);
+      await supabase.from("activities").delete().eq("id", activity.id);
+      alert(tagInsertError.message || "Failed to link activity tags");
+      setLoading(false);
+      return;
+    }
 
     setLoading(false);
 

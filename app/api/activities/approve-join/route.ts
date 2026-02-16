@@ -100,14 +100,54 @@ export async function POST(req: Request) {
       activity_id: joinRequest.activity_id,
     });
 
-    const { data: conversation } = await admin
+    const { data: existingConversation, error: existingConversationError } = await admin
       .from("conversations")
       .select("id")
       .eq("activity_id", joinRequest.activity_id)
       .single();
 
-    if (conversation) {
-      await admin.from("conversation_participants").upsert(
+    if (existingConversationError && existingConversationError.code !== "PGRST116") {
+      return NextResponse.json({ error: existingConversationError.message }, { status: 500 });
+    }
+
+    let conversation = existingConversation;
+
+    if (!conversation) {
+      const { data: createdConversation, error: createConversationError } = await admin
+        .from("conversations")
+        .insert({
+          activity_id: joinRequest.activity_id,
+        })
+        .select("id")
+        .single();
+
+      if (createConversationError || !createdConversation) {
+        return NextResponse.json({ error: "Failed to create conversation" }, { status: 500 });
+      }
+
+      conversation = createdConversation;
+    }
+
+    const { error: hostConversationParticipantError } = await admin
+      .from("conversation_participants")
+      .upsert(
+        {
+          conversation_id: conversation.id,
+          user_id: activity.host_id,
+          last_seen_at: null,
+        },
+        {
+          onConflict: "conversation_id,user_id",
+        }
+      );
+
+    if (hostConversationParticipantError) {
+      return NextResponse.json({ error: hostConversationParticipantError.message }, { status: 500 });
+    }
+
+    const { error: requesterConversationParticipantError } = await admin
+      .from("conversation_participants")
+      .upsert(
         {
           conversation_id: conversation.id,
           user_id: joinRequest.requester_id,
@@ -117,6 +157,9 @@ export async function POST(req: Request) {
           onConflict: "conversation_id,user_id",
         }
       );
+
+    if (requesterConversationParticipantError) {
+      return NextResponse.json({ error: requesterConversationParticipantError.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
