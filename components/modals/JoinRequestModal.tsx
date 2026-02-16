@@ -81,35 +81,23 @@ export default function JoinRequestModal({
       return;
     }
 
-    // ✅ UPSERT join request (THIS IS THE FIX)
-    const { error: upsertError } = await supabase
-      .from("join_requests")
-      .upsert(
-        {
-          activity_id: activityId,
-          requester_id: user.id,
-          status: "pending",
-          answers: questions.length > 0 ? answers : [],
-        },
-        {
-          onConflict: "activity_id,requester_id",
-        }
-      );
+    const response = await fetch("/api/activities/request-join", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        activityId,
+        hostId,
+        answers: questions.length > 0 ? answers : [],
+      }),
+    });
 
-    if (upsertError) {
-      setError(upsertError.message);
+    const payload = (await response.json()) as { error?: string };
+
+    if (!response.ok) {
+      setError(payload.error ?? "Failed to send join request");
       setLoading(false);
       return;
     }
-
-    // 🔔 Notification (optional but fine)
-    await supabase.from("notifications").insert({
-      user_id: hostId,
-      actor_id: user.id,
-      type: "join_request",
-      message: "sent a join request",
-      activity_id: activityId,
-    });
 
     setLoading(false);
     await onSuccess();

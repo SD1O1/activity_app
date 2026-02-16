@@ -4,6 +4,12 @@ import {
   createSupabaseServer,
 } from "@/lib/supabaseServer";
 
+type DeleteActivityRpcResult = {
+  ok: boolean;
+  code: string;
+  message: string;
+};
+
 export async function POST(
   _req: Request,
   context: { params: Promise<{ id: string }> }
@@ -21,51 +27,49 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data: activity, error } = await admin
-    .from("activities")
-    .select("id, host_id")
-    .eq("id", activityId)
-    .single();
+  const { data: rpcResult, error: rpcError } = await admin.rpc(
+    "delete_activity_cascade_atomic",
+    {
+      p_activity_id: activityId,
+      p_actor_id: user.id,
+    }
+  );
 
-  if (error || !activity) {
-    return NextResponse.json({ error: "Activity not found" }, { status: 404 });
-  }
-
-  if (activity.host_id !== user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const { data: members } = await admin
-    .from("activity_members")
-    .select("user_id")
-    .eq("activity_id", activityId)
-    .neq("user_id", activity.host_id);
-
-  if (members && members.length > 0) {
-    await admin.from("notifications").insert(
-      members.map((m) => ({
-        user_id: m.user_id,
-        actor_id: user.id,
-        type: "activity_deleted",
-        message: "An activity you joined was cancelled",
-        activity_id: activityId,
-      }))
+  if (rpcError) {
+    console.error("activity delete cascade rpc failed", {
+      activityId,
+      userId: user.id,
+      rpcError,
+    });
+    return NextResponse.json(
+      {
+        error:
+          "Failed to delete activity atomically. Ensure delete_activity_cascade_atomic() exists and cleanup constraints/indexes are applied.",
+      },
+      { status: 500 }
     );
   }
 
-  const { error: updateError } = await admin
-    .from("activities")
-    .update({ status: "deleted" })
-    .eq("id", activityId);
+  const result = (rpcResult ?? {}) as DeleteActivityRpcResult;
 
-  if (updateError) {
-    console.error("activity delete failed", {
-      activityId,
-      userId: user.id,
-      updateError,
-    });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  if (result.ok) {
+    return NextResponse.json({ success: true });
   }
 
-  return NextResponse.json({ success: true });
+  if (result.code === "NOT_FOUND") {
+    return NextResponse.json({ error: result.message || "Activity not found" }, { status: 404 });
+  }
+
+  if (result.code === "FORBIDDEN") {
+    return NextResponse.json({ error: result.message || "Forbidden" }, { status: 403 });
+  }
+
+  if (result.code === "BAD_REQUEST") {
+    return NextResponse.json({ error: result.message || "Invalid request" }, { status: 400 });
+  }
+
+  return NextResponse.json(
+    { error: result.message || "Internal server error" },
+    { status: 500 }
+  );
 }

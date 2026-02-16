@@ -25,6 +25,7 @@ export async function GET(
     .from("activities")
     .select("host_id")
     .eq("id", id)
+    .neq("status", "deleted")
     .single();
 
   if (activityError || !activity) {

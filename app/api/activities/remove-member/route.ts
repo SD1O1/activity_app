@@ -29,6 +29,7 @@ export async function POST(req: Request) {
       .from("activities")
       .select("id, host_id, member_count, max_members, status")
       .eq("id", activityId)
+      .neq("status", "deleted")
       .single();
 
     if (activityError || !activity) {

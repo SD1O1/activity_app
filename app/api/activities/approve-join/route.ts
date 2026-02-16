@@ -4,6 +4,12 @@ import {
   createSupabaseServer,
 } from "@/lib/supabaseServer";
 
+type ApproveJoinRpcResult = {
+  ok: boolean;
+  code: string;
+  message: string;
+};
+
 export async function POST(req: Request) {
   try {
     const { joinRequestId } = await req.json();
@@ -24,145 +30,43 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: joinRequest, error: jrError } = await admin
-      .from("join_requests")
-      .select("id, activity_id, requester_id, status")
-      .eq("id", joinRequestId)
-      .single();
-
-    if (jrError || !joinRequest) {
-      return NextResponse.json({ error: "Join request not found" }, { status: 404 });
-    }
-
-    if (joinRequest.status !== "pending") {
-      return NextResponse.json({ error: "Join request is not pending" }, { status: 400 });
-    }
-
-    const { data: activity, error: activityError } = await admin
-      .from("activities")
-      .select("id, title, status, member_count, max_members, host_id")
-      .eq("id", joinRequest.activity_id)
-      .single();
-
-    if (activityError || !activity) {
-      return NextResponse.json({ error: "Activity not found" }, { status: 404 });
-    }
-
-    if (activity.host_id !== user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    if (activity.status === "completed") {
-      return NextResponse.json({ error: "Activity has already ended" }, { status: 400 });
-    }
-
-    if (activity.status === "full" || activity.member_count >= activity.max_members) {
-      return NextResponse.json({ error: "Activity is full" }, { status: 400 });
-    }
-
-    await admin.from("activity_members").insert({
-      activity_id: joinRequest.activity_id,
-      user_id: joinRequest.requester_id,
-      role: "member",
-      status: "active",
-    });
-
-    await admin.rpc("increment_member_count", {
-      activity_id_input: joinRequest.activity_id,
-    });
-
-    const { data: updatedActivity } = await admin
-      .from("activities")
-      .select("member_count, max_members")
-      .eq("id", joinRequest.activity_id)
-      .single();
-
-    if (
-      updatedActivity &&
-      updatedActivity.member_count >= updatedActivity.max_members
-    ) {
-      await admin
-        .from("activities")
-        .update({ status: "full" })
-        .eq("id", joinRequest.activity_id);
-    }
-
-    await admin
-      .from("join_requests")
-      .update({ status: "approved" })
-      .eq("id", joinRequestId);
-
-    await admin.from("notifications").insert({
-      user_id: joinRequest.requester_id,
-      actor_id: user.id,
-      type: "join_approved",
-      message: `Your request to join "${activity.title}" was approved`,
-      activity_id: joinRequest.activity_id,
-    });
-
-    const { data: existingConversation, error: existingConversationError } = await admin
-      .from("conversations")
-      .select("id")
-      .eq("activity_id", joinRequest.activity_id)
-      .single();
-
-    if (existingConversationError && existingConversationError.code !== "PGRST116") {
-      return NextResponse.json({ error: existingConversationError.message }, { status: 500 });
-    }
-
-    let conversation = existingConversation;
-
-    if (!conversation) {
-      const { data: createdConversation, error: createConversationError } = await admin
-        .from("conversations")
-        .insert({
-          activity_id: joinRequest.activity_id,
-        })
-        .select("id")
-        .single();
-
-      if (createConversationError || !createdConversation) {
-        return NextResponse.json({ error: "Failed to create conversation" }, { status: 500 });
+    const { data: rpcResult, error: rpcError } = await admin.rpc(
+      "approve_join_request_atomic",
+      {
+        p_join_request_id: joinRequestId,
+        p_host_id: user.id,
       }
+    );
 
-      conversation = createdConversation;
-    }
-
-    const { error: hostConversationParticipantError } = await admin
-      .from("conversation_participants")
-      .upsert(
+    if (rpcError) {
+      console.error("approve_join rpc failed", { rpcError, joinRequestId, userId: user.id });
+      return NextResponse.json(
         {
-          conversation_id: conversation.id,
-          user_id: activity.host_id,
-          last_seen_at: null,
+          error:
+            "Failed to approve join request atomically. Ensure approve_join_request_atomic() exists and required constraints/indexes are applied.",
         },
-        {
-          onConflict: "conversation_id,user_id",
-        }
+        { status: 500 }
       );
-
-    if (hostConversationParticipantError) {
-      return NextResponse.json({ error: hostConversationParticipantError.message }, { status: 500 });
     }
 
-    const { error: requesterConversationParticipantError } = await admin
-      .from("conversation_participants")
-      .upsert(
-        {
-          conversation_id: conversation.id,
-          user_id: joinRequest.requester_id,
-          last_seen_at: null,
-        },
-        {
-          onConflict: "conversation_id,user_id",
-        }
-      );
+    const result = (rpcResult ?? {}) as ApproveJoinRpcResult;
 
-    if (requesterConversationParticipantError) {
-      return NextResponse.json({ error: requesterConversationParticipantError.message }, { status: 500 });
+    if (result.ok) {
+      return NextResponse.json({ success: true });
     }
 
-    return NextResponse.json({ success: true });
+    if (result.code === "BAD_REQUEST") {
+      return NextResponse.json({ error: result.message || "Invalid request" }, { status: 400 });
+    }
+
+    if (result.code === "CONFLICT") {
+      return NextResponse.json({ error: result.message || "Conflict" }, { status: 409 });
+    }
+
+    return NextResponse.json(
+      { error: result.message || "Internal server error" },
+      { status: 500 }
+    );
   } catch (err) {
     console.error("approve-join failed", { err });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

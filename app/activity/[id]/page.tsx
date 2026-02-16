@@ -54,6 +54,7 @@ export default function Page() {
           )
         `)
           .eq("id", id)
+          .neq("status", "deleted")
           .single();
 
         if (error || !activityData) {

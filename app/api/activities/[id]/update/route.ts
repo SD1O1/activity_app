@@ -28,6 +28,7 @@ export async function POST(
     .from("activities")
     .select("id, host_id")
     .eq("id", activityId)
+    .neq("status", "deleted")
     .single();
 
   if (fetchError || !activity) {

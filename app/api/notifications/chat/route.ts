@@ -4,8 +4,11 @@ import {
   createSupabaseServer,
 } from "@/lib/supabaseServer";
 
+const MAX_MESSAGE_AGE_SECONDS = 20;
+const DUPLICATE_NOTIFICATION_WINDOW_SECONDS = 15;
+
 export async function POST(req: Request) {
-  const { conversationId, activityId } = await req.json();
+  const { conversationId, activityId, messageCreatedAt } = await req.json();
 
   const supabase = await createSupabaseServer();
   const admin = createSupabaseAdmin();
@@ -21,6 +24,19 @@ export async function POST(req: Request) {
 
   if (!conversationId) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
+
+  if (messageCreatedAt) {
+    const createdAtDate = new Date(messageCreatedAt);
+
+    if (!Number.isFinite(createdAtDate.getTime())) {
+      return NextResponse.json({ error: "Invalid messageCreatedAt" }, { status: 400 });
+    }
+
+    const ageSeconds = (Date.now() - createdAtDate.getTime()) / 1000;
+    if (ageSeconds > MAX_MESSAGE_AGE_SECONDS) {
+      return NextResponse.json({ success: true, skipped: "message_too_old" });
+    }
   }
 
   const { data: callerMembership } = await admin
@@ -65,9 +81,36 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
   }
 
+  const thresholdIso = new Date(
+    Date.now() - DUPLICATE_NOTIFICATION_WINDOW_SECONDS * 1000
+  ).toISOString();
+
+  const dedupedRecipients: string[] = [];
+
+  for (const participant of participants) {
+    const { data: existing } = await admin
+      .from("notifications")
+      .select("id")
+      .eq("user_id", participant.user_id)
+      .eq("actor_id", user.id)
+      .eq("type", "chat")
+      .eq("activity_id", activityId ?? null)
+      .gte("created_at", thresholdIso)
+      .limit(1)
+      .maybeSingle();
+
+    if (!existing) {
+      dedupedRecipients.push(participant.user_id);
+    }
+  }
+
+  if (!dedupedRecipients.length) {
+    return NextResponse.json({ success: true, skipped: "deduped" });
+  }
+
   await admin.from("notifications").insert(
-    participants.map((p) => ({
-      user_id: p.user_id,
+    dedupedRecipients.map((userId) => ({
+      user_id: userId,
       actor_id: user.id,
       type: "chat",
       message: "sent you a message",

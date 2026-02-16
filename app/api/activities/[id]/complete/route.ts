@@ -24,6 +24,7 @@ export async function POST(
     .from("activities")
     .select("host_id")
     .eq("id", id)
+    .neq("status", "deleted")
     .single();
 
   if (!activity || activity.host_id !== user.id) {

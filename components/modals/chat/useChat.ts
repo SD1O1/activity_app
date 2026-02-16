@@ -258,6 +258,7 @@ export function useChat(open: boolean, activityId: string) {
         body: JSON.stringify({
           conversationId,
           activityId,
+          messageCreatedAt: msg.created_at,
         }),
       });
     }
