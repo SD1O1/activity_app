@@ -26,7 +26,7 @@ export async function POST(
 
   const { data: activity, error: fetchError } = await admin
     .from("activities")
-    .select("id, host_id")
+    .select("id, host_id, member_count")
     .eq("id", activityId)
     .neq("status", "deleted")
     .single();
@@ -37,6 +37,13 @@ export async function POST(
 
   if (activity.host_id !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (typeof max_members === "number" && max_members < activity.member_count) {
+    return NextResponse.json(
+      { error: "max_members cannot be less than current member_count" },
+      { status: 409 }
+    );
   }
 
   const { error: updateError } = await admin

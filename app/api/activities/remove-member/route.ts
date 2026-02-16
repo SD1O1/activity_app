@@ -4,6 +4,12 @@ import {
   createSupabaseServer,
 } from "@/lib/supabaseServer";
 
+type RemoveMemberRpcResult = {
+  ok: boolean;
+  code: string;
+  message: string;
+};
+
 export async function POST(req: Request) {
   try {
     const { activityId, userId: requestedUserId } = await req.json();
@@ -25,119 +31,61 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: activity, error: activityError } = await admin
-      .from("activities")
-      .select("id, host_id, member_count, max_members, status")
-      .eq("id", activityId)
-      .neq("status", "deleted")
-      .single();
+    const { data: rpcResult, error: rpcError } = await admin.rpc(
+      "remove_member_atomic",
+      {
+        p_activity_id: activityId,
+        p_actor_id: user.id,
+        p_target_user_id: targetUserId,
+      }
+    );
 
-    if (activityError || !activity) {
-      return NextResponse.json({ error: "Activity not found" }, { status: 404 });
-    }
-
-    const callerIsHost = activity.host_id === user.id;
-    const callerIsSelf = user.id === targetUserId;
-
-    if (!callerIsHost && !callerIsSelf) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    if (!callerIsHost && targetUserId === activity.host_id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    if (targetUserId === activity.host_id) {
+    if (rpcError) {
+      console.error("remove-member rpc failed", {
+        activityId,
+        actorId: user.id,
+        targetUserId,
+        rpcError,
+      });
       return NextResponse.json(
-        { error: "Host cannot be removed via this endpoint" },
-        { status: 400 }
+        {
+          error:
+            "Failed to remove member atomically. Ensure remove_member_atomic() exists and integrity constraints are applied.",
+        },
+        { status: 500 }
       );
     }
 
-    const { data: membership } = await admin
-      .from("activity_members")
-      .select("id")
-      .eq("activity_id", activityId)
-      .eq("user_id", targetUserId)
-      .maybeSingle();
+    const result = (rpcResult ?? {}) as RemoveMemberRpcResult;
 
-    if (!membership) {
-      return NextResponse.json({ error: "Member not found" }, { status: 404 });
+    if (result.ok) {
+      return NextResponse.json({ success: true });
     }
 
-    const { error: removeError } = await admin
-      .from("activity_members")
-      .delete()
-      .eq("activity_id", activityId)
-      .eq("user_id", targetUserId);
-
-    if (removeError) {
-      return NextResponse.json({ error: removeError.message }, { status: 500 });
+    if (result.code === "BAD_REQUEST") {
+      return NextResponse.json({ error: result.message || "Invalid request" }, { status: 400 });
     }
 
-    const { error: clearJoinRequestError } = await admin
-      .from("join_requests")
-      .delete()
-      .eq("activity_id", activityId)
-      .eq("requester_id", targetUserId);
-
-    if (clearJoinRequestError) {
-      return NextResponse.json({ error: clearJoinRequestError.message }, { status: 500 });
+    if (result.code === "UNAUTHORIZED") {
+      return NextResponse.json({ error: result.message || "Unauthorized" }, { status: 401 });
     }
 
-    if (activity.member_count > 0) {
-      await admin
-        .from("activities")
-        .update({
-          member_count: activity.member_count - 1,
-        })
-        .eq("id", activityId);
+    if (result.code === "FORBIDDEN") {
+      return NextResponse.json({ error: result.message || "Forbidden" }, { status: 403 });
     }
 
-    if (
-      activity.status === "full" &&
-      activity.member_count - 1 < activity.max_members
-    ) {
-      await admin.from("activities").update({ status: "open" }).eq("id", activityId);
+    if (result.code === "NOT_FOUND") {
+      return NextResponse.json({ error: result.message || "Not found" }, { status: 404 });
     }
 
-    const { data: conversation, error: conversationError } = await admin
-      .from("conversations")
-      .select("id")
-      .eq("activity_id", activityId)
-      .single();
-
-    if (conversationError && conversationError.code !== "PGRST116") {
-      return NextResponse.json({ error: conversationError.message }, { status: 500 });
+    if (result.code === "CONFLICT") {
+      return NextResponse.json({ error: result.message || "Conflict" }, { status: 409 });
     }
 
-    if (conversation) {
-      const { error: participantRemovalError } = await admin
-        .from("conversation_participants")
-        .delete()
-        .eq("conversation_id", conversation.id)
-        .eq("user_id", targetUserId);
-
-      if (participantRemovalError) {
-        return NextResponse.json({ error: participantRemovalError.message }, { status: 500 });
-      }
-    }
-
-    if (callerIsHost && targetUserId !== user.id) {
-      const { error: notifyError } = await admin.from("notifications").insert({
-        user_id: targetUserId,
-        actor_id: user.id,
-        type: "removed_from_activity",
-        message: "You were removed from an activity by the host.",
-        activity_id: activityId,
-      });
-
-      if (notifyError) {
-        return NextResponse.json({ error: notifyError.message }, { status: 500 });
-      }
-    }
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json(
+      { error: result.message || "Internal server error" },
+      { status: 500 }
+    );
   } catch (err) {
     console.error("remove-member error", { err });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

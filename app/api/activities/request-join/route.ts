@@ -4,6 +4,13 @@ import {
   createSupabaseServer,
 } from "@/lib/supabaseServer";
 
+type RequestJoinRpcResult = {
+  ok: boolean;
+  code: string;
+  message: string;
+  duplicatePending?: boolean;
+};
+
 export async function POST(req: Request) {
   try {
     const { activityId, hostId, answers } = await req.json();
@@ -35,41 +42,48 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Activity not found" }, { status: 404 });
     }
 
-    const { data: pendingRequest } = await admin
-      .from("join_requests")
-      .select("id")
-      .eq("activity_id", activityId)
-      .eq("requester_id", user.id)
-      .eq("status", "pending")
-      .maybeSingle();
-
-    const { error: upsertError } = await admin.from("join_requests").upsert(
+    const { data: rpcResult, error: rpcError } = await admin.rpc(
+      "request_join_atomic",
       {
-        activity_id: activityId,
-        requester_id: user.id,
-        status: "pending",
-        answers: Array.isArray(answers) ? answers : [],
-      },
-      {
-        onConflict: "activity_id,requester_id",
+        p_activity_id: activityId,
+        p_requester_id: user.id,
+        p_answers: Array.isArray(answers) ? answers : [],
       }
     );
 
-    if (upsertError) {
-      return NextResponse.json({ error: upsertError.message }, { status: 409 });
-    }
-
-    if (!pendingRequest) {
-      await admin.from("notifications").insert({
-        user_id: hostId,
-        actor_id: user.id,
-        type: "join_request",
-        message: "sent a join request",
-        activity_id: activityId,
+    if (rpcError) {
+      console.error("request-join rpc failed", {
+        activityId,
+        requesterId: user.id,
+        rpcError,
       });
+      return NextResponse.json(
+        {
+          error:
+            "Failed to create join request atomically. Ensure request_join_atomic() and required constraints are applied.",
+        },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ success: true, duplicatePending: Boolean(pendingRequest) });
+    const result = (rpcResult ?? {}) as RequestJoinRpcResult;
+
+    if (result.ok) {
+      return NextResponse.json({ success: true, duplicatePending: Boolean(result.duplicatePending) });
+    }
+
+    if (result.code === "BAD_REQUEST") {
+      return NextResponse.json({ error: result.message || "Invalid request" }, { status: 400 });
+    }
+
+    if (result.code === "CONFLICT") {
+      return NextResponse.json({ error: result.message || "Conflict" }, { status: 409 });
+    }
+
+    return NextResponse.json(
+      { error: result.message || "Internal server error" },
+      { status: 500 }
+    );
   } catch (err) {
     console.error("request-join failed", { err });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
