@@ -5,12 +5,15 @@ type ApproveJoinRpcResult = {
   ok: boolean;
   code: string;
   message: string;
-  joinRequestMessage?: string;
+  approvedUserId?: string;
+  joinMessage?: string | null;
 };
 
 export async function POST(req: Request) {
   try {
-    const { joinRequestId } = await req.json();
+    const body = await req.json();
+    const joinRequestId =
+      typeof body?.joinRequestId === "string" ? body.joinRequestId : undefined;
 
     if (!joinRequestId) {
       return NextResponse.json({ error: "Missing joinRequestId" }, { status: 400 });
@@ -42,8 +45,8 @@ export async function POST(req: Request) {
       });
       return NextResponse.json(
         {
-          error:
-            "Failed to approve join request atomically. Ensure approve_join_request_atomic() exists and is deployed.",
+          error: rpcError.message || "Failed to approve join request",
+          code: "RPC_ERROR",
         },
         { status: 500 }
       );
@@ -53,13 +56,20 @@ export async function POST(req: Request) {
 
     if (result.ok) {
       return NextResponse.json({
-        success: true,
-        message: result.message || "Approved",
-        joinRequestMessage: result.joinRequestMessage ?? "",
+        ok: true,
+        code: result.code || "OK",
+        message: result.message || "Join request approved",
+        approvedUserId: result.approvedUserId,
+        joinMessage: result.joinMessage ?? null,
       });
     }
 
-    if (result.code === "BAD_REQUEST") {
+    if (
+      result.code === "BAD_REQUEST" ||
+      result.code === "UNAUTHORIZED" ||
+      result.code === "FORBIDDEN" ||
+      result.code === "NOT_FOUND"
+    ) {
       return NextResponse.json({ error: result.message || "Invalid request" }, { status: 400 });
     }
 
@@ -68,11 +78,15 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json(
-      { error: result.message || "Internal server error" },
+      {
+        error: result.message || "Failed to approve join request",
+        code: result.code || "INTERNAL",
+      },
       { status: 500 }
     );
   } catch (err) {
     console.error("approve-join failed", { err });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const message = err instanceof Error ? err.message : "Malformed request body";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
