@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  createSupabaseAdmin,
-  createSupabaseServer,
-} from "@/lib/supabaseServer";
+import { createSupabaseServer } from "@/lib/supabaseServer";
 
 type ApproveJoinRpcResult = {
   ok: boolean;
@@ -19,7 +16,6 @@ export async function POST(req: Request) {
     }
 
     const supabase = await createSupabaseServer();
-    const admin = createSupabaseAdmin();
 
     const {
       data: { user },
@@ -30,20 +26,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: rpcResult, error: rpcError } = await admin.rpc(
+    const { data: rpcResult, error: rpcError } = await supabase.rpc(
       "approve_join_request_atomic",
       {
         p_join_request_id: joinRequestId,
-        p_host_id: user.id,
       }
     );
 
     if (rpcError) {
-      console.error("approve_join rpc failed", { rpcError, joinRequestId, userId: user.id });
+      console.error("approve_join rpc failed", {
+        rpcError,
+        joinRequestId,
+        userId: user.id,
+      });
       return NextResponse.json(
         {
           error:
-            "Failed to approve join request atomically. Ensure approve_join_request_atomic() exists and required constraints/indexes are applied.",
+            "Failed to approve join request atomically. Ensure approve_join_request_atomic() exists and is deployed.",
         },
         { status: 500 }
       );
@@ -52,7 +51,7 @@ export async function POST(req: Request) {
     const result = (rpcResult ?? {}) as ApproveJoinRpcResult;
 
     if (result.ok) {
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, message: result.message || "Approved" });
     }
 
     if (result.code === "BAD_REQUEST") {
