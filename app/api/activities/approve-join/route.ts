@@ -5,6 +5,7 @@ type ApproveJoinRpcResult = {
   ok: boolean;
   code: string;
   message: string;
+  joinRequestMessage?: string;
 };
 
 export async function POST(req: Request) {
@@ -51,7 +52,11 @@ export async function POST(req: Request) {
     const result = (rpcResult ?? {}) as ApproveJoinRpcResult;
 
     if (result.ok) {
-      return NextResponse.json({ success: true, message: result.message || "Approved" });
+      return NextResponse.json({
+        success: true,
+        message: result.message || "Approved",
+        joinRequestMessage: result.joinRequestMessage ?? "",
+      });
     }
 
     if (result.code === "BAD_REQUEST") {
