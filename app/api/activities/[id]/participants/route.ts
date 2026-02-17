@@ -81,7 +81,7 @@ export async function GET(
     const { data: members, error: membersError } = await admin
       .from("activity_members")
       .select(`
-        profiles (
+        profiles!activity_members_user_fk(
           id,
           name,
           avatar_url,

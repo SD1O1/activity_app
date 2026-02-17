@@ -98,7 +98,6 @@ export async function POST(request: Request) {
       "approve_join_request_atomic",
       {
         p_join_request_id: resolvedJoinRequestId,
-        p_host_id: user.id,
       }
     );
 
