@@ -13,10 +13,17 @@ type RequestJoinRpcResult = {
 
 export async function POST(req: Request) {
   try {
-    const { activityId, hostId, answers } = await req.json();
+    const body = await req.json();
+    const activityId = body?.activityId as string | undefined;
+    const message =
+      typeof body?.message === "string"
+        ? body.message
+        : typeof body?.note === "string"
+          ? body.note
+          : null;
 
-    if (!activityId || !hostId) {
-      return NextResponse.json({ error: "Missing activityId or hostId" }, { status: 400 });
+    if (!activityId) {
+      return NextResponse.json({ error: "Missing activityId" }, { status: 400 });
     }
 
     const supabase = await createSupabaseServer();
@@ -33,13 +40,60 @@ export async function POST(req: Request) {
 
     const { data: activity, error: activityError } = await admin
       .from("activities")
-      .select("id, host_id, status")
+      .select("id, host_id, status, member_count, max_members")
       .eq("id", activityId)
       .neq("status", "deleted")
       .single();
 
-    if (activityError || !activity || activity.host_id !== hostId) {
+    if (activityError || !activity) {
       return NextResponse.json({ error: "Activity not found" }, { status: 404 });
+    }
+
+    if (activity.host_id === user.id) {
+      return NextResponse.json(
+        { error: "Hosts cannot request to join their own activity" },
+        { status: 400 }
+      );
+    }
+
+    if (activity.status === "completed") {
+      return NextResponse.json(
+        { error: "Activity has already ended" },
+        { status: 409 }
+      );
+    }
+
+    if (activity.member_count >= activity.max_members || activity.status === "full") {
+      return NextResponse.json(
+        { error: "Activity is full" },
+        { status: 409 }
+      );
+    }
+
+    const { data: membership, error: membershipError } = await admin
+      .from("activity_members")
+      .select("id")
+      .eq("activity_id", activityId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (membershipError) {
+      console.error("request-join membership check failed", {
+        activityId,
+        requesterId: user.id,
+        membershipError,
+      });
+      return NextResponse.json(
+        { error: "Failed to validate membership status" },
+        { status: 500 }
+      );
+    }
+
+    if (membership) {
+      return NextResponse.json(
+        { error: "You are already a member of this activity" },
+        { status: 409 }
+      );
     }
 
     const { data: rpcResult, error: rpcError } = await admin.rpc(
@@ -47,7 +101,7 @@ export async function POST(req: Request) {
       {
         p_activity_id: activityId,
         p_requester_id: user.id,
-        p_answers: Array.isArray(answers) ? answers : [],
+        p_message: message,
       }
     );
 
@@ -60,7 +114,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error:
-            "Failed to create join request atomically. Ensure request_join_atomic() and required constraints are applied.",
+            "Failed to create join request atomically. Ensure request_join_atomic() is installed.",
         },
         { status: 500 }
       );
@@ -69,15 +123,25 @@ export async function POST(req: Request) {
     const result = (rpcResult ?? {}) as RequestJoinRpcResult;
 
     if (result.ok) {
-      return NextResponse.json({ success: true, duplicatePending: Boolean(result.duplicatePending) });
+      return NextResponse.json({
+        success: true,
+        message: result.message || "Join request sent",
+        duplicatePending: Boolean(result.duplicatePending),
+      });
     }
 
     if (result.code === "BAD_REQUEST") {
-      return NextResponse.json({ error: result.message || "Invalid request" }, { status: 400 });
+      return NextResponse.json(
+        { error: result.message || "Invalid request" },
+        { status: 400 }
+      );
     }
 
     if (result.code === "CONFLICT") {
-      return NextResponse.json({ error: result.message || "Conflict" }, { status: 409 });
+      return NextResponse.json(
+        { error: result.message || "Conflict" },
+        { status: 409 }
+      );
     }
 
     return NextResponse.json(
