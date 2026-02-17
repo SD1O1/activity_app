@@ -6,10 +6,18 @@ import {
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id?: string } }
+  { params }: { params: { id?: string } | Promise<{ id?: string }> }
 ) {
   try {
-    const activityId = params?.id;
+    const resolvedParams = await Promise.resolve(params);
+    const activityId = resolvedParams?.id;
+
+    // Temporary debug log for runtime param shape
+    console.log("GET /api/activities/[id]/participants params", {
+      rawParams: params,
+      resolvedParams,
+      activityId,
+    });
 
     if (!activityId) {
       return NextResponse.json({ error: "Missing activityId" }, { status: 400 });

@@ -12,20 +12,32 @@ type ApproveJoinRpcResult = {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const activityId =
-      typeof body?.activityId === "string" && body.activityId.trim().length > 0
-        ? body.activityId
-        : undefined;
-    const participantId =
-      typeof body?.participantId === "string" && body.participantId.trim().length > 0
-        ? body.participantId
-        : undefined;
+
+    // Temporary debug log for frontend payload verification
+    console.log("POST /api/activities/approve-join body", body);
+
     const joinRequestId =
       typeof body?.joinRequestId === "string" && body.joinRequestId.trim().length > 0
-        ? body.joinRequestId
-        : undefined;
+        ? body.joinRequestId.trim()
+        : typeof body?.join_request_id === "string" && body.join_request_id.trim().length > 0
+          ? body.join_request_id.trim()
+          : undefined;
 
-    if ((!activityId || !participantId) && !joinRequestId) {
+    const activityId =
+      typeof body?.activityId === "string" && body.activityId.trim().length > 0
+        ? body.activityId.trim()
+        : typeof body?.id === "string" && body.id.trim().length > 0
+          ? body.id.trim()
+          : undefined;
+
+    const participantId =
+      typeof body?.participantId === "string" && body.participantId.trim().length > 0
+        ? body.participantId.trim()
+        : typeof body?.userId === "string" && body.userId.trim().length > 0
+          ? body.userId.trim()
+          : undefined;
+
+    if (!joinRequestId && (!activityId || !participantId)) {
       return NextResponse.json(
         {
           error:
@@ -86,6 +98,7 @@ export async function POST(request: Request) {
       "approve_join_request_atomic",
       {
         p_join_request_id: resolvedJoinRequestId,
+        p_host_id: user.id,
       }
     );
 
@@ -121,16 +134,20 @@ export async function POST(request: Request) {
       );
     }
 
-    if (
-      result.code === "BAD_REQUEST" ||
-      result.code === "UNAUTHORIZED" ||
-      result.code === "FORBIDDEN" ||
-      result.code === "NOT_FOUND"
-    ) {
-      return NextResponse.json(
-        { error: result.message || "Invalid request" },
-        { status: 400 }
-      );
+    if (result.code === "UNAUTHORIZED") {
+      return NextResponse.json({ error: result.message || "Unauthorized" }, { status: 401 });
+    }
+
+    if (result.code === "FORBIDDEN") {
+      return NextResponse.json({ error: result.message || "Forbidden" }, { status: 403 });
+    }
+
+    if (result.code === "NOT_FOUND") {
+      return NextResponse.json({ error: result.message || "Not found" }, { status: 404 });
+    }
+
+    if (result.code === "BAD_REQUEST") {
+      return NextResponse.json({ error: result.message || "Invalid request" }, { status: 400 });
     }
 
     if (result.code === "CONFLICT") {
