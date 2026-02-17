@@ -192,6 +192,7 @@ export default function OnboardingProfile() {
 
   const handleSubmit = async () => {
     setGlobalError(null);
+    setPhoneError(null);
 
     const { data: auth } = await supabase.auth.getUser();
     if (!auth?.user) {
@@ -199,19 +200,21 @@ export default function OnboardingProfile() {
       return;
     }
 
+    const payload = {
+      id: auth.user.id,
+      name: form.name,
+      dob: form.dob,
+      bio: form.bio,
+      avatar_url: form.photo || null,
+      city: form.city || null,
+      phone: fullPhone,
+      phone_verified: form.phoneVerified,
+      interests: form.interests,
+    };
+
     const { error: profileError } = await supabase
       .from("profiles")
-      .update({
-        name: form.name,
-        dob: form.dob,
-        bio: form.bio,
-        avatar_url: form.photo || null,
-        city: form.city || null,
-        phone: fullPhone,
-        phone_verified: form.phoneVerified,
-        interests: form.interests,
-      })
-      .eq("id", auth.user.id);
+      .upsert(payload, { onConflict: "id" });
 
     if (profileError) {
       if (
@@ -225,8 +228,11 @@ export default function OnboardingProfile() {
         return;
       }
 
-      console.error("Profile update failed:", profileError);
-      alert("Failed to save profile. Please try again.");
+      console.error("Profile upsert failed:", profileError);
+      setGlobalError(
+        profileError.message ||
+          "Failed to save your profile. Please try again."
+      );
       return;
     }
 
