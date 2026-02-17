@@ -16,8 +16,12 @@ import LocationSlide from "@/components/onboarding/slides/LocationSlide";
 import PhotoSlide from "@/components/onboarding/slides/PhotoSlide";
 import PhotoVerificationSlide from "@/components/onboarding/slides/PhotoVerificationSlide";
 
-
 const TOTAL_STEPS = 9;
+const PROFILE_PHOTOS_BUCKET =
+  process.env.NEXT_PUBLIC_SUPABASE_PROFILE_PHOTOS_BUCKET ?? "profile-photos";
+const VERIFICATION_PHOTOS_BUCKET =
+  process.env.NEXT_PUBLIC_SUPABASE_VERIFICATION_PHOTOS_BUCKET ??
+  "verification-photos";
 
 export default function OnboardingProfile() {
   const [step, setStep] = useState(0);
@@ -37,6 +41,9 @@ export default function OnboardingProfile() {
 
   const [otp, setOtp] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
+  const [globalError, setGlobalError] = useState<string | null>(null);
   const router = useRouter();
   const fullPhone = `${form.countryCode}${form.phone}`;
 
@@ -45,7 +52,11 @@ export default function OnboardingProfile() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setUserId(data.user.id);
+      if (data.user) {
+        setUserId(data.user.id);
+      } else {
+        setGlobalError("You are not signed in. Please sign in again to continue onboarding.");
+      }
     });
   }, []);
 
@@ -54,26 +65,21 @@ export default function OnboardingProfile() {
       const code = await detectCountryCode();
       setForm((p) => ({ ...p, countryCode: code }));
     };
-  
+
     initCountry();
   }, []);
-  
 
   /* -------------------- helpers -------------------- */
 
   const isStepValid = () => {
     switch (step) {
       case 0:
-        return (
-          form.phone.length === 10 &&
-          form.countryCode.length > 0
-        );
+        return form.phone.length === 10 && form.countryCode.length > 0;
       case 1:
         return form.phoneVerified === true;
       case 2:
         return form.name.trim().length > 0;
-      case 3:
-      {
+      case 3: {
         if (!form.dob) return false;
 
         const birthDate = new Date(form.dob);
@@ -113,42 +119,68 @@ export default function OnboardingProfile() {
   };
 
   const handlePhotoUpload = async (file: File) => {
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth?.user) return;
+    setPhotoUploadError(null);
+    setGlobalError(null);
+    setPhotoUploading(true);
 
-    const ext = file.name.split(".").pop();
-    const path = `${auth.user.id}.${ext}`;
+    try {
+      const { data: auth } = await supabase.auth.getUser();
 
-    const { error } = await supabase.storage
-      .from("profile-photos")
-      .upload(path, file, { upsert: true });
+      if (!auth?.user) {
+        const message =
+          "You are not signed in. Please sign in again before uploading a photo.";
+        setPhotoUploadError(message);
+        setGlobalError(message);
+        return;
+      }
 
-    if (error) {
-      console.error(error);
-      return;
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${auth.user.id}/${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(PROFILE_PHOTOS_BUCKET)
+        .upload(path, file, { upsert: true });
+
+      if (uploadError) {
+        setPhotoUploadError(
+          uploadError.message || "Photo upload failed. Please try again."
+        );
+        return;
+      }
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from(PROFILE_PHOTOS_BUCKET).getPublicUrl(path);
+
+      if (!publicUrl) {
+        setPhotoUploadError(
+          "Photo uploaded, but we could not generate its URL. Please retry."
+        );
+        return;
+      }
+
+      setForm((prev) => ({ ...prev, photo: publicUrl }));
+    } catch {
+      setPhotoUploadError("Unexpected upload error. Please try again.");
+    } finally {
+      setPhotoUploading(false);
     }
-
-    const { data } = supabase.storage
-      .from("profile-photos")
-      .getPublicUrl(path);
-
-    setForm((prev) => ({ ...prev, photo: data.publicUrl }));
   };
 
   const uploadVerificationVideo = async () => {
     if (!form.verificationSelfie || !userId) return;
-  
+
     const path = `${userId}/${Date.now()}.webm`;
-  
+
     const { error } = await supabase.storage
-      .from("verification-photos")
+      .from(VERIFICATION_PHOTOS_BUCKET)
       .upload(path, form.verificationSelfie);
-  
+
     if (error) {
       console.error("Verification upload failed", error);
       return;
     }
-  
+
     await supabase
       .from("profiles")
       .update({
@@ -156,54 +188,63 @@ export default function OnboardingProfile() {
         verification_video_path: path,
       })
       .eq("id", userId);
-  };  
+  };
 
   const handleSubmit = async () => {
+    setGlobalError(null);
+
     const { data: auth } = await supabase.auth.getUser();
-    if (!auth?.user) return;
-
-    const { error: profileError } = await supabase
-  .from("profiles")
-  .update({
-    name: form.name,
-    dob: form.dob,
-    bio: form.bio,
-    avatar_url: form.photo || null,
-    city: form.city || null,
-    phone: fullPhone,
-    phone_verified: form.phoneVerified,
-    interests: form.interests,
-  })
-  .eq("id", auth.user.id);
-
-  if (profileError) {
-    if (
-      profileError.code === "23505" ||
-      profileError.message?.includes("profiles_phone_unique")
-    ) {
-      setPhoneError(
-        "This phone number is already associated with another account."
-      );
-      setStep(0); // bring user back to phone step
+    if (!auth?.user) {
+      setGlobalError("You are not signed in. Please sign in again to save your profile.");
       return;
     }
-  
-    console.error("Profile update failed:", profileError);
-    alert("Failed to save profile. Please try again.");
-    return;
-  }  
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({
+        name: form.name,
+        dob: form.dob,
+        bio: form.bio,
+        avatar_url: form.photo || null,
+        city: form.city || null,
+        phone: fullPhone,
+        phone_verified: form.phoneVerified,
+        interests: form.interests,
+      })
+      .eq("id", auth.user.id);
+
+    if (profileError) {
+      if (
+        profileError.code === "23505" ||
+        profileError.message?.includes("profiles_phone_unique")
+      ) {
+        setPhoneError(
+          "This phone number is already associated with another account."
+        );
+        setStep(0);
+        return;
+      }
+
+      console.error("Profile update failed:", profileError);
+      alert("Failed to save profile. Please try again.");
+      return;
+    }
 
     await uploadVerificationVideo();
     router.replace("/profile");
-  };  
+  };
 
   /* -------------------- render -------------------- */
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4">
-      <h1 className="text-xl font-semibold mb-4">
-        Profile Onboarding
-      </h1>
+      <h1 className="text-xl font-semibold mb-4">Profile Onboarding</h1>
+
+      {globalError ? (
+        <p className="mb-3 max-w-sm text-center text-sm text-red-600" role="alert">
+          {globalError}
+        </p>
+      ) : null}
 
       {step === 0 && (
         <PhoneSlide
@@ -216,7 +257,7 @@ export default function OnboardingProfile() {
           onPhoneChange={(phone) => {
             setPhoneError(null);
             setForm((p) => ({ ...p, phone }));
-          }}          
+          }}
         />
       )}
 
@@ -234,47 +275,28 @@ export default function OnboardingProfile() {
       )}
 
       {step === 2 && (
-        <NameSlide
-          value={form.name}
-          onChange={(name) =>
-            setForm({ ...form, name })
-          }
-        />
+        <NameSlide value={form.name} onChange={(name) => setForm({ ...form, name })} />
       )}
 
       {step === 3 && (
-        <DobSlide
-          value={form.dob}
-          onChange={(dob) =>
-            setForm({ ...form, dob })
-          }
-        />
+        <DobSlide value={form.dob} onChange={(dob) => setForm({ ...form, dob })} />
       )}
 
       {step === 4 && (
-        <BioSlide
-          value={form.bio}
-          onChange={(bio) =>
-            setForm({ ...form, bio })
-          }
-        />
+        <BioSlide value={form.bio} onChange={(bio) => setForm({ ...form, bio })} />
       )}
 
       {step === 5 && (
         <InterestSlide
           value={form.interests}
-          onChange={(interests) =>
-            setForm({ ...form, interests })
-          }
+          onChange={(interests) => setForm({ ...form, interests })}
         />
       )}
 
       {step === 6 && (
         <LocationSlide
           city={form.city}
-          onCityChange={(city) =>
-            setForm({ ...form, city })
-          }
+          onCityChange={(city) => setForm({ ...form, city })}
           onUseLocation={handleUseLocation}
         />
       )}
@@ -283,6 +305,8 @@ export default function OnboardingProfile() {
         <PhotoSlide
           value={form.photo}
           onSelectFile={handlePhotoUpload}
+          uploading={photoUploading}
+          error={photoUploadError}
         />
       )}
 
@@ -297,16 +321,11 @@ export default function OnboardingProfile() {
         />
       )}
 
-      <p className="text-sm text-gray-500 mt-4">
-        Step {step + 1} of {TOTAL_STEPS}
-      </p>
+      <p className="text-sm text-gray-500 mt-4">Step {step + 1} of {TOTAL_STEPS}</p>
 
       <div className="mt-6 flex w-full max-w-sm justify-between">
         {step > 0 ? (
-          <button
-            onClick={() => setStep((s) => s - 1)}
-            className="text-sm text-gray-600"
-          >
+          <button onClick={() => setStep((s) => s - 1)} className="text-sm text-gray-600">
             Back
           </button>
         ) : (
@@ -315,21 +334,18 @@ export default function OnboardingProfile() {
 
         {step < TOTAL_STEPS - 1 ? (
           <button
-            disabled={!isStepValid()}
+            disabled={!isStepValid() || photoUploading}
             onClick={() => setStep((s) => s + 1)}
             className={`text-sm font-semibold ${
-              isStepValid()
-                ? "text-black"
-                : "text-gray-400 cursor-not-allowed"
+              !isStepValid() || photoUploading
+                ? "text-gray-400 cursor-not-allowed"
+                : "text-black"
             }`}
           >
-            Next
+            {photoUploading && step === 7 ? "Uploading…" : "Next"}
           </button>
         ) : (
-          <button
-            onClick={handleSubmit}
-            className="text-sm font-semibold text-black"
-          >
+          <button onClick={handleSubmit} className="text-sm font-semibold text-black">
             Save & Continue
           </button>
         )}
