@@ -21,7 +21,7 @@ import { useViewerRole } from "@/hooks/useViewerRole";
 import { useJoinStatus } from "@/hooks/useJoinStatus";
 import { useUnreadChat } from "@/hooks/useUnreadChat";
 import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
-import { ActivityDetailItem, ActivityTagRelation } from "@/types/activity";
+import { ActivityDetailItem, normalizeActivityTags } from "@/types/activity";
 
 type Props = {
   activity: ActivityDetailItem;
@@ -29,6 +29,7 @@ type Props = {
 
 type Participant = {
   id: string;
+  username?: string | null;
   name: string | null;
   avatar_url: string | null;
   verified: boolean | null;
@@ -64,7 +65,7 @@ export default function ActivityDetail({ activity }: Props) {
     void loadParticipants();
   }, [activity.id]);
 
-  const tags = activity.activity_tag_relations?.map((rel: ActivityTagRelation) => rel.activity_tags) ?? [];
+  const tags = normalizeActivityTags(activity.activity_tag_relations);
 
   const canOpenChat = viewerRole === "host" || (viewerRole === "guest" && joinStatus === "approved");
 
@@ -159,6 +160,12 @@ export default function ActivityDetail({ activity }: Props) {
         onRequestJoin={handleRequestJoin}
         onOpenChat={() => setOpenChat(true)}
         onOpenReview={() => setOpenReview(true)}
+        onLeaveSuccess={async () => {
+          await computeJoinStatus();
+          if (user) {
+            setParticipants((prev) => prev.filter((participant) => participant.id !== user.id));
+          }
+        }}
         activityStatus={activity.status}
       />
 
@@ -201,7 +208,10 @@ export default function ActivityDetail({ activity }: Props) {
           currentUserId={user.id}
           isHost={user.id === activity.host_id}
           isJoined={joinStatus === "approved"}
-          onOpenProfile={(participantId) => router.push(`/profile/${participantId}`)}
+          onOpenProfile={(participant) => {
+            if (!participant.username) return;
+            router.push(`/u/${participant.username}`);
+          }}
           onRemove={handleRemove}
         />
       )}

@@ -1,5 +1,5 @@
 import HostMiniProfile from "@/components/profile/HostMiniProfile";
-import { Host } from "@/types/host";
+import { PublicUser } from "@/types/publicUser";
 
 type ActivityCardProps = {
   title: string;
@@ -8,7 +8,7 @@ type ActivityCardProps = {
   time: string;
   type: "group" | "one-on-one";
   tags?: { id: string; name: string }[];
-  host?: Host;
+  host?: PublicUser | null;
   hideHost?: boolean; // 👈 NEW
   onClick?: () => void;
 };

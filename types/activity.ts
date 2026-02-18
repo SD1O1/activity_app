@@ -6,8 +6,22 @@ export type ActivityTag = {
 };
 
 export type ActivityTagRelation = {
-  activity_tags: ActivityTag;
+  activity_tags: ActivityTag | ActivityTag[] | null;
 };
+
+export function normalizeActivityTags(
+  relations: ActivityTagRelation[] | null | undefined
+): ActivityTag[] {
+  if (!relations?.length) return [];
+
+  return relations.flatMap((relation) => {
+    if (!relation?.activity_tags) return [];
+
+    return Array.isArray(relation.activity_tags)
+      ? relation.activity_tags
+      : [relation.activity_tags];
+  });
+}
 
 export type ActivityListItem = {
   id: string;

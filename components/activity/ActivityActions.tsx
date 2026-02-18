@@ -5,7 +5,7 @@ import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
 
 type JoinStatus = "none" | "pending" | "approved" | "rejected";
 type ViewerRole = "guest" | "host";
-type ActivityStatus = "open" | "full" | "completed";
+type ActivityStatus = string;
 
 type Props = {
   activityId: string;
@@ -16,6 +16,7 @@ type Props = {
   onRequestJoin: () => void;
   onOpenChat: () => void;
   onOpenReview: () => void;
+  onLeaveSuccess?: () => Promise<void> | void;
 };
 
 export default function ActivityActions({
@@ -27,6 +28,7 @@ export default function ActivityActions({
   onRequestJoin,
   onOpenChat,
   onOpenReview,
+  onLeaveSuccess,
 }: Props) {
   const { user } = useClientAuthProfile();
   const [leaving, setLeaving] = useState(false);
@@ -37,7 +39,7 @@ export default function ActivityActions({
     setLeaving(true);
 
     try {
-      await fetch("/api/activities/remove-member", {
+      const res = await fetch("/api/activities/remove-member", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -46,8 +48,14 @@ export default function ActivityActions({
         }),
       });
 
-      // simplest & safest for now
-      window.location.reload();
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        alert(payload.error || "Failed to leave activity");
+        setLeaving(false);
+        return;
+      }
+
+      await onLeaveSuccess?.();
     } catch (err) {
       console.error("Failed to leave activity", err);
       setLeaving(false);

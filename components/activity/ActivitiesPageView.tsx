@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ActivityCard from "@/components/cards/ActivityCard";
 import ActivitiesMap from "../map/ActivitesMap";
-import { ActivityListItem, ActivityTagRelation } from "@/types/activity";
+import { ActivityListItem, normalizeActivityTags } from "@/types/activity";
 
 type Props = {
   activities: ActivityListItem[];
@@ -49,8 +49,7 @@ export default function ActivitiesPageView({ activities, loading }: Props) {
           <p className="text-center mt-10">No activities yet.</p>
         ) : (
           activities.map((activity) => {
-            const tags =
-              activity.activity_tag_relations?.map((rel: ActivityTagRelation) => rel.activity_tags) ?? [];
+            const tags = normalizeActivityTags(activity.activity_tag_relations);
 
             return (
               <div
@@ -66,7 +65,7 @@ export default function ActivitiesPageView({ activities, loading }: Props) {
                   time={activity.starts_at ? new Date(activity.starts_at).toLocaleString() : ""}
                   type={activity.type}
                   tags={tags}
-                  host={activity.host ?? null}
+                  host={activity.host ?? undefined}
                   onClick={() => router.push(`/activity/${activity.id}`)}
                 />
               </div>
