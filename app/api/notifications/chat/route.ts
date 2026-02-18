@@ -74,50 +74,93 @@ export async function POST(req: Request) {
     });
   }
 
+  const { data: activity, error: activityError } = await admin
+    .from("activities")
+    .select("host_id")
+    .eq("id", convo.activity_id)
+    .maybeSingle();
+
+  if (activityError || !activity) {
+    console.error("chat notification activity lookup failed", {
+      conversationId,
+      activityId: convo.activity_id,
+      userId: user.id,
+      activityError,
+    });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+
+  const { data: participantRecords, error: participantQueryError } = await admin
+    .from("conversation_participants")
+    .select("user_id")
+    .eq("conversation_id", conversationId);
+
+  if (participantQueryError) {
+    console.error("chat notification participant lookup failed", {
+      conversationId,
+      userId: user.id,
+      participantQueryError,
+    });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+
+  const participantIds = new Set(
+    (participantRecords ?? []).map((participant) => participant.user_id)
+  );
+
   const { data: activityMembers, error: activityMembersError } = await admin
-  .from("activity_members")
-  .select("user_id")
-  .eq("activity_id", convo.activity_id)
-  .eq("status", "active");
+    .from("activity_members")
+    .select("user_id")
+    .eq("activity_id", convo.activity_id)
+    .eq("status", "active");
 
-if (activityMembersError) {
-  console.error("chat notification activity members query failed", {
-    conversationId,
-    activityId: convo.activity_id,
-    userId: user.id,
-    activityMembersError,
-  });
-  return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-}
+  if (activityMembersError) {
+    console.error("chat notification activity members query failed", {
+      conversationId,
+      activityId: convo.activity_id,
+      userId: user.id,
+      activityMembersError,
+    });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 
-if (!activityMembers?.some((member) => member.user_id === user.id)) {
-  return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-}
+  const activeMemberIds = new Set(
+    (activityMembers ?? []).map((member) => member.user_id)
+  );
+  activeMemberIds.add(activity.host_id);
 
-const participantRows = activityMembers.map((member) => ({
-  conversation_id: conversationId,
-  user_id: member.user_id,
-}));
+  const isConversationParticipant = participantIds.has(user.id);
+  const isActivityMember = activeMemberIds.has(user.id);
 
-const { error: participantUpsertError } = await admin
-  .from("conversation_participants")
-  .upsert(participantRows, {
-    onConflict: "conversation_id,user_id",
-    ignoreDuplicates: true,
-  });
+  if (!isConversationParticipant && !isActivityMember) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
-if (participantUpsertError) {
-  console.error("chat notification participant sync failed", {
-    conversationId,
-    userId: user.id,
-    participantUpsertError,
-  });
-  return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-}
+  const participantRows = Array.from(activeMemberIds).map((memberId) => ({
+    conversation_id: conversationId,
+    user_id: memberId,
+  }));
 
-const rows = activityMembers
-  .map((member) => member.user_id)
-  .filter((memberId) => memberId !== user.id)
+  const { error: participantUpsertError } = await admin
+    .from("conversation_participants")
+    .upsert(participantRows, {
+      onConflict: "conversation_id,user_id",
+      ignoreDuplicates: true,
+    });
+
+  if (participantUpsertError) {
+    console.error("chat notification participant sync failed", {
+      conversationId,
+      userId: user.id,
+      participantUpsertError,
+    });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+
+  const recipientIds = new Set([...participantIds, ...activeMemberIds]);
+  recipientIds.delete(user.id);
+
+  const rows = Array.from(recipientIds)
   .map((recipientId) => ({
     user_id: recipientId,
     actor_id: user.id,
