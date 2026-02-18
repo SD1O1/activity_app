@@ -46,6 +46,25 @@ export async function POST(req: Request) {
     messageTimestamp = createdAtDate;
   }
 
+  const { data: convo, error: convoError } = await admin
+    .from("conversations")
+    .select("activity_id")
+    .eq("id", conversationId)
+    .maybeSingle();
+
+  if (convoError || !convo) {
+    return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+  }
+
+  if (activityId && convo.activity_id !== activityId) {
+    console.warn("chat notification activity mismatch", {
+      conversationId,
+      requestedActivityId: activityId,
+      conversationActivityId: convo.activity_id,
+      userId: user.id,
+    });
+  }
+
   const { data: callerMembership } = await admin
     .from("conversation_participants")
     .select("user_id")
@@ -54,17 +73,16 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (!callerMembership) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+    const { data: latestCallerMessage } = await admin
+      .from("messages")
+      .select("sender_id")
+      .eq("conversation_id", conversationId)
+      .eq("sender_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-  if (activityId) {
-    const { data: convo } = await admin
-      .from("conversations")
-      .select("activity_id")
-      .eq("id", conversationId)
-      .single();
-
-    if (!convo || convo.activity_id !== activityId) {
+    if (!latestCallerMessage) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   }
@@ -94,7 +112,7 @@ export async function POST(req: Request) {
     actor_id: user.id,
     type: "chat",
     message: "sent you a message",
-    activity_id: activityId,
+    activity_id: convo.activity_id,
     dedupe_key: `chat:${conversationId}:${user.id}:${participant.user_id}:${bucket}`,
   }));
 

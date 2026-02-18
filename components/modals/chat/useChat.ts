@@ -19,12 +19,24 @@ export function useChat(open: boolean, activityId: string) {
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const typingChannelRef = useRef<any>(null);
-
   const participantsRef = useRef<ParticipantWithAvatar[]>([]);
 
   useEffect(() => {
     participantsRef.current = participants;
   }, [participants]);
+
+  const syncParticipantSeen = (userId: string, seenAt: string | null) => {
+    setParticipants(prev => {
+      let changed = false;
+      const next = prev.map(p => {
+        if (p.user_id !== userId) return p;
+        if (p.last_seen_at === seenAt) return p;
+        changed = true;
+        return { ...p, last_seen_at: seenAt };
+      });
+      return changed ? next : prev;
+    });
+  };
 
   /* ───────── AUTH ───────── */
   useEffect(() => {
@@ -105,7 +117,11 @@ export function useChat(open: boolean, activityId: string) {
           filter: `conversation_id=eq.${conversationId}`,
         },
         payload => {
-          setMessages(prev => [...prev, payload.new as Message]);
+          const incoming = payload.new as Message;
+          setMessages(prev => {
+            if (prev.some(m => m.id === incoming.id)) return prev;
+            return [...prev, incoming];
+          });
         }
       )
       .subscribe();
@@ -136,18 +152,14 @@ export function useChat(open: boolean, activityId: string) {
 
     const seenAt = lastIncoming.created_at;
 
-    supabase
+    void supabase
       .from("conversation_participants")
       .update({ last_seen_at: seenAt })
       .eq("conversation_id", conversationId)
       .eq("user_id", myId);
 
-    setParticipants(prev =>
-      prev.map(p =>
-        p.user_id === myId ? { ...p, last_seen_at: seenAt } : p
-      )
-    );
-  }, [open, conversationId, myId, messages]);
+      syncParticipantSeen(myId, seenAt);
+    }, [open, conversationId, myId, messages]);
 
   /* ───────── REALTIME: SEEN SYNC ───────── */
   useEffect(() => {
@@ -164,13 +176,7 @@ export function useChat(open: boolean, activityId: string) {
           filter: `conversation_id=eq.${conversationId}`,
         },
         payload => {
-          setParticipants(prev =>
-            prev.map(p =>
-              p.user_id === payload.new.user_id
-                ? { ...p, last_seen_at: payload.new.last_seen_at }
-                : p
-            )
-          );
+          syncParticipantSeen(payload.new.user_id, payload.new.last_seen_at);
         }
       )
       .subscribe();
@@ -179,6 +185,33 @@ export function useChat(open: boolean, activityId: string) {
       supabase.removeChannel(channel);
     };
   }, [conversationId]);
+
+    /* ───────── FALLBACK: POLL PARTICIPANT SEEN ───────── */
+    useEffect(() => {
+      if (!open || !conversationId) return;
+  
+      const refreshParticipants = async () => {
+        const { data: parts } = await supabase
+          .from("conversation_participants")
+          .select("user_id, last_seen_at")
+          .eq("conversation_id", conversationId);
+  
+        if (!parts?.length) return;
+  
+        parts.forEach((part) => {
+          syncParticipantSeen(part.user_id, part.last_seen_at);
+        });
+      };
+  
+      void refreshParticipants();
+      const interval = window.setInterval(() => {
+        void refreshParticipants();
+      }, 4000);
+  
+      return () => {
+        window.clearInterval(interval);
+      };
+    }, [open, conversationId]);
 
   /* ───────── TYPING INDICATOR ───────── */
   useEffect(() => {
@@ -250,7 +283,10 @@ export function useChat(open: boolean, activityId: string) {
 
     if (!msg) return;
 
-    setMessages(prev => [...prev, msg]);
+    setMessages(prev => {
+      if (prev.some(m => m.id === msg.id)) return prev;
+      return [...prev, msg];
+    });
 
     // 🔔 notify server (server resolves recipients reliably)
     void fetch("/api/notifications/chat", {
@@ -261,6 +297,15 @@ export function useChat(open: boolean, activityId: string) {
         activityId,
         messageCreatedAt: msg.created_at,
       }),
+    }).then(async (res) => {
+      if (!res.ok) {
+        console.error("chat notification failed", {
+          status: res.status,
+          body: await res.text(),
+        });
+      }
+    }).catch((error) => {
+      console.error("chat notification request error", error);
     });
 
     typingChannelRef.current?.untrack();
