@@ -76,7 +76,7 @@ export default function ProfileView() {
       .from("activity_members")
       .select(`
         activity_id,
-        activities (
+        activities:activities!activity_members_activity_fk (
           id,
           title,
           type,
@@ -98,12 +98,15 @@ export default function ProfileView() {
     if (!data) return;
 
     const joined = data
-      .map((m: any) => m.activities)
+    .map((member: any) => {
+      const relation = member.activities;
+      return Array.isArray(relation) ? relation[0] : relation;
+    })
       .filter(
-        (a: any) =>
-          a &&
-          a.status !== "deleted" &&
-          a.host_id !== userId
+        (activity: any) =>
+          activity &&
+          activity.status !== "deleted" &&
+          activity.host_id !== userId
       );
 
     setJoinedActivities(joined);

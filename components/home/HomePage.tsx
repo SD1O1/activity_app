@@ -74,7 +74,7 @@ export default function HomePage() {
       // 🔹 fetch host profiles
       const { data: hosts } = await supabase
         .from("profiles")
-        .select("id, name, avatar_url, dob, verified")
+        .select("id, username,name, avatar_url, dob, verified")
         .in("id", hostIds);
 
       const hostMap = Object.fromEntries(

@@ -1,5 +1,6 @@
 "use client";
 
+import type { MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { PublicUser } from "@/types/publicUser";
 
@@ -16,7 +17,8 @@ export default function HostMiniProfile({
 }: Props) {
   const router = useRouter();
 
-  const handleClick = () => {
+  const handleClick = (event?: MouseEvent) => {
+    event?.stopPropagation();
     if (!clickable) return;
     if (!host.username) return; // ✅ guard
     router.push(`/u/${host.username}`);
@@ -24,7 +26,7 @@ export default function HostMiniProfile({
 
   return (
     <div
-      onClick={handleClick}
+      onClick={(event) => handleClick(event)}
       className={`flex items-center gap-3 ${
         clickable ? "cursor-pointer" : ""
       }`}

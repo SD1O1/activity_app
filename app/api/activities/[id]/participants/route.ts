@@ -67,7 +67,7 @@ export async function GET(
 
     const { data: hostProfile, error: hostError } = await admin
       .from("profiles")
-      .select("id, name, avatar_url, verified")
+      .select("id, username, name, avatar_url, verified")
       .eq("id", activity.host_id)
       .single();
 
