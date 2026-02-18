@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { Message, Participant } from "./types";
-
+import type { RealtimeChannel } from "@supabase/supabase-js";
 type ParticipantWithAvatar = Participant & {
   avatar_url?: string | null;
   username?: string | null;
@@ -18,7 +18,7 @@ export function useChat(open: boolean, activityId: string) {
   const [isOtherTyping, setIsOtherTyping] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
-  const typingChannelRef = useRef<any>(null);
+  const typingChannelRef = useRef<RealtimeChannel | null>(null);
   const participantsRef = useRef<ParticipantWithAvatar[]>([]);
 
   useEffect(() => {
@@ -152,14 +152,29 @@ export function useChat(open: boolean, activityId: string) {
 
     const seenAt = lastIncoming.created_at;
 
-    void supabase
-      .from("conversation_participants")
-      .update({ last_seen_at: seenAt })
-      .eq("conversation_id", conversationId)
-      .eq("user_id", myId);
+    void fetch("/api/chat/seen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        conversationId,
+        seenAt,
+      }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          console.error("chat seen update failed", {
+            status: res.status,
+            body: await res.text(),
+          });
+          return;
+        }
 
-      syncParticipantSeen(myId, seenAt);
-    }, [open, conversationId, myId, messages]);
+        syncParticipantSeen(myId, seenAt);
+      })
+      .catch((error) => {
+        console.error("chat seen request error", error);
+      });
+  }, [open, conversationId, myId, messages]);
 
   /* ───────── REALTIME: SEEN SYNC ───────── */
   useEffect(() => {

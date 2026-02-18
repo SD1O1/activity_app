@@ -10,6 +10,15 @@ const DUPLICATE_NOTIFICATION_WINDOW_SECONDS = 15;
 const toWindowBucket = (date: Date) =>
   Math.floor(date.getTime() / (DUPLICATE_NOTIFICATION_WINDOW_SECONDS * 1000));
 
+const isMissingDedupeSetupError = (error: { message?: string } | null) => {
+  const message = error?.message?.toLowerCase() ?? "";
+  return (
+    message.includes("dedupe_key") ||
+    message.includes("no unique") ||
+    message.includes("on conflict")
+  );
+};
+
 export async function POST(req: Request) {
   const { conversationId, activityId, messageCreatedAt } = await req.json();
 
@@ -116,26 +125,38 @@ export async function POST(req: Request) {
     dedupe_key: `chat:${conversationId}:${user.id}:${participant.user_id}:${bucket}`,
   }));
 
-  const { error: upsertError } = await admin
-    .from("notifications")
-    .upsert(rows, {
-      onConflict: "user_id,type,dedupe_key",
-      ignoreDuplicates: true,
-    });
+  const { error: upsertError } = await admin.from("notifications").upsert(rows, {
+    onConflict: "user_id,type,dedupe_key",
+    ignoreDuplicates: true,
+  });
 
   if (upsertError) {
-    console.error("chat notification upsert failed", {
-      conversationId,
-      userId: user.id,
-      upsertError,
+    if (!isMissingDedupeSetupError(upsertError)) {
+      console.error("chat notification upsert failed", {
+        conversationId,
+        userId: user.id,
+        upsertError,
+      });
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
+
+    const rowsWithoutDedupeKey = rows.map((row) => {
+      const { dedupe_key: omittedDedupeKey, ...rest } = row;
+      void omittedDedupeKey;
+      return rest;
     });
-    return NextResponse.json(
-      {
-        error:
-          "Failed to upsert deduped chat notifications. Ensure notifications.dedupe_key and related unique indexes are applied.",
-      },
-      { status: 500 }
-    );
+    const { error: insertError } = await admin
+      .from("notifications")
+      .insert(rowsWithoutDedupeKey);
+
+    if (insertError) {
+      console.error("chat notification fallback insert failed", {
+        conversationId,
+        userId: user.id,
+        insertError,
+      });
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
   }
 
   return NextResponse.json({ success: true });
