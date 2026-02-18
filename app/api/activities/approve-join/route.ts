@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServer } from "@/lib/supabaseServer";
+import {
+  createSupabaseAdmin,
+  createSupabaseServer,
+} from "@/lib/supabaseServer";
 
 type ApproveJoinRpcResult = {
   ok: boolean;
@@ -12,9 +15,6 @@ type ApproveJoinRpcResult = {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-
-    // Temporary debug log for frontend payload verification
-    console.log("POST /api/activities/approve-join body", body);
 
     const joinRequestId =
       typeof body?.joinRequestId === "string" && body.joinRequestId.trim().length > 0
@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createSupabaseServer();
+    const admin = createSupabaseAdmin();
 
     const {
       data: { user },
@@ -94,6 +95,30 @@ export async function POST(request: Request) {
       resolvedJoinRequestId = joinRequest.id;
     }
 
+    let resolvedActivityId = activityId;
+    let resolvedParticipantId = participantId;
+
+    if (!resolvedActivityId || !resolvedParticipantId) {
+      const { data: joinRequestMeta, error: joinRequestMetaError } = await admin
+        .from("join_requests")
+        .select("activity_id, requester_id")
+        .eq("id", resolvedJoinRequestId)
+        .maybeSingle();
+
+      if (joinRequestMetaError) {
+        console.error("approve-join join request metadata lookup failed", {
+          joinRequestMetaError,
+          joinRequestId: resolvedJoinRequestId,
+          userId: user.id,
+        });
+      }
+
+      if (joinRequestMeta) {
+        resolvedActivityId = resolvedActivityId ?? joinRequestMeta.activity_id;
+        resolvedParticipantId = resolvedParticipantId ?? joinRequestMeta.requester_id;
+      }
+    }
+
     const { data: rpcResult, error: rpcError } = await supabase.rpc(
       "approve_join_request_atomic",
       {
@@ -121,6 +146,44 @@ export async function POST(request: Request) {
     const result = (rpcResult ?? {}) as ApproveJoinRpcResult;
 
     if (result.ok) {
+      const approvedUserId = result.approvedUserId ?? resolvedParticipantId;
+
+      if (approvedUserId && resolvedActivityId) {
+        const { data: conversation, error: conversationError } = await admin
+          .from("conversations")
+          .select("id")
+          .eq("activity_id", resolvedActivityId)
+          .maybeSingle();
+
+        if (conversationError) {
+          console.error("approve-join conversation lookup failed", {
+            conversationError,
+            activityId: resolvedActivityId,
+            approvedUserId,
+          });
+        } else if (conversation?.id) {
+          const { error: participantUpsertError } = await admin
+            .from("conversation_participants")
+            .upsert(
+              {
+                conversation_id: conversation.id,
+                user_id: approvedUserId,
+              },
+              {
+                onConflict: "conversation_id,user_id",
+                ignoreDuplicates: true,
+              }
+            );
+
+          if (participantUpsertError) {
+            console.error("approve-join participant upsert failed", {
+              participantUpsertError,
+              conversationId: conversation.id,
+              approvedUserId,
+            });
+          }
+        }
+      }
       return NextResponse.json(
         {
           ok: true,

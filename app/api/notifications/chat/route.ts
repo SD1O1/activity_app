@@ -74,90 +74,96 @@ export async function POST(req: Request) {
     });
   }
 
-  const { data: callerMembership } = await admin
-    .from("conversation_participants")
-    .select("user_id")
-    .eq("conversation_id", conversationId)
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const { data: activityMembers, error: activityMembersError } = await admin
+  .from("activity_members")
+  .select("user_id")
+  .eq("activity_id", convo.activity_id)
+  .eq("status", "active");
 
-  if (!callerMembership) {
-    const { data: latestCallerMessage } = await admin
-      .from("messages")
-      .select("sender_id")
-      .eq("conversation_id", conversationId)
-      .eq("sender_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+if (activityMembersError) {
+  console.error("chat notification activity members query failed", {
+    conversationId,
+    activityId: convo.activity_id,
+    userId: user.id,
+    activityMembersError,
+  });
+  return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+}
 
-    if (!latestCallerMessage) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-  }
+if (!activityMembers?.some((member) => member.user_id === user.id)) {
+  return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+}
 
-  const { data: participants, error: participantsError } = await admin
-    .from("conversation_participants")
-    .select("user_id")
-    .eq("conversation_id", conversationId)
-    .neq("user_id", user.id);
+const participantRows = activityMembers.map((member) => ({
+  conversation_id: conversationId,
+  user_id: member.user_id,
+}));
 
-  if (participantsError) {
-    console.error("chat notification participants query failed", {
-      conversationId,
-      userId: user.id,
-      participantsError,
-    });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
+const { error: participantUpsertError } = await admin
+  .from("conversation_participants")
+  .upsert(participantRows, {
+    onConflict: "conversation_id,user_id",
+    ignoreDuplicates: true,
+  });
 
-  if (!participants?.length) {
-    return NextResponse.json({ success: true });
-  }
+if (participantUpsertError) {
+  console.error("chat notification participant sync failed", {
+    conversationId,
+    userId: user.id,
+    participantUpsertError,
+  });
+  return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+}
 
-  const bucket = toWindowBucket(messageTimestamp);
-  const rows = participants.map((participant) => ({
-    user_id: participant.user_id,
+const rows = activityMembers
+  .map((member) => member.user_id)
+  .filter((memberId) => memberId !== user.id)
+  .map((recipientId) => ({
+    user_id: recipientId,
     actor_id: user.id,
     type: "chat",
     message: "sent you a message",
     activity_id: convo.activity_id,
-    dedupe_key: `chat:${conversationId}:${user.id}:${participant.user_id}:${bucket}`,
+    dedupe_key: `chat:${conversationId}:${user.id}:${recipientId}:${toWindowBucket(messageTimestamp)}`,
   }));
 
-  const { error: upsertError } = await admin.from("notifications").upsert(rows, {
-    onConflict: "user_id,type,dedupe_key",
-    ignoreDuplicates: true,
-  });
+if (!rows.length) {
+  return NextResponse.json({ success: true });
+}
 
-  if (upsertError) {
-    if (!isMissingDedupeSetupError(upsertError)) {
-      console.error("chat notification upsert failed", {
-        conversationId,
-        userId: user.id,
-        upsertError,
-      });
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-    }
+const { error: upsertError } = await admin.from("notifications").upsert(rows, {
+  onConflict: "user_id,type,dedupe_key",
+  ignoreDuplicates: true,
+});
 
-    const rowsWithoutDedupeKey = rows.map((row) => {
-      const { dedupe_key: omittedDedupeKey, ...rest } = row;
-      void omittedDedupeKey;
-      return rest;
+if (upsertError) {
+  if (!isMissingDedupeSetupError(upsertError)) {
+    console.error("chat notification upsert failed", {
+      conversationId,
+      userId: user.id,
+      upsertError,
     });
-    const { error: insertError } = await admin
-      .from("notifications")
-      .insert(rowsWithoutDedupeKey);
-
-    if (insertError) {
-      console.error("chat notification fallback insert failed", {
-        conversationId,
-        userId: user.id,
-        insertError,
-      });
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-    }
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true });
+  const rowsWithoutDedupeKey = rows.map((row) => {
+    const { dedupe_key: omittedDedupeKey, ...rest } = row;
+    void omittedDedupeKey;
+    return rest;
+  });
+  const { error: insertError } = await admin
+    .from("notifications")
+    .insert(rowsWithoutDedupeKey);
+
+  if (insertError) {
+    console.error("chat notification fallback insert failed", {
+      conversationId,
+      userId: user.id,
+      insertError,
+    });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+return NextResponse.json({ success: true });
 }

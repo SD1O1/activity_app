@@ -34,6 +34,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { data: convo, error: convoError } = await admin
+    .from("conversations")
+    .select("id, activity_id")
+    .eq("id", conversationId)
+    .maybeSingle();
+
+  if (convoError || !convo) {
+    return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+  }
+
   const { data: membership, error: membershipError } = await admin
     .from("conversation_participants")
     .select("user_id")
@@ -51,7 +61,49 @@ export async function POST(req: Request) {
   }
 
   if (!membership) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const { data: isActivityMember, error: activityMemberError } = await admin
+      .from("activity_members")
+      .select("user_id")
+      .eq("activity_id", convo.activity_id)
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (activityMemberError) {
+      console.error("chat seen activity member check failed", {
+        conversationId,
+        activityId: convo.activity_id,
+        userId: user.id,
+        activityMemberError,
+      });
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
+
+    if (!isActivityMember) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { error: participantUpsertError } = await admin
+      .from("conversation_participants")
+      .upsert(
+        {
+          conversation_id: conversationId,
+          user_id: user.id,
+        },
+        {
+          onConflict: "conversation_id,user_id",
+          ignoreDuplicates: true,
+        }
+      );
+
+    if (participantUpsertError) {
+      console.error("chat seen participant backfill failed", {
+        conversationId,
+        userId: user.id,
+        participantUpsertError,
+      });
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
   }
 
   const { error: updateError } = await admin
