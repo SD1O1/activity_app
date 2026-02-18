@@ -20,6 +20,12 @@ export function useChat(open: boolean, activityId: string) {
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const typingChannelRef = useRef<any>(null);
 
+  const participantsRef = useRef<ParticipantWithAvatar[]>([]);
+
+  useEffect(() => {
+    participantsRef.current = participants;
+  }, [participants]);
+
   /* ───────── AUTH ───────── */
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -119,7 +125,7 @@ export function useChat(open: boolean, activityId: string) {
 
     if (!lastIncoming) return;
 
-    const me = participants.find(p => p.user_id === myId);
+    const me = participantsRef.current.find(p => p.user_id === myId);
 
     if (
       me?.last_seen_at &&
@@ -141,7 +147,7 @@ export function useChat(open: boolean, activityId: string) {
         p.user_id === myId ? { ...p, last_seen_at: seenAt } : p
       )
     );
-  }, [open, conversationId, myId, messages, participants]);
+  }, [open, conversationId, myId, messages]);
 
   /* ───────── REALTIME: SEEN SYNC ───────── */
   useEffect(() => {
@@ -246,22 +252,16 @@ export function useChat(open: boolean, activityId: string) {
 
     setMessages(prev => [...prev, msg]);
 
-    // 🔔 notify server ONLY
-    const receiverIds = participants
-      .filter((p) => p.user_id !== myId)
-      .map((p) => p.user_id);
-
-    if (receiverIds.length > 0) {
-      fetch("/api/notifications/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversationId,
-          activityId,
-          messageCreatedAt: msg.created_at,
-        }),
-      });
-    }
+    // 🔔 notify server (server resolves recipients reliably)
+    void fetch("/api/notifications/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        conversationId,
+        activityId,
+        messageCreatedAt: msg.created_at,
+      }),
+    });
 
     typingChannelRef.current?.untrack();
   };
