@@ -194,7 +194,6 @@ export default function ActivityDetail({ activity }: Props) {
       <HostReviewModal
         open={openReview}
         onClose={() => setOpenReview(false)}
-        hostId={activity.host_id}
         onResolved={computeJoinStatus}
       />
 
@@ -202,19 +201,17 @@ export default function ActivityDetail({ activity }: Props) {
         <ChatModal open={openChat} activityId={activity.id} onClose={() => setOpenChat(false)} onChatClosed={checkUnread} />
       )}
 
-      {user && (
-        <ParticipantsRow
-          participants={participants}
-          currentUserId={user.id}
-          isHost={user.id === activity.host_id}
-          isJoined={joinStatus === "approved"}
-          onOpenProfile={(participant) => {
-            if (!participant.username) return;
-            router.push(`/u/${participant.username}`);
-          }}
-          onRemove={handleRemove}
-        />
-      )}
+<ParticipantsRow
+        participants={participants}
+        currentUserId={user?.id}
+        isHost={user?.id === activity.host_id}
+        isJoined={joinStatus === "approved"}
+        onOpenProfile={(participant) => {
+          if (!participant.username) return;
+          router.push(`/u/${participant.username}`);
+        }}
+        onRemove={handleRemove}
+      />
 
       <AuthModal open={openAuth} onClose={() => setOpenAuth(false)} />
 

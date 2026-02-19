@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import {
   createSupabaseAdmin,
-  createSupabaseServer,
 } from "@/lib/supabaseServer";
 
 export async function GET(
@@ -12,28 +11,11 @@ export async function GET(
     const resolvedParams = await Promise.resolve(params);
     const activityId = resolvedParams?.id;
 
-    // Temporary debug log for runtime param shape
-    console.log("GET /api/activities/[id]/participants params", {
-      rawParams: params,
-      resolvedParams,
-      activityId,
-    });
-
     if (!activityId) {
       return NextResponse.json({ error: "Missing activityId" }, { status: 400 });
     }
 
-    const supabase = await createSupabaseServer();
     const admin = createSupabaseAdmin();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const { data: activity, error: activityError } = await admin
       .from("activities")
@@ -44,25 +26,6 @@ export async function GET(
 
     if (activityError || !activity) {
       return NextResponse.json({ error: "Activity not found" }, { status: 404 });
-    }
-
-    const isHost = activity.host_id === user.id;
-    let isMember = false;
-
-    if (!isHost) {
-      const { data: member } = await admin
-        .from("activity_members")
-        .select("id")
-        .eq("activity_id", activityId)
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .maybeSingle();
-
-      isMember = !!member;
-    }
-
-    if (!isHost && !isMember) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { data: hostProfile, error: hostError } = await admin
@@ -83,6 +46,7 @@ export async function GET(
       .select(`
         profiles!activity_members_user_fk(
           id,
+          username,
           name,
           avatar_url,
           verified

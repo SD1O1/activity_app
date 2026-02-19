@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import HostMiniProfile from "@/components/profile/HostMiniProfile";
 
@@ -21,21 +22,39 @@ type RequesterProfile = {
 type JoinRequest = {
   id: string; // join_requests.id
   requester_id: string;
-  answers: string[];
+  answers: unknown;
   profile: RequesterProfile | null;
+};
+
+const normalizeAnswers = (answers: unknown): string[] => {
+  if (Array.isArray(answers)) {
+    return answers.map(answer =>
+      typeof answer === "string" ? answer : ""
+    );
+  }
+
+  if (typeof answers === "string") {
+    return [answers];
+  }
+
+  if (answers && typeof answers === "object") {
+    return Object.values(answers).map(answer =>
+      typeof answer === "string" ? answer : ""
+    );
+  }
+
+  return [];
 };
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  hostId: string;
   onResolved: () => Promise<void>;
 };
 
 export default function HostReviewModal({
   open,
   onClose,
-  hostId,
   onResolved,
 }: Props) {
   const params = useParams();
@@ -124,10 +143,7 @@ export default function HostReviewModal({
     await onResolved();
   };
 
-  const handleReject = async (
-    joinRequestId: string,
-    requesterId: string
-  ) => {
+  const handleReject = async (joinRequestId: string) => {
     if (resolving || !activityId) return;
     setResolving(true);
 
@@ -165,11 +181,20 @@ export default function HostReviewModal({
             className="mb-4 rounded-xl border p-3 space-y-3"
           >
             {r.profile && (
-              <HostMiniProfile
-                host={r.profile}
-                clickable
-                size="sm"
-              />
+              r.profile.username ? (
+                <Link href={`/u/${r.profile.username}`}>
+                  <HostMiniProfile
+                    host={r.profile}
+                    clickable
+                    size="sm"
+                  />
+                </Link>
+              ) : (
+                <HostMiniProfile
+                  host={r.profile}
+                  size="sm"
+                />
+              )
             )}
 
             {questions.length > 0 && (
@@ -180,7 +205,7 @@ export default function HostReviewModal({
                       {q}
                     </p>
                     <p className="text-sm">
-                      {r.answers?.[i] || "—"}
+                      {normalizeAnswers(r.answers)?.[i]?.trim() || "—"}
                     </p>
                   </div>
                 ))}
@@ -190,7 +215,7 @@ export default function HostReviewModal({
             <div className="flex gap-2 pt-2">
               <button
                 onClick={() =>
-                  handleReject(r.id, r.requester_id)
+                  handleReject(r.id)
                 }
                 disabled={resolving}
                 className="flex-1 border rounded-xl py-2 text-sm"

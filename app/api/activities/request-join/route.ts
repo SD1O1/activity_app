@@ -15,6 +15,13 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const activityId = body?.activityId as string | undefined;
+    const answers = Array.isArray(body?.answers)
+      ? body.answers
+          .map((answer: unknown) =>
+            typeof answer === "string" ? answer.trim() : ""
+          )
+          .filter((answer: string) => answer.length > 0)
+      : [];
     const message =
       typeof body?.message === "string"
         ? body.message
@@ -123,6 +130,22 @@ export async function POST(req: Request) {
     const result = (rpcResult ?? {}) as RequestJoinRpcResult;
 
     if (result.ok) {
+      if (answers.length > 0) {
+        const { error: answersError } = await admin
+          .from("join_requests")
+          .update({ answers })
+          .eq("activity_id", activityId)
+          .eq("requester_id", user.id)
+          .eq("status", "pending");
+
+        if (answersError) {
+          console.error("request-join answers update failed", {
+            activityId,
+            requesterId: user.id,
+            answersError,
+          });
+        }
+      }
       return NextResponse.json({
         success: true,
         message: result.message || "Join request sent",

@@ -1,6 +1,5 @@
 "use client";
 
-import type { MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { PublicUser } from "@/types/publicUser";
 
@@ -17,21 +16,10 @@ export default function HostMiniProfile({
 }: Props) {
   const router = useRouter();
 
-  const handleClick = (event?: MouseEvent) => {
-    event?.stopPropagation();
-    if (!clickable) return;
-    if (!host.username) return; // ✅ guard
-    router.push(`/u/${host.username}`);
-  };
+  const canNavigate = clickable && !!host.username;
 
-  return (
-    <div
-      onClick={(event) => handleClick(event)}
-      className={`flex items-center gap-3 ${
-        clickable ? "cursor-pointer" : ""
-      }`}
-    >
-      {/* AVATAR */}
+  const content = (
+    <>
       <div
         className={`rounded-full bg-gray-200 overflow-hidden ${
           size === "sm" ? "h-8 w-8" : "h-10 w-10"
@@ -40,29 +28,35 @@ export default function HostMiniProfile({
         {host.avatar_url && (
           <img
             src={host.avatar_url}
-            alt={host.name ?? "User"}   /* ✅ FIX */
+            alt={host.name ?? "User"}
             className="h-full w-full object-cover"
           />
         )}
       </div>
 
-      {/* INFO */}
-      <div className="text-sm">
+      <div className="text-sm text-left">
         <div className="flex items-center gap-1">
-          <span className="font-medium text-gray-900">
-            {host.name ?? "Unknown"}
-          </span>
-          {host.verified && (
-            <span className="text-xs text-blue-600">✓</span>
-          )}
+          <span className="font-medium text-gray-900">{host.name ?? "Unknown"}</span>
+          {host.verified && <span className="text-xs text-blue-600">✓</span>}
         </div>
 
-        {host.username && (
-          <p className="text-xs text-gray-500">
-            @{host.username}
-          </p>
-        )}
+        {host.username && <p className="text-xs text-gray-500">@{host.username}</p>}
       </div>
-    </div>
+    </>
   );
+
+  if (canNavigate) {
+    return (
+      <button
+        type="button"
+        onClick={() => router.push(`/u/${host.username}`)}
+        className="flex items-center gap-3 cursor-pointer"
+        aria-label={`Open ${host.name ?? "host"} profile`}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return <div className="flex items-center gap-3">{content}</div>;
 }
