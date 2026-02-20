@@ -23,6 +23,22 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
 
   const isPasswordValid = password.length >= 8;
 
+  const buildSignupMetadata = () => {
+    const emailPrefix = email.split("@")[0]?.trim() || "new_user";
+    const normalizedBase = emailPrefix
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    const fallbackName = normalizedBase || "new_user";
+
+    return {
+      name: fallbackName,
+      full_name: fallbackName,
+      username: fallbackName,
+    };
+  };
+
   /* -------------------- email auth -------------------- */
   const handleEmailAuth = async () => {
     setLoading(true);
@@ -32,12 +48,15 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
     const { data, error } =
       mode === "login"
         ? await supabase.auth.signInWithPassword({
-            email,
+            email: email.trim().toLowerCase(),
             password,
           })
         : await supabase.auth.signUp({
             email,
             password,
+            options: {
+              data: buildSignupMetadata(),
+            },
           });
 
     setLoading(false);
