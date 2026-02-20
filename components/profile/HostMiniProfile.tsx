@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { PublicUser } from "@/types/publicUser";
 
 type Props = {
@@ -14,8 +14,6 @@ export default function HostMiniProfile({
   clickable = false,
   size = "md",
 }: Props) {
-  const router = useRouter();
-
   const canNavigate = clickable && !!host.username;
 
   const content = (
@@ -47,14 +45,13 @@ export default function HostMiniProfile({
 
   if (canNavigate) {
     return (
-      <button
-        type="button"
-        onClick={() => router.push(`/u/${host.username}`)}
+      <Link
+        href={`/u/${host.username}`}
         className="flex items-center gap-3 cursor-pointer"
         aria-label={`Open ${host.name ?? "host"} profile`}
       >
         {content}
-      </button>
+      </Link>
     );
   }
 

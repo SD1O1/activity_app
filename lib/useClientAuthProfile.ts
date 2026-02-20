@@ -25,12 +25,12 @@ export function useClientAuthProfile() {
 
       const { data } = await supabase
         .from("profiles")
-        .select("dob, phone_verified")
+        .select("dob, phone_verified, username")
         .eq("id", user.id)
         .single();
 
       const completed =
-        !!data?.dob && data?.phone_verified === true;
+        !!data?.dob && data?.phone_verified === true && !!data?.username;
 
       setProfileCompleted(completed);
       setLoading(false);

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import HostMiniProfile from "@/components/profile/HostMiniProfile";
 
@@ -181,20 +180,11 @@ export default function HostReviewModal({
             className="mb-4 rounded-xl border p-3 space-y-3"
           >
             {r.profile && (
-              r.profile.username ? (
-                <Link href={`/u/${r.profile.username}`}>
-                  <HostMiniProfile
-                    host={r.profile}
-                    clickable
-                    size="sm"
-                  />
-                </Link>
-              ) : (
-                <HostMiniProfile
-                  host={r.profile}
-                  size="sm"
-                />
-              )
+              <HostMiniProfile
+                host={r.profile}
+                clickable
+                size="sm"
+              />
             )}
 
             {questions.length > 0 && (

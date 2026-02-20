@@ -50,6 +50,8 @@ export default function ParticipantsRow({
             ? "Host"
             : participant.name ?? "User";
 
+          const canOpenParticipantProfile = canOpenProfile && !!participant.username;
+
           return (
             <div
               key={participant.id}
@@ -57,11 +59,11 @@ export default function ParticipantsRow({
             >
               <button
                 type="button"
-                disabled={!canOpenProfile}
+                disabled={!canOpenParticipantProfile}
                 onClick={() =>
-                  canOpenProfile && onOpenProfile?.(participant)
+                  canOpenParticipantProfile && onOpenProfile?.(participant)
                 }
-                className={!canOpenProfile ? "cursor-default" : ""}
+                className={!canOpenParticipantProfile ? "cursor-default opacity-80" : ""}
               >
                 <img
                   src={participant.avatar_url ?? "/avatar-placeholder.png"}

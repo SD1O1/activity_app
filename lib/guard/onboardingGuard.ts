@@ -16,13 +16,14 @@ export async function requireCompletedProfile() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("dob, phone_verified")
+    .select("dob, phone_verified, username")
     .eq("id", user.id)
     .single();
 
   const profileCompleted =
     !!profile?.dob &&
-    profile?.phone_verified === true;
+    profile?.phone_verified === true &&
+    !!profile?.username;
 
 
   if (!profileCompleted) {

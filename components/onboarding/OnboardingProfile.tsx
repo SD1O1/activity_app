@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { getCityFromDevice } from "@/lib/location";
 import { useRouter } from "next/navigation";
 import { detectCountryCode } from "@/lib/country";
+import { generateUsernameFromName } from "../../lib/username";
 
 import PhoneSlide from "@/components/onboarding/slides/PhoneSlide";
 import PhoneOtpSlide from "@/components/onboarding/slides/PhoneOtpSlide";
@@ -200,9 +201,20 @@ export default function OnboardingProfile() {
       return;
     }
 
+    const { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", auth.user.id)
+      .maybeSingle();
+
+    const username =
+      existingProfile?.username ??
+      generateUsernameFromName(form.name || auth.user.email || "user", auth.user.id);
+
     const payload = {
       id: auth.user.id,
       name: form.name,
+      username,
       dob: form.dob,
       bio: form.bio,
       avatar_url: form.photo || null,
