@@ -144,7 +144,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
         cost_rule: costRule,
         host_id: userId,
         questions: cleanedQuestions,
-        max_members: type === "one-on-one" ? 2 : maxMembers,
+        max_members: type === "one-on-one" ? 2 : maxMembers + 1,
       })
       .select()
       .single();
@@ -309,7 +309,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
 
           <input
             type="number"
-            min={2}
+            min={1}
             value={maxMembers}
             onChange={(e) => setMaxMembers(Number(e.target.value))}
             className="mt-2 w-full rounded-xl border px-4 py-3"
@@ -317,7 +317,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
           />
 
           <p className="mt-1 text-xs text-gray-500">
-            Including you
+            Excluding you (host)
           </p>
         </div>
       )}

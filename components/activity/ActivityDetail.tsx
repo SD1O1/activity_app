@@ -144,6 +144,7 @@ export default function ActivityDetail({ activity }: Props) {
         costRule={activity.cost_rule}
         memberCount={activity.member_count}
         maxMembers={activity.max_members}
+        showMemberProgress={activity.type === "group"}
         lat={activity.public_lat}
         lng={activity.public_lng}
       />

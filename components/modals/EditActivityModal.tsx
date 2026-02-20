@@ -26,7 +26,11 @@ export default function EditActivityModal({
   const [title, setTitle] = useState(activity.title);
   const [description, setDescription] = useState(activity.description);
   const [type, setType] = useState(activity.type);
-  const [maxMembers, setMaxMembers] = useState(activity.max_members);
+  const [maxMembers, setMaxMembers] = useState(
+    activity.type === "group"
+      ? Math.max(activity.max_members - 1, 1)
+      : activity.max_members
+  );
   const [costRule, setCostRule] = useState(activity.cost_rule);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +51,7 @@ export default function EditActivityModal({
           description,
           type,
           cost_rule: costRule,
-          max_members: type === "group" ? maxMembers : 2,
+          max_members: type === "group" ? maxMembers + 1 : 2,
           host_id: activity.host_id,
         }),
       }
@@ -122,7 +126,7 @@ export default function EditActivityModal({
         {type === "group" && (
           <input
             type="number"
-            min={2}
+            min={1}
             value={maxMembers}
             onChange={(e) =>
               setMaxMembers(Number(e.target.value))

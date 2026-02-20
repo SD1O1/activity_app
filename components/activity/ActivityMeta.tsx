@@ -8,6 +8,7 @@ type Props = {
   costRule: string;
   memberCount?: number;
   maxMembers?: number;
+  showMemberProgress?: boolean;
   lat?: number | null;
   lng?: number | null;
 };
@@ -26,7 +27,7 @@ function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
-export default function ActivityMeta({ startsAt, location, costRule, memberCount, maxMembers, lat, lng }: Props) {
+export default function ActivityMeta({ startsAt, location, costRule, memberCount, maxMembers, showMemberProgress = true, lat, lng }: Props) {
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [distanceError, setDistanceError] = useState(
     typeof navigator !== "undefined" ? !navigator.geolocation : false
@@ -52,7 +53,7 @@ export default function ActivityMeta({ startsAt, location, costRule, memberCount
       <p>🕒 {new Date(startsAt).toLocaleString()}</p>
       <p>📍 {location}</p>
 
-      {typeof memberCount === "number" && typeof maxMembers === "number" && (
+      {showMemberProgress && typeof memberCount === "number" && typeof maxMembers === "number" && (
         <p>
           👥 {memberCount} / {maxMembers} joined
         </p>
