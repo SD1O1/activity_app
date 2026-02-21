@@ -42,17 +42,34 @@ export default function EmailSecuritySection() {
                 return;
               }
 
+              const {
+                data: { user },
+              } = await supabase.auth.getUser();
+
+              if (!user) {
+                setMessage("You are not signed in. Please sign in again.");
+                return;
+              }
+
+              if (user.email?.toLowerCase() === trimmedEmail.toLowerCase()) {
+                setMessage("New email must be different from your current email.");
+                return;
+              }
+
               setSubmitting(true);
 
-              const { error } = await supabase.auth.updateUser({
-                email: trimmedEmail,
+              const res = await fetch("/api/account/update-credentials", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: trimmedEmail }),
               });
+              const result = (await res.json()) as { error?: string };
 
               setSubmitting(false);
 
               setMessage(
-                error
-                  ? error.message
+                !res.ok
+                  ? result.error || "Failed to update email."
                   : "Confirmation email sent. Check your inbox to finish the change."
               );
             }}

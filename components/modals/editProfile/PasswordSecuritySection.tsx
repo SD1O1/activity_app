@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 
 export default function PasswordSecuritySection() {
   const [show, setShow] = useState(false);
@@ -62,15 +61,18 @@ export default function PasswordSecuritySection() {
 
               setSubmitting(true);
 
-              const { error } = await supabase.auth.updateUser({
-                password,
+              const res = await fetch("/api/account/update-credentials", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ password }),
               });
+              const result = (await res.json()) as { error?: string };
 
               setSubmitting(false);
 
               setMessage(
-                error
-                  ? error.message
+                !res.ok
+                  ? result.error || "Failed to update password"
                   : "Password updated successfully"
               );
             }}
