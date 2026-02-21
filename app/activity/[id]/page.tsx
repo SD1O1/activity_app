@@ -28,6 +28,11 @@ export default function Page() {
         data: { user: viewer },
       } = await supabase.auth.getUser();
 
+      if (viewer) {
+        await fetch("/api/activities/auto-complete-stale", { method: "POST" });
+        await fetch(`/api/activities/${id}/auto-complete`, { method: "POST" });
+      }
+      
       const { data: activityData, error } = await supabase
         .from("activities")
         .select(`

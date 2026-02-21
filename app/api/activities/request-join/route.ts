@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 
     const { data: activity, error: activityError } = await admin
       .from("activities")
-      .select("id, host_id, status, member_count, max_members")
+      .select("id, host_id, status, starts_at, member_count, max_members")
       .eq("id", activityId)
       .neq("status", "deleted")
       .single();
@@ -63,7 +63,17 @@ export async function POST(req: Request) {
       );
     }
 
-    if (activity.status === "completed") {
+    const hasStarted = new Date(activity.starts_at).getTime() < Date.now();
+
+    if (activity.status === "completed" || hasStarted) {
+      if (activity.status !== "completed" && hasStarted) {
+        await admin
+          .from("activities")
+          .update({ status: "completed" })
+          .eq("id", activityId)
+          .in("status", ["open", "full"]);
+      }
+      
       return NextResponse.json(
         { error: "Activity has already ended" },
         { status: 409 }

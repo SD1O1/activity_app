@@ -23,17 +23,13 @@ export async function POST(
 
   const { data: activity } = await admin
     .from("activities")
-    .select("starts_at, status, host_id")
+    .select("starts_at, status")
     .eq("id", id)
     .neq("status", "deleted")
     .single();
 
   if (!activity) {
     return NextResponse.json({ error: "Activity not found" }, { status: 404 });
-  }
-
-  if (activity.host_id !== user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const now = new Date();

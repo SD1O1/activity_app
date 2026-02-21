@@ -118,6 +118,7 @@ export default function ProfileView() {
 
     const loadAll = async () => {
       setLoading(true);
+      await fetch("/api/activities/auto-complete-stale", { method: "POST" });
       await loadProfile();
       await loadHostedActivities();
       await loadJoinedActivities();

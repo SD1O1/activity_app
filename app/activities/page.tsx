@@ -26,6 +26,10 @@ export default function ActivitiesPage() {
         data: { user: viewer },
       } = await supabase.auth.getUser();
 
+      if (viewer) {
+        await fetch("/api/activities/auto-complete-stale", { method: "POST" });
+      }
+
       // blocked users
       const { blockedUserIds } = viewer
         ? await getBlockedUserIds(supabase, viewer.id)
@@ -69,6 +73,7 @@ export default function ActivitiesPage() {
           )
         `)
         .eq("status", "open")
+        .gte("starts_at", new Date().toISOString())
         .order("starts_at", { ascending: true });
 
       if (activityIds) query = query.in("id", activityIds);
@@ -177,7 +182,7 @@ export default function ActivitiesPage() {
       setLoading(false);
     };
 
-    fetchActivities();
+    void fetchActivities();
   }, [tagId, time, distance]);
 
   return (
