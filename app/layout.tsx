@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NotificationProvider } from "@/components/notifications/NotificationContext";
+import { ToastProvider } from "@/components/ui/ToastProvider";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 const geistSans = Geist({
@@ -29,9 +30,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <NotificationProvider>
-          {children}
-        </NotificationProvider>
+        <ToastProvider>
+          <NotificationProvider>{children}</NotificationProvider>
+        </ToastProvider>
       </body>
     </html>
   );

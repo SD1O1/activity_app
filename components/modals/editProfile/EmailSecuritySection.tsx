@@ -20,6 +20,7 @@ export default function EmailSecuritySection() {
 
       {show && (
         <div className="mt-2">
+          <p className="text-xs text-gray-500">Your email is private and only used for login and recovery.</p>
           <input
             type="email"
             placeholder="New email"

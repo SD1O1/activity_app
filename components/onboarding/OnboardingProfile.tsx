@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { getCityFromDevice } from "@/lib/location";
 import { useRouter } from "next/navigation";
 import { detectCountryCode } from "@/lib/country";
+import { useToast } from "@/components/ui/ToastProvider";
 import { generateUsernameFromName } from "../../lib/username";
 
 import PhoneSlide from "@/components/onboarding/slides/PhoneSlide";
@@ -49,10 +50,13 @@ export default function OnboardingProfile() {
 
   const [otp, setOtp] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const router = useRouter();
+  const { showToast } = useToast();
   const fullPhone = `${form.countryCode}${form.phone}`;
 
   const [userId, setUserId] = useState<string | null>(null);
@@ -122,7 +126,7 @@ export default function OnboardingProfile() {
       const { city } = await getCityFromDevice();
       setForm((prev) => ({ ...prev, city: normalizeCity(city)  }));
     } catch {
-      alert("Unable to access location. Enter city manually.");
+      setGlobalError("Unable to access location. Enter city manually.");
     }
   };
 
@@ -139,6 +143,7 @@ export default function OnboardingProfile() {
           "You are not signed in. Please sign in again before uploading a photo.";
         setPhotoUploadError(message);
         setGlobalError(message);
+        setSubmitting(false);
         return;
       }
 
@@ -201,10 +206,12 @@ export default function OnboardingProfile() {
   const handleSubmit = async () => {
     setGlobalError(null);
     setPhoneError(null);
+    setSubmitting(true);
 
     const { data: auth } = await supabase.auth.getUser();
     if (!auth?.user) {
       setGlobalError("You are not signed in. Please sign in again to save your profile.");
+      setSubmitting(false);
       return;
     }
 
@@ -244,6 +251,7 @@ export default function OnboardingProfile() {
           "This phone number is already associated with another account."
         );
         setStep(0);
+        setSubmitting(false);
         return;
       }
 
@@ -252,10 +260,13 @@ export default function OnboardingProfile() {
         profileError.message ||
           "Failed to save your profile. Please try again."
       );
+      setSubmitting(false);
       return;
     }
 
     await uploadVerificationVideo();
+    showToast("Profile saved successfully", "success");
+    setSubmitting(false);
     router.replace("/profile");
   };
 
@@ -291,9 +302,15 @@ export default function OnboardingProfile() {
           otp={otp}
           onChange={setOtp}
           loading={otpLoading}
+          error={otpError}
           onVerify={() => {
-            if (otp.length < 4) return alert("Invalid code");
+            if (otp.length < 4) {
+              setOtpError("Please enter a valid code.");
+              return;
+            }
+            setOtpError(null);
             setForm((p) => ({ ...p, phoneVerified: true }));
+            showToast("Phone verified", "success");
             setStep(2);
           }}
         />
@@ -372,8 +389,8 @@ export default function OnboardingProfile() {
             {photoUploading && step === 7 ? "Uploading…" : "Next"}
           </button>
         ) : (
-          <button onClick={handleSubmit} className="text-sm font-semibold text-black">
-            Save & Continue
+          <button disabled={submitting} onClick={handleSubmit} className="text-sm font-semibold text-black disabled:text-gray-400">
+            {submitting ? "Saving..." : "Save & Continue"}
           </button>
         )}
       </div>

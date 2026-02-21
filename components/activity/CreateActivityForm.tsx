@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import dynamic from "next/dynamic";
+import { useToast } from "@/components/ui/ToastProvider";
 
 const LocationPicker = dynamic(
   () => import("@/components/map/LocationPicker"),
@@ -12,6 +13,7 @@ const LocationPicker = dynamic(
 
 export default function CreateActivityForm({ userId }: { userId: string }) {
   const router = useRouter();
+  const { showToast } = useToast();
 
   const [questions, setQuestions] = useState<string[]>([
     "",
@@ -40,6 +42,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
   const [filteredTags, setFilteredTags] = useState<Tag[]>([]);
 
   const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const [location, setLocation] = useState<{
     lat: number;
@@ -99,26 +102,45 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
   
   const handleCreate = async () => {
     setLoading(true);
+    setFormError(null);
 
     const cleanedQuestions = questions
     .map(q => q.trim())
     .filter(q => q.length > 0);
 
+    if (!title.trim()) {
+      setFormError("Please enter an activity title.");
+      setLoading(false);
+      return;
+    }
+
+    if (!description.trim()) {
+      setFormError("Please add a short activity description.");
+      setLoading(false);
+      return;
+    }
+
+    if (type === "group" && (!Number.isFinite(maxMembers) || maxMembers < 1)) {
+      setFormError("Max members must be at least 1 for group activities.");
+      setLoading(false);
+      return;
+    }
+
     if (!location) {
-      alert("Please choose a location");
+      setFormError("Please choose a location.");
       setLoading(false);
       return;
     }
     
     if (!date) {
-      alert("Please choose date and time");
+      setFormError("Please choose date and time.");
       setLoading(false);
       return;
     }
 
     const startsAtMs = new Date(date).getTime();
     if (Number.isNaN(startsAtMs) || startsAtMs < Date.now()) {
-      alert("Please choose a future date and time");
+      setFormError("Please choose a future date and time.");
       setLoading(false);
       return;
     }
@@ -163,7 +185,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
       .single();
 
     if (error || !activity) {
-      alert(error?.message || "Failed to create activity");
+      setFormError(error?.message || "Failed to create activity");
       setLoading(false);
       return;
     }
@@ -178,7 +200,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
 
     if (conversationError || !conversation) {
       await supabase.from("activities").delete().eq("id", activity.id);
-      alert(conversationError?.message || "Failed to initialize activity chat");
+      setFormError(conversationError?.message || "Failed to initialize activity chat");
       setLoading(false);
       return;
     }
@@ -194,7 +216,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
     if (hostParticipantError) {
       await supabase.from("conversations").delete().eq("id", conversation.id);
       await supabase.from("activities").delete().eq("id", activity.id);
-      alert(hostParticipantError.message || "Failed to initialize activity chat participants");
+      setFormError(hostParticipantError.message || "Failed to initialize activity chat participants");
       setLoading(false);
       return;
     }
@@ -203,7 +225,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
       await supabase.from("conversation_participants").delete().eq("conversation_id", conversation.id);
       await supabase.from("conversations").delete().eq("id", conversation.id);
       await supabase.from("activities").delete().eq("id", activity.id);
-      alert("Please select at least one activity tag");
+      setFormError("Please select at least one activity tag");
       setLoading(false);
       return;
     }
@@ -219,13 +241,14 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
       await supabase.from("conversation_participants").delete().eq("conversation_id", conversation.id);
       await supabase.from("conversations").delete().eq("id", conversation.id);
       await supabase.from("activities").delete().eq("id", activity.id);
-      alert(tagInsertError.message || "Failed to link activity tags");
+      setFormError(tagInsertError.message || "Failed to link activity tags");
       setLoading(false);
       return;
     }
 
     setLoading(false);
 
+    showToast("Activity created successfully", "success");
     router.push("/activities");
   };
 
@@ -283,6 +306,8 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
           </span>
         ))}
       </div>
+
+      {tagError ? <p className="mt-2 text-xs text-red-600">{tagError}</p> : null}
 
       {isSearchingTags && filteredTags.length === 0 && (
         <div className="mt-2 rounded-xl border bg-white px-4 py-3 text-sm text-gray-500">
@@ -450,6 +475,8 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
           </div>
         </div>
       )}
+
+      {formError ? <p className="mb-3 text-sm text-red-600">{formError}</p> : null}
 
       <button
         onClick={handleCreate}

@@ -32,6 +32,8 @@ export default function ActivityActionsMenu({
   };
 
   const handleLeave = async () => {
+    const confirmed = confirm("Leave this activity?");
+    if (!confirmed) return;
     if (!onLeaveActivity || leaving) return;
 
     setLeaving(true);

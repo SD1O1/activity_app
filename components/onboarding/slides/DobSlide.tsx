@@ -22,7 +22,7 @@ export default function DobSlide({ value, onChange }: DobSlideProps) {
         This helps us show your correct age.
         <br />
         <span className="text-xs text-gray-400">
-          This can’t be changed later.
+          We only show your age to others, not your full birth date.
         </span>
       </p>
 

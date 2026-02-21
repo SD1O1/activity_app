@@ -5,6 +5,7 @@ type PhoneOtpSlideProps = {
   onChange: (otp: string) => void;
   onVerify: () => void;
   loading: boolean;
+  error?: string | null;
 };
 
 export default function PhoneOtpSlide({
@@ -12,6 +13,7 @@ export default function PhoneOtpSlide({
   onChange,
   onVerify,
   loading,
+  error,
 }: PhoneOtpSlideProps) {
   return (
     <div className="w-full max-w-sm flex flex-col items-center">
@@ -30,6 +32,8 @@ export default function PhoneOtpSlide({
         onChange={(e) => onChange(e.target.value)}
         className="w-full border rounded-lg px-4 py-3 text-sm mb-4"
       />
+
+      {error ? <p className="mb-2 text-xs text-red-600">{error}</p> : null}
 
       <button
         onClick={onVerify}

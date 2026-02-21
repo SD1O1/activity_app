@@ -22,6 +22,7 @@ import { useJoinStatus } from "@/hooks/useJoinStatus";
 import { useUnreadChat } from "@/hooks/useUnreadChat";
 import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
 import { ActivityDetailItem, normalizeActivityTags } from "@/types/activity";
+import { useToast } from "@/components/ui/ToastProvider";
 
 type Props = {
   activity: ActivityDetailItem;
@@ -50,13 +51,17 @@ export default function ActivityDetail({ activity }: Props) {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const router = useRouter();
   const { user, profileCompleted, loading } = useClientAuthProfile();
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!activity.id) return;
 
     const loadParticipants = async () => {
       const res = await fetch(`/api/activities/${activity.id}/participants`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        showToast("Failed to load participants", "error");
+        return;
+      }
 
       const data: Participant[] = await res.json();
       setParticipants(data);
@@ -99,7 +104,7 @@ export default function ActivityDetail({ activity }: Props) {
     });
 
     if (!res.ok) {
-      alert("Failed to remove member");
+      showToast("Failed to remove member", "error");
       return;
     }
 
@@ -120,7 +125,7 @@ export default function ActivityDetail({ activity }: Props) {
 
     if (!res.ok) {
       const payload = await res.json().catch(() => ({}));
-      alert(payload.error || "Failed to leave activity");
+      showToast(payload.error || "Failed to leave activity", "error");
       return;
     }
 
@@ -146,9 +151,17 @@ export default function ActivityDetail({ activity }: Props) {
             canLeaveActivity={joinStatus === "approved" && activity.status !== "completed"}
             onLeaveActivity={handleLeaveActivity}
             onDelete={async () => {
-              await fetch(`/api/activities/${activity.id}/delete`, {
+              const res = await fetch(`/api/activities/${activity.id}/delete`, {
                 method: "POST",
               });
+
+              if (!res.ok) {
+                const payload = await res.json().catch(() => ({}));
+                showToast(payload.error || "Failed to delete activity", "error");
+                return;
+              }
+
+              showToast("Activity deleted", "success");
               router.replace("/activities");
             }}
             onReport={() => setOpenReport(true)}
@@ -205,6 +218,7 @@ export default function ActivityDetail({ activity }: Props) {
         userId={user?.id ?? null}
         onSuccess={async () => {
           await computeJoinStatus();
+          showToast("Join request sent", "success");
           setOpenJoin(false);
         }}
       />

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/ToastProvider";
 
 type AuthModalProps = {
   open: boolean;
@@ -11,6 +12,7 @@ type AuthModalProps = {
 
 export default function AuthModal({ open, onClose }: AuthModalProps) {
   const router = useRouter();
+  const { showToast } = useToast();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -71,12 +73,13 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
 
     // ✅ NEW: redirect immediately after signup
     if (mode === "signup" && data.user) {
+      showToast("Account created. Let's finish your profile.", "success");
       onClose();
       router.replace("/onboarding/profile");
       return;
     }
 
-    // login success
+    showToast("Logged in successfully", "success");
     onClose();
   };
 
@@ -139,6 +142,11 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
           onChange={(e) => setEmail(e.target.value)}
           className="w-full rounded-lg border px-3 py-2 mb-3 text-sm"
         />
+
+
+        <p className="mb-2 text-xs text-gray-500">
+          Your email is private and used only for login and account recovery.
+        </p>
 
         <input
           type="password"

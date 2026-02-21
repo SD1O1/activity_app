@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type Props = {
-  phone: string; // full phone: +919090909090
+  phone: string;
   phoneVerified: boolean;
   error?: string;
   onChange: (phone: string) => void;
@@ -16,6 +16,12 @@ const COUNTRY_OPTIONS = [
   { code: "+44", label: "UK" },
 ];
 
+function getInitialPhoneParts(phone: string) {
+  const match = COUNTRY_OPTIONS.find((opt) => phone.startsWith(opt.code));
+  if (!match) return { countryCode: "+91", localPhone: "" };
+  return { countryCode: match.code, localPhone: phone.replace(match.code, "") };
+}
+
 export default function PhoneVerificationSection({
   phone,
   phoneVerified,
@@ -23,43 +29,21 @@ export default function PhoneVerificationSection({
   onChange,
   onVerified,
 }: Props) {
-  const [originalPhone, setOriginalPhone] = useState(phone);
-  const [countryCode, setCountryCode] = useState("+91");
-  const [localPhone, setLocalPhone] = useState("");
+  const initial = getInitialPhoneParts(phone);
+  const [countryCode, setCountryCode] = useState(initial.countryCode);
+  const [localPhone, setLocalPhone] = useState(initial.localPhone);
   const [showOtp, setShowOtp] = useState(false);
   const [otp, setOtp] = useState("");
+  const [otpError, setOtpError] = useState<string | null>(null);
 
-  /* ---------------- init from full phone ---------------- */
-  useEffect(() => {
-    setOriginalPhone(phone);
-
-    if (!phone) return;
-
-    const match = COUNTRY_OPTIONS.find(opt =>
-      phone.startsWith(opt.code)
-    );
-
-    if (match) {
-      setCountryCode(match.code);
-      setLocalPhone(phone.replace(match.code, ""));
-    }
-  }, []);
-
-  /* ---------------- helpers ---------------- */
   const fullPhone = `${countryCode}${localPhone}`;
-  const phoneChanged = fullPhone !== originalPhone;
+  const phoneChanged = fullPhone !== phone;
+  const isInvalidNumber = localPhone.length >= 0 && localPhone.length !== 10;
 
-  const isInvalidNumber =
-    localPhone.length >= 0 && localPhone.length !== 10;
-
-  /* ---------------- render ---------------- */
   return (
     <div className="mt-6 space-y-2">
-      <label className="text-xs font-medium text-gray-600">
-        Phone number
-      </label>
+      <label className="text-xs font-medium text-gray-600">Phone number</label>
 
-      {/* Phone input row */}
       <div className="flex gap-2">
         <select
           value={countryCode}
@@ -69,7 +53,7 @@ export default function PhoneVerificationSection({
           }}
           className="border rounded px-2 py-2 text-sm"
         >
-          {COUNTRY_OPTIONS.map(opt => (
+          {COUNTRY_OPTIONS.map((opt) => (
             <option key={opt.code} value={opt.code}>
               {opt.code} {opt.label}
             </option>
@@ -91,24 +75,17 @@ export default function PhoneVerificationSection({
         />
       </div>
 
-      {/* Invalid number warning */}
-      {isInvalidNumber && (
-        <p className="text-xs text-red-600">
-          Phone number must be exactly 10 digits
-        </p>
-      )}
+      {isInvalidNumber && <p className="text-xs text-red-600">Phone number must be exactly 10 digits</p>}
 
-      {/* Not verified warning (only if valid) */}
+      <p className="text-xs text-gray-500">Your phone number is used only for account verification and stays private.</p>
+
       {phoneChanged && !phoneVerified && !isInvalidNumber && (
         <div className="mt-2 space-y-2">
-          <p className="text-xs text-red-600">
-            Phone number not verified
-          </p>
+          <p className="text-xs text-red-600">Phone number not verified</p>
 
           {!showOtp ? (
             <button
               onClick={() => {
-                console.log("OTP sent to", fullPhone);
                 setShowOtp(true);
               }}
               className="text-sm font-semibold underline"
@@ -125,19 +102,17 @@ export default function PhoneVerificationSection({
                 className="w-full border rounded px-3 py-2 text-sm"
               />
 
-              {error && (
-                <p className="text-xs text-red-600">
-                  {error}
-                </p>
-              )}
+              {error ? <p className="text-xs text-red-600">{error}</p> : null}
+              {otpError ? <p className="text-xs text-red-600">{otpError}</p> : null}
 
               <button
                 onClick={() => {
                   if (otp.length < 4) {
-                    alert("Invalid OTP");
+                    setOtpError("Please enter a valid OTP code");
                     return;
                   }
 
+                  setOtpError(null);
                   onVerified();
                   setShowOtp(false);
                   setOtp("");

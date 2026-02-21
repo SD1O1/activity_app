@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createReport } from "@/lib/reporting";
+import { useToast } from "@/components/ui/ToastProvider";
 
 type ReportTargetType = "profile" | "activity";
 
@@ -24,6 +25,7 @@ export default function ReportModal({
   const [details, setDetails] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   if (!open) return null;
 
@@ -40,9 +42,11 @@ export default function ReportModal({
         message: details.trim() || null,
       });
 
+      showToast("Report submitted", "success");
       onClose();
-    } catch (err: any) {
-      setError(err.message ?? "Something went wrong");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      setError(message);
     } finally {
       setLoading(false);
     }

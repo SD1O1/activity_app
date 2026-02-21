@@ -14,10 +14,12 @@ export default function PhotoVerificationSlide({
   const recordedChunks = useRef<Blob[]>([]);
 
   const [isRecording, setIsRecording] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const startCameraAndRecord = async () => {
       try {
+        setError(null);
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: false,
@@ -59,7 +61,7 @@ export default function PhotoVerificationSlide({
         }, 3000);
       } catch (err) {
         console.error("Camera access failed", err);
-        alert("Unable to access camera. Please allow camera permissions.");
+        setError("Unable to access camera. Please allow camera permissions and retry.");
       }
     };
 
@@ -87,6 +89,10 @@ export default function PhotoVerificationSlide({
           className="w-full rounded-lg mb-3"
         />
       )}
+
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
+      <p className="text-xs text-gray-500">This video is used only for identity verification and is never public.</p>
 
       {!isRecording && (
         <p className="text-green-600 font-semibold text-sm">

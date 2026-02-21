@@ -48,6 +48,8 @@ export default function PhoneSlide({
         </p>
       )}
 
+      <p className="text-xs text-gray-500 mt-2">Your phone number is used only for verification and is never shown publicly.</p>
+      
       {error && (
         <p className="text-xs text-red-600 mt-2">
           {error}

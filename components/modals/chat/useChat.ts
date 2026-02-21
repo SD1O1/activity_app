@@ -16,6 +16,7 @@ export function useChat(open: boolean, activityId: string) {
   const [text, setText] = useState("");
   const [myId, setMyId] = useState<string | null>(null);
   const [isOtherTyping, setIsOtherTyping] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const typingChannelRef = useRef<RealtimeChannel | null>(null);
@@ -282,11 +283,12 @@ export function useChat(open: boolean, activityId: string) {
   /* ───────── SEND MESSAGE (NO NOTIFICATION HERE) ───────── */
   const send = async () => {
     if (!text.trim() || !conversationId || !myId) return;
+    setSendError(null);
 
     const content = text.trim();
     setText("");
 
-    const { data: msg } = await supabase
+    const { data: msg, error: insertError } = await supabase
       .from("messages")
       .insert({
         conversation_id: conversationId,
@@ -296,7 +298,10 @@ export function useChat(open: boolean, activityId: string) {
       .select()
       .single();
 
-    if (!msg) return;
+      if (insertError || !msg) {
+        setSendError(insertError?.message || "Failed to send message");
+        return;
+      }
 
     setMessages(prev => {
       if (prev.some(m => m.id === msg.id)) return prev;
@@ -336,5 +341,6 @@ export function useChat(open: boolean, activityId: string) {
     getMessageStatusText,
     myId,
     participants,
+    sendError,
   };
 }

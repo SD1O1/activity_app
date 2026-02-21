@@ -28,6 +28,7 @@ export default function ChatModal({
     getMessageStatusText,
     myId,
     participants,
+    sendError,
   } = useChat(open, activityId);
 
   if (!open) return null;
@@ -59,6 +60,10 @@ export default function ChatModal({
 
         <TypingIndicator show={isOtherTyping} />
 
+        {sendError ? (
+          <p className="px-3 pb-1 text-xs text-red-600">{sendError}</p>
+        ) : null}
+        
         <ChatInput
           text={text}
           setText={setText}

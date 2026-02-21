@@ -7,6 +7,7 @@ import ProfileBasicsSection from "./ProfileBasicsSection";
 import PhoneVerificationSection from "./PhoneVerificationSection";
 import EmailSecuritySection from "./EmailSecuritySection";
 import PasswordSecuritySection from "./PasswordSecuritySection";
+import { useToast } from "@/components/ui/ToastProvider";
 
 const PROFILE_PHOTOS_BUCKET =
   process.env.NEXT_PUBLIC_SUPABASE_PROFILE_PHOTOS_BUCKET ?? "profile-photos";
@@ -38,6 +39,8 @@ export default function EditProfileModal({
   const [phoneError, setPhoneError] = useState<string | undefined>(undefined);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   /* -------------------- load profile -------------------- */
   useEffect(() => {
@@ -157,6 +160,8 @@ export default function EditProfileModal({
           <PasswordSecuritySection />
         </div>
 
+        {saveError ? <p className="mt-4 text-sm text-red-600">{saveError}</p> : null}
+
         <div className="mt-6 flex justify-between">
           <button onClick={onClose} className="text-sm text-gray-500">
             Cancel
@@ -165,9 +170,11 @@ export default function EditProfileModal({
           <button
             disabled={saving}
             onClick={async () => {
+              setSaveError(null);
+
               // 🔴 Required field validation
               if (!form.name.trim()) {
-                alert("Name cannot be empty");
+                setSaveError("Name cannot be empty");
                 return;
               }
 
@@ -178,12 +185,12 @@ export default function EditProfileModal({
 
               const digitsOnly = form.phone.replace(/\D/g, "");
               if (digitsOnly.length < 10) {
-                alert("Enter a valid phone number");
+                setSaveError("Enter a valid phone number");
                 return;
               }
 
               if (!form.phone_verified) {
-                alert("Please verify your phone number");
+                setSaveError("Please verify your phone number");
                 return;
               }
 
@@ -216,7 +223,7 @@ export default function EditProfileModal({
                 }
 
                 console.error("Profile update failed", error);
-                alert("Failed to save profile. Please try again.");
+                setSaveError("Failed to save profile. Please try again.");
                 return;
               }
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useParams } from "next/navigation";
 import HostMiniProfile from "@/components/profile/HostMiniProfile";
+import { useToast } from "@/components/ui/ToastProvider";
 
 /* =========================
    TYPES
@@ -62,6 +63,8 @@ export default function HostReviewModal({
   const [requests, setRequests] = useState<JoinRequest[]>([]);
   const [questions, setQuestions] = useState<string[]>([]);
   const [resolving, setResolving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   /* =========================
      LOAD PENDING REQUESTS
@@ -121,6 +124,7 @@ export default function HostReviewModal({
 
   const handleApprove = async (joinRequestId: string) => {
     if (resolving) return;
+    setError(null);
     setResolving(true);
 
     try {
@@ -132,13 +136,14 @@ export default function HostReviewModal({
 
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        alert(payload.error || "Failed to approve join request");
+        setError(payload.error || "Failed to approve join request");
         return;
       }
 
       // Remove by join request ID
       setRequests(prev => prev.filter(r => r.id !== joinRequestId));
       await onResolved();
+      showToast("Join request approved", "success");
     } finally {
       setResolving(false);
     }
@@ -146,15 +151,24 @@ export default function HostReviewModal({
 
   const handleReject = async (joinRequestId: string) => {
     if (resolving || !activityId) return;
+    setError(null);
+    const confirmed = confirm("Decline this join request?");
+    if (!confirmed) return;
     setResolving(true);
 
-    await supabase
+    const { error: rejectError } = await supabase
       .from("join_requests")
       .update({ status: "rejected" })
       .eq("id", joinRequestId);
 
-    // Remove by join request ID (IMPORTANT FIX)
+      if (rejectError) {
+        setError(rejectError.message || "Failed to decline join request");
+        setResolving(false);
+        return;
+      }
+
     setRequests(prev => prev.filter(r => r.id !== joinRequestId));
+    showToast("Join request declined", "info");
 
     setResolving(false);
   };
@@ -170,6 +184,8 @@ export default function HostReviewModal({
       <div className="w-full bg-white rounded-t-2xl p-4 max-h-[85vh] overflow-y-auto">
         <h2 className="mb-4 font-semibold">Join Requests</h2>
 
+        {error ? <p className="mb-2 text-sm text-red-600">{error}</p> : null}
+        
         {requests.length === 0 && (
           <p className="text-sm text-gray-500">
             No pending requests
