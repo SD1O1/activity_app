@@ -5,9 +5,14 @@ export type CityResult = {
 };
 
 const MAPBOX_TOKEN =
-  process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN!;
+process.env.NEXT_PUBLIC_MAPBOX_TOKEN ??
+process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
 export async function getCityFromDevice(): Promise<CityResult> {
+  if (!MAPBOX_TOKEN) {
+    throw new Error("Mapbox token is missing");
+  }
+  
   if (!navigator.geolocation) {
     throw new Error("Geolocation not supported");
   }

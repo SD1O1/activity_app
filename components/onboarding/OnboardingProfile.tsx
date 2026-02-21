@@ -24,6 +24,13 @@ const VERIFICATION_PHOTOS_BUCKET =
   process.env.NEXT_PUBLIC_SUPABASE_VERIFICATION_PHOTOS_BUCKET ??
   "verification-photos";
 
+  function normalizeCity(city: string): string {
+    const trimmed = city.trim();
+    if (!trimmed) return "";
+  
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+  }
+  
 export default function OnboardingProfile() {
   const [step, setStep] = useState(0);
 
@@ -113,7 +120,7 @@ export default function OnboardingProfile() {
   const handleUseLocation = async () => {
     try {
       const { city } = await getCityFromDevice();
-      setForm((prev) => ({ ...prev, city }));
+      setForm((prev) => ({ ...prev, city: normalizeCity(city)  }));
     } catch {
       alert("Unable to access location. Enter city manually.");
     }
@@ -314,7 +321,9 @@ export default function OnboardingProfile() {
       {step === 6 && (
         <LocationSlide
           city={form.city}
-          onCityChange={(city) => setForm({ ...form, city })}
+          onCityChange={(city) =>
+            setForm({ ...form, city: normalizeCity(city) })
+          }
           onUseLocation={handleUseLocation}
         />
       )}
