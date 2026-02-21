@@ -110,6 +110,19 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
       return;
     }
     
+    if (!date) {
+      alert("Please choose date and time");
+      setLoading(false);
+      return;
+    }
+
+    const startsAtMs = new Date(date).getTime();
+    if (Number.isNaN(startsAtMs) || startsAtMs < Date.now()) {
+      alert("Please choose a future date and time");
+      setLoading(false);
+      return;
+    }
+
     function getPublicCoords(
       lat: number,
       lng: number
@@ -144,7 +157,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
         cost_rule: costRule,
         host_id: userId,
         questions: cleanedQuestions,
-        max_members: type === "one-on-one" ? 2 : maxMembers + 1,
+        max_members: type === "one-on-one" ? 2 : maxMembers,
       })
       .select()
       .single();
@@ -349,6 +362,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
           type="datetime-local"
           value={date}
           onChange={(e) => setDate(e.target.value)}
+          min={new Date().toISOString().slice(0, 16)}
           className="mt-2 w-full rounded-xl border px-4 py-3"
         />
       </div>

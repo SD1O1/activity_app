@@ -123,23 +123,25 @@ export default function HostReviewModal({
     if (resolving) return;
     setResolving(true);
 
-    const res = await fetch("/api/activities/approve-join", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ joinRequestId }),
-    });
+    try {
+      const res = await fetch("/api/activities/approve-join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ joinRequestId }),
+      });
 
-    if (!res.ok) {
-      console.error("Approve failed");
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        alert(payload.error || "Failed to approve join request");
+        return;
+      }
+
+      // Remove by join request ID
+      setRequests(prev => prev.filter(r => r.id !== joinRequestId));
+      await onResolved();
+    } finally {
       setResolving(false);
-      return;
     }
-
-    // Remove by join request ID
-    setRequests(prev => prev.filter(r => r.id !== joinRequestId));
-
-    setResolving(false);
-    await onResolved();
   };
 
   const handleReject = async (joinRequestId: string) => {
