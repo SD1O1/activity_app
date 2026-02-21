@@ -79,6 +79,30 @@ export default function Page() {
         }
       }
 
+      if (activityData.status === "completed") {
+        if (!viewer) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
+
+        if (viewer.id !== activityData.host_id) {
+          const { data: membership } = await supabase
+            .from("activity_members")
+            .select("id")
+            .eq("activity_id", id)
+            .eq("user_id", viewer.id)
+            .eq("status", "active")
+            .maybeSingle();
+
+          if (!membership) {
+            setNotFound(true);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+      
       const { data: host } = await supabase
         .from("profiles")
         .select("id, username, name, avatar_url, verified")

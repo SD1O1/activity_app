@@ -106,6 +106,28 @@ export default function ActivityDetail({ activity }: Props) {
     setParticipants((prev) => prev.filter((participant) => participant.id !== userId));
   };
 
+  const handleLeaveActivity = async () => {
+    if (!user) return;
+
+    const res = await fetch("/api/activities/remove-member", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        activityId: activity.id,
+        userId: user.id,
+      }),
+    });
+
+    if (!res.ok) {
+      const payload = await res.json().catch(() => ({}));
+      alert(payload.error || "Failed to leave activity");
+      return;
+    }
+
+    await computeJoinStatus();
+    setParticipants((prev) => prev.filter((participant) => participant.id !== user.id));
+  };
+
   const isHost = viewerRole === "host";
   const isApprovedGuest = joinStatus === "approved";
   const showExactMap = isHost || isApprovedGuest;
@@ -121,6 +143,8 @@ export default function ActivityDetail({ activity }: Props) {
           <ActivityActionsMenu
             isHost={viewerRole === "host"}
             onEdit={() => setOpenEdit(true)}
+            canLeaveActivity={joinStatus === "approved" && activity.status !== "completed"}
+            onLeaveActivity={handleLeaveActivity}
             onDelete={async () => {
               await fetch(`/api/activities/${activity.id}/delete`, {
                 method: "POST",
@@ -154,19 +178,12 @@ export default function ActivityDetail({ activity }: Props) {
       <ActivityAbout description={activity.description} />
 
       <ActivityActions
-        activityId={activity.id}
         viewerRole={viewerRole}
         joinStatus={joinStatus}
         hasUnread={hasUnread}
         onRequestJoin={handleRequestJoin}
         onOpenChat={() => setOpenChat(true)}
         onOpenReview={() => setOpenReview(true)}
-        onLeaveSuccess={async () => {
-          await computeJoinStatus();
-          if (user) {
-            setParticipants((prev) => prev.filter((participant) => participant.id !== user.id));
-          }
-        }}
         activityStatus={activity.status}
       />
 
