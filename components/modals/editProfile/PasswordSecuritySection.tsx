@@ -8,6 +8,7 @@ export default function PasswordSecuritySection() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   return (
     <div className="mt-4">
@@ -44,15 +45,28 @@ export default function PasswordSecuritySection() {
 
           <button
             onClick={async () => {
+              if (!password) {
+                setMessage("Please enter a new password.");
+                return;
+              }
+
+              if (password.length < 6) {
+                setMessage("Password must be at least 6 characters.");
+                return;
+              }
+
               if (password !== confirm) {
                 setMessage("Passwords do not match");
                 return;
               }
 
-              const { error } =
-                await supabase.auth.updateUser({
-                  password,
-                });
+              setSubmitting(true);
+
+              const { error } = await supabase.auth.updateUser({
+                password,
+              });
+
+              setSubmitting(false);
 
               setMessage(
                 error
@@ -60,9 +74,10 @@ export default function PasswordSecuritySection() {
                   : "Password updated successfully"
               );
             }}
-            className="mt-2 text-sm font-semibold"
+            disabled={submitting}
+            className="mt-2 text-sm font-semibold disabled:opacity-60"
           >
-            Update password
+            {submitting ? "Updating…" : "Update password"}
           </button>
         </div>
       )}

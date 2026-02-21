@@ -7,6 +7,7 @@ export default function EmailSecuritySection() {
   const [show, setShow] = useState(false);
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   return (
     <div className="mt-4">
@@ -35,20 +36,30 @@ export default function EmailSecuritySection() {
 
           <button
             onClick={async () => {
-              const { error } =
-                await supabase.auth.updateUser({
-                  email,
-                });
+              const trimmedEmail = email.trim();
+              if (!trimmedEmail) {
+                setMessage("Please enter a new email.");
+                return;
+              }
+
+              setSubmitting(true);
+
+              const { error } = await supabase.auth.updateUser({
+                email: trimmedEmail,
+              });
+
+              setSubmitting(false);
 
               setMessage(
                 error
                   ? error.message
-                  : "Confirmation email sent"
+                  : "Confirmation email sent. Check your inbox to finish the change."
               );
             }}
-            className="mt-2 text-sm font-semibold"
+            disabled={submitting}
+            className="mt-2 text-sm font-semibold disabled:opacity-60"
           >
-            Update email
+            {submitting ? "Updating…" : "Update email"}
           </button>
         </div>
       )}

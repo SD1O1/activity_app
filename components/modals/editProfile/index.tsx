@@ -8,6 +8,9 @@ import PhoneVerificationSection from "./PhoneVerificationSection";
 import EmailSecuritySection from "./EmailSecuritySection";
 import PasswordSecuritySection from "./PasswordSecuritySection";
 
+const PROFILE_PHOTOS_BUCKET =
+  process.env.NEXT_PUBLIC_SUPABASE_PROFILE_PHOTOS_BUCKET ?? "profile-photos";
+
 type Props = {
   userId: string;
   onClose: () => void;
@@ -23,6 +26,7 @@ export default function EditProfileModal({
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
+    avatar_url: "",
     name: "",
     bio: "",
     city: "",
@@ -32,13 +36,15 @@ export default function EditProfileModal({
   });
 
   const [phoneError, setPhoneError] = useState<string | undefined>(undefined);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   /* -------------------- load profile -------------------- */
   useEffect(() => {
     const loadProfile = async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("name, bio, city, phone, phone_verified, interests")
+        .select("avatar_url, name, bio, city, phone, phone_verified, interests")
         .eq("id", userId)
         .single();
 
@@ -49,6 +55,7 @@ export default function EditProfileModal({
       }
 
       setForm({
+        avatar_url: data?.avatar_url ?? "",
         name: data?.name ?? "",
         bio: data?.bio ?? "",
         city: data?.city ?? "",
@@ -67,6 +74,47 @@ export default function EditProfileModal({
     setForm((prev) => ({ ...prev, ...patch }));
   };
 
+  const handleAvatarUpload = async (file: File) => {
+    setAvatarError(null);
+    setAvatarUploading(true);
+
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+
+      if (!auth?.user) {
+        setAvatarError("You are not signed in. Please sign in again.");
+        return;
+      }
+
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${auth.user.id}/${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(PROFILE_PHOTOS_BUCKET)
+        .upload(path, file, { upsert: true });
+
+      if (uploadError) {
+        setAvatarError(uploadError.message || "Failed to upload photo.");
+        return;
+      }
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from(PROFILE_PHOTOS_BUCKET).getPublicUrl(path);
+
+      if (!publicUrl) {
+        setAvatarError("Photo uploaded, but URL could not be generated.");
+        return;
+      }
+
+      updateForm({ avatar_url: publicUrl });
+    } catch {
+      setAvatarError("Unexpected upload error. Please try again.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   /* -------------------- loading -------------------- */
   if (loading) {
     return (
@@ -78,15 +126,19 @@ export default function EditProfileModal({
 
   /* -------------------- render -------------------- */
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white w-full max-w-md rounded-xl p-6">
+    <div className="fixed inset-0 bg-black/40 z-50 overflow-y-auto px-4 py-6 flex items-start sm:items-center justify-center">
+      <div className="bg-white w-full max-w-md rounded-xl p-6 max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-semibold mb-4">Edit profile</h2>
 
         <ProfileBasicsSection
+          avatarUrl={form.avatar_url}
+          avatarUploading={avatarUploading}
+          avatarError={avatarError}
           name={form.name}
           bio={form.bio}
           city={form.city}
           onChange={updateForm}
+          onAvatarUpload={handleAvatarUpload}
         />
 
         <PhoneVerificationSection
@@ -141,6 +193,7 @@ export default function EditProfileModal({
                 .from("profiles")
                 .update({
                   name: form.name.trim(),
+                  avatar_url: form.avatar_url || null,
                   bio: form.bio.trim(),
                   city: form.city.trim(),
                   phone: form.phone,
