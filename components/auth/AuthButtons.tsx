@@ -33,7 +33,12 @@ export default function AuthButtons() {
 
   return (
     <button
-      onClick={() => supabase.auth.signOut()}
+    onClick={async () => {
+      const { error } = await supabase.auth.signOut({ scope: "local" });
+      if (error) {
+        console.error("logout failed", error);
+      }
+    }}
       className="px-4 py-2 border"
     >
       Logout

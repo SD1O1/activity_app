@@ -16,7 +16,11 @@ export default function Sidebar({ open, onClose, isLoggedIn }: SidebarProps) {
   if (!open) return null;
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({ scope: "local" });
+
+    if (error) {
+      console.error("logout failed", error);
+    }
     onClose();
     router.push("/");
   };
