@@ -32,10 +32,13 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
       .replace(/^_+|_+$/g, "");
     const fallbackName = normalizedBase || "new_user";
 
+    const usernameSuffix = Math.random().toString(36).slice(2, 8);
+    const fallbackUsername = `${fallbackName}_${usernameSuffix}`;
+
     return {
       name: fallbackName,
       full_name: fallbackName,
-      username: fallbackName,
+      username: fallbackUsername,
     };
   };
 
@@ -52,7 +55,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
             password,
           })
         : await supabase.auth.signUp({
-            email,
+            email: email.trim().toLowerCase(),
             password,
             options: {
               data: buildSignupMetadata(),
