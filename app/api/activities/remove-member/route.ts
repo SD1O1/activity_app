@@ -3,7 +3,7 @@ import {
   createSupabaseAdmin,
   createSupabaseServer,
 } from "@/lib/supabaseServer";
-import { safeJson } from "@/lib/safeJson"
+import { safeJson } from "@/lib/safeJson";
 
 type RemoveMemberRpcResult = {
   ok: boolean;
@@ -40,6 +40,45 @@ export async function POST(req: Request) {
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { data: activityForNotification } = await admin
+      .from("activities")
+      .select("id, host_id, title")
+      .eq("id", activityId)
+      .maybeSingle();
+
+    const notifyHostForSelfLeave =
+      !!activityForNotification &&
+      targetUserId === user.id &&
+      targetUserId !== activityForNotification.host_id;
+
+    const sendHostLeaveNotification = async () => {
+      if (!notifyHostForSelfLeave || !activityForNotification) return;
+
+      const { data: actorProfile } = await admin
+        .from("profiles")
+        .select("name, username")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const actorName = actorProfile?.name || actorProfile?.username || "A participant";
+
+      const { error: notifyError } = await admin.from("notifications").insert({
+        user_id: activityForNotification.host_id,
+        actor_id: user.id,
+        type: "member_left",
+        message: `${actorName} has left '${activityForNotification.title}' activity`,
+        activity_id: activityId,
+      });
+
+      if (notifyError) {
+        console.error("failed to notify host after participant left", {
+          activityId,
+          actorId: user.id,
+          notifyError,
+        });
+      }
+    };
 
     const { data: rpcResult, error: rpcError } = await admin.rpc(
       "remove_member_atomic",
@@ -189,12 +228,14 @@ export async function POST(req: Request) {
         );
       }
 
+      await sendHostLeaveNotification();
       return NextResponse.json({ success: true, mode: "fallback" });
     }
 
     const result = (rpcResult ?? {}) as RemoveMemberRpcResult;
 
     if (result.ok) {
+      await sendHostLeaveNotification();
       return NextResponse.json({ success: true });
     }
 

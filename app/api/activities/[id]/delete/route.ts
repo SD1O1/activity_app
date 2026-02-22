@@ -27,6 +27,28 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { data: activity, error: activityError } = await admin
+    .from("activities")
+    .select("id, host_id, title")
+    .eq("id", activityId)
+    .maybeSingle();
+
+  if (activityError || !activity) {
+    return NextResponse.json({ error: "Activity not found" }, { status: 404 });
+  }
+
+  if (activity.host_id !== user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { data: members } = await admin
+    .from("activity_members")
+    .select("user_id")
+    .eq("activity_id", activityId)
+    .eq("status", "active")
+    .neq("user_id", user.id);
+
+
   const { data: rpcResult, error: rpcError } = await admin.rpc(
     "delete_activity_cascade_atomic",
     {
@@ -53,6 +75,26 @@ export async function POST(
   const result = (rpcResult ?? {}) as DeleteActivityRpcResult;
 
   if (result.ok) {
+    if (members && members.length > 0) {
+      const { error: notifyError } = await admin.from("notifications").insert(
+        members.map((member) => ({
+          user_id: member.user_id,
+          actor_id: user.id,
+          type: "activity_deleted",
+          message: `"${activity.title}" was deleted by the host`,
+          activity_id: null,
+        }))
+      );
+
+      if (notifyError) {
+        console.error("activity delete notification failed", {
+          activityId,
+          userId: user.id,
+          notifyError,
+        });
+      }
+    }
+
     return NextResponse.json({ success: true });
   }
 

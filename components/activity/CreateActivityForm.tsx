@@ -120,8 +120,8 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
       return;
     }
 
-    if (type === "group" && (!Number.isFinite(maxMembers) || maxMembers < 1)) {
-      setFormError("Max members must be at least 1 for group activities.");
+    if (type === "group" && (!Number.isFinite(maxMembers) || maxMembers < 2)) {
+      setFormError("Max members must be at least 2 for group activities.");
       setLoading(false);
       return;
     }
@@ -329,7 +329,10 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
           </button>
 
           <button
-            onClick={() => setType("group")}
+            onClick={() => {
+              setType("group");
+              setMaxMembers((prev) => Math.max(prev, 2));
+            }}
             className={`rounded-xl border py-3 ${
               type === "group" ? "bg-black text-white" : ""
             }`}
@@ -347,9 +350,22 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
 
           <input
             type="number"
-            min={1}
+            min={2}
             value={maxMembers}
-            onChange={(e) => setMaxMembers(Number(e.target.value))}
+            onChange={(e) => {
+              const nextValue = Number(e.target.value);
+              if (nextValue === 1) {
+                setType("one-on-one");
+                setMaxMembers(2);
+                setFormError("Switched to one-on-one because group activities must have at least 2 people.");
+                return;
+              }
+
+              setMaxMembers(nextValue);
+              if (formError?.startsWith("Switched to one-on-one")) {
+                setFormError(null);
+              }
+            }}
             className="mt-2 w-full rounded-xl border px-4 py-3"
             placeholder="e.g. 5"
           />

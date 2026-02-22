@@ -148,7 +148,7 @@ export default function ActivityDetail({ activity }: Props) {
           <ActivityActionsMenu
             isHost={viewerRole === "host"}
             onEdit={() => setOpenEdit(true)}
-            canLeaveActivity={joinStatus === "approved" && activity.status !== "completed"}
+            canLeaveActivity={viewerRole !== "host" && joinStatus === "approved" && activity.status !== "completed"}
             onLeaveActivity={handleLeaveActivity}
             onDelete={async () => {
               const res = await fetch(`/api/activities/${activity.id}/delete`, {
