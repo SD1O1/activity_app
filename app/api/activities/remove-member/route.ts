@@ -3,6 +3,7 @@ import {
   createSupabaseAdmin,
   createSupabaseServer,
 } from "@/lib/supabaseServer";
+import { safeJson } from "@/lib/safeJson"
 
 type RemoveMemberRpcResult = {
   ok: boolean;
@@ -12,7 +13,16 @@ type RemoveMemberRpcResult = {
 
 export async function POST(req: Request) {
   try {
-    const { activityId, userId: requestedUserId } = await req.json();
+    const { data: payload, errorResponse } = await safeJson<{
+      activityId?: string;
+      userId?: string;
+    }>(req);
+
+    if (errorResponse) {
+      return errorResponse;
+    }
+
+    const { activityId, userId: requestedUserId } = payload ?? {};
     const targetUserId = requestedUserId as string | undefined;
 
     if (!activityId || !targetUserId) {
@@ -135,32 +145,48 @@ export async function POST(req: Request) {
           .eq("user_id", targetUserId);
 
         if (deleteConversationParticipantError) {
-          console.error("remove-member fallback conversation participant delete failed", {
-            deleteConversationParticipantError,
-            conversationId: conversation.id,
-            targetUserId,
-          });
+          return NextResponse.json(
+            {
+              error:
+                deleteConversationParticipantError.message ||
+                "Failed to remove conversation participant",
+            },
+            { status: 500 }
+          );
         }
       }
 
-      const nextMemberCount = Math.max((activity.member_count ?? 0) - 1, 0);
-      const nextStatus = activity.status === "full" && nextMemberCount < activity.max_members ? "open" : activity.status;
+      const { count: activeMemberCount, error: memberCountError } = await admin
+        .from("activity_members")
+        .select("id", { count: "exact", head: true })
+        .eq("activity_id", activityId)
+        .eq("status", "active");
+
+      if (memberCountError || activeMemberCount === null) {
+        return NextResponse.json(
+          { error: memberCountError?.message || "Failed to recalculate member count" },
+          { status: 500 }
+        );
+      }
+
+      const nextStatus =
+        activity.status === "full" && activeMemberCount < activity.max_members
+          ? "open"
+          : activity.status;
 
       const { error: updateActivityError } = await admin
         .from("activities")
         .update({
-          member_count: nextMemberCount,
+          member_count: activeMemberCount,
           status: nextStatus,
         })
         .eq("id", activityId);
 
       if (updateActivityError) {
-        console.error("remove-member fallback activity update failed", {
-          updateActivityError,
-          activityId,
-          nextMemberCount,
-          nextStatus,
-        });
+        return NextResponse.json(
+          { error: updateActivityError.message || "Failed to update activity" },
+          { status: 500 }
+        );
       }
 
       return NextResponse.json({ success: true, mode: "fallback" });

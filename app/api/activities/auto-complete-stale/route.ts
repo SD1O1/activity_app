@@ -5,30 +5,38 @@ import {
 } from "@/lib/supabaseServer";
 
 export async function POST() {
-  const supabase = await createSupabaseServer();
-  const admin = createSupabaseAdmin();
+  try {
+    const supabase = await createSupabaseServer();
+    const admin = createSupabaseAdmin();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-  if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const nowIso = new Date().toISOString();
+
+    const { data, error } = await admin
+      .from("activities")
+      .update({ status: "completed" })
+      .in("status", ["open", "full"])
+      .lt("starts_at", nowIso)
+      .select("id");
+
+    if (error) {
+      return NextResponse.json(
+        { error: "Failed to complete stale activities" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, updatedCount: data?.length ?? 0 });
+  } catch (error) {
+    console.error("auto-complete-stale error", { error });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  const nowIso = new Date().toISOString();
-
-  const { data, error } = await admin
-    .from("activities")
-    .update({ status: "completed" })
-    .in("status", ["open", "full"])
-    .lt("starts_at", nowIso)
-    .select("id");
-
-  if (error) {
-    return NextResponse.json({ error: "Failed to complete stale activities" }, { status: 500 });
-  }
-
-  return NextResponse.json({ success: true, updatedCount: data?.length ?? 0 });
 }
