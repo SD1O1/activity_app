@@ -15,7 +15,7 @@ export async function POST(req: Request) {
 
     if (!email && !password) {
       return NextResponse.json(
-        { error: "Provide email and/or password." },
+        { success: false, error: "Provide email and/or password." },
         { status: 400 }
       );
     }
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const { error: updateError } = await admin.auth.admin.updateUserById(user.id, {
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
 
     if (updateError) {
       return NextResponse.json(
-        { error: updateError.message || "Failed to update credentials." },
+        { success: false, error: updateError.message || "Failed to update credentials." },
         { status: 400 }
       );
     }
@@ -47,6 +47,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     console.error("update-credentials failed", { error });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }

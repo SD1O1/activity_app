@@ -19,7 +19,7 @@ export async function POST(
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const { data: activity, error: activityError } = await admin
@@ -30,11 +30,11 @@ export async function POST(
       .single();
 
     if (activityError || !activity) {
-      return NextResponse.json({ error: "Activity not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "Activity not found" }, { status: 404 });
     }
 
     if (activity.host_id !== user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
     }
 
     const { data: members, error: membersError } = await admin
@@ -45,7 +45,7 @@ export async function POST(
 
     if (membersError || !members) {
       return NextResponse.json(
-        { error: "Failed to load members" },
+        { success: false, error: "Failed to load members" },
         { status: 500 }
       );
     }
@@ -73,7 +73,7 @@ export async function POST(
         notifyError,
       });
       return NextResponse.json(
-        { error: "Failed to notify participants" },
+        { success: false, error: "Failed to notify participants" },
         { status: 500 }
       );
     }
@@ -81,6 +81,6 @@ export async function POST(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("notify-update error", { error });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }

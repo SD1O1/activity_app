@@ -31,11 +31,11 @@ export async function POST(req: Request) {
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
   if (!conversationId) {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    return NextResponse.json({ success: false, error: "Invalid payload" }, { status: 400 });
   }
 
   let messageTimestamp = new Date();
@@ -44,12 +44,12 @@ export async function POST(req: Request) {
     const createdAtDate = new Date(messageCreatedAt);
 
     if (!Number.isFinite(createdAtDate.getTime())) {
-      return NextResponse.json({ error: "Invalid messageCreatedAt" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Invalid messageCreatedAt" }, { status: 400 });
     }
 
     const ageSeconds = (Date.now() - createdAtDate.getTime()) / 1000;
     if (ageSeconds > MAX_MESSAGE_AGE_SECONDS) {
-      return NextResponse.json({ success: true, skipped: "message_too_old" });
+      return NextResponse.json({ success: true, data: { skipped: "message_too_old" } });
     }
 
     messageTimestamp = createdAtDate;
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (convoError || !convo) {
-    return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+    return NextResponse.json({ success: false, error: "Conversation not found" }, { status: 404 });
   }
 
   if (activityId && convo.activity_id !== activityId) {
@@ -87,7 +87,7 @@ export async function POST(req: Request) {
       userId: user.id,
       activityError,
     });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 
   const { data: participantRecords, error: participantQueryError } = await admin
@@ -101,7 +101,7 @@ export async function POST(req: Request) {
       userId: user.id,
       participantQueryError,
     });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 
   const participantIds = new Set(
@@ -121,7 +121,7 @@ export async function POST(req: Request) {
       userId: user.id,
       activityMembersError,
     });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 
   const activeMemberIds = new Set(
@@ -133,7 +133,7 @@ export async function POST(req: Request) {
   const isActivityMember = activeMemberIds.has(user.id);
 
   if (!isConversationParticipant && !isActivityMember) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
   const participantRows = Array.from(activeMemberIds).map((memberId) => ({
@@ -154,7 +154,7 @@ export async function POST(req: Request) {
       userId: user.id,
       participantUpsertError,
     });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 
   const recipientIds = new Set([...participantIds, ...activeMemberIds]);
@@ -186,7 +186,7 @@ if (upsertError) {
       userId: user.id,
       upsertError,
     });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 
   const rowsWithoutDedupeKey = rows.map((row) => {
@@ -204,7 +204,7 @@ if (upsertError) {
       userId: user.id,
       insertError,
     });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }
 

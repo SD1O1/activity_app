@@ -10,7 +10,7 @@ export async function safeJson<T>(req: Request): Promise<{
   } catch {
     return {
       errorResponse: NextResponse.json(
-        { error: "Invalid JSON body" },
+        { success: false, error: "Invalid JSON body" },
         { status: 400 }
       ),
     };

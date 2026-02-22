@@ -12,7 +12,7 @@ export async function GET(
     const activityId = resolvedParams?.id;
 
     if (!activityId) {
-      return NextResponse.json({ error: "Missing activityId" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Missing activityId" }, { status: 400 });
     }
 
     const admin = createSupabaseAdmin();
@@ -25,7 +25,7 @@ export async function GET(
       .single();
 
     if (activityError || !activity) {
-      return NextResponse.json({ error: "Activity not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "Activity not found" }, { status: 404 });
     }
 
     const { data: hostProfile, error: hostError } = await admin
@@ -36,7 +36,7 @@ export async function GET(
 
     if (hostError || !hostProfile) {
       return NextResponse.json(
-        { error: "Host profile not found" },
+        { success: false, error: "Host profile not found" },
         { status: 500 }
       );
     }
@@ -56,7 +56,7 @@ export async function GET(
       .eq("status", "active");
 
     if (membersError) {
-      return NextResponse.json({ error: membersError.message }, { status: 500 });
+      return NextResponse.json({ success: false, error: membersError.message }, { status: 500 });
     }
 
     const participants = [
@@ -70,14 +70,14 @@ export async function GET(
       })),
     ];
 
-    return NextResponse.json(participants, { status: 200 });
+    return NextResponse.json({ success: true, data: participants }, { status: 200 });
   } catch (error) {
     console.error("GET /api/activities/[id]/participants failed", {
       error,
       params,
     });
     return NextResponse.json(
-      { error: "Failed to fetch participants" },
+      { success: false, error: "Failed to fetch participants" },
       { status: 500 }
     );
   }

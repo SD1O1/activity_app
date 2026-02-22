@@ -135,7 +135,7 @@ export default function HostReviewModal({
       });
 
       if (!res.ok) {
-        const payload = await res.json().catch(() => ({}));
+        const payload = await res.json().catch(() => ({} as { error?: string }));
         setError(payload.error || "Failed to approve join request");
         return;
       }

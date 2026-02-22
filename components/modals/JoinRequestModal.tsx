@@ -91,7 +91,7 @@ export default function JoinRequestModal({
       }),
     });
 
-    const payload = (await response.json()) as { error?: string };
+    const payload = (await response.json()) as { error?: string; data?: { message?: string } };
 
     if (!response.ok) {
       setError(payload.error ?? "Failed to send join request");

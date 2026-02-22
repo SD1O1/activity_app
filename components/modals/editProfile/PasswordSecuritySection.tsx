@@ -66,7 +66,7 @@ export default function PasswordSecuritySection() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ password }),
               });
-              const result = (await res.json()) as { error?: string };
+              const result = (await res.json()) as { error?: string; data?: unknown };
 
               setSubmitting(false);
 

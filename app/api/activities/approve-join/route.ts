@@ -40,6 +40,7 @@ export async function POST(request: Request) {
     if (!joinRequestId && (!activityId || !participantId)) {
       return NextResponse.json(
         {
+          success: false,
           error:
             "Missing required fields: provide joinRequestId or both activityId and participantId",
         },
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     let resolvedJoinRequestId = joinRequestId;
@@ -79,6 +80,7 @@ export async function POST(request: Request) {
         });
         return NextResponse.json(
           {
+            success: false,
             error: joinRequestLookupError.message || "Failed to find join request",
           },
           { status: 500 }
@@ -87,7 +89,7 @@ export async function POST(request: Request) {
 
       if (!joinRequest?.id) {
         return NextResponse.json(
-          { error: "Pending join request not found for activityId and participantId" },
+          { success: false, error: "Pending join request not found for activityId and participantId" },
           { status: 400 }
         );
       }
@@ -136,7 +138,7 @@ export async function POST(request: Request) {
       });
       return NextResponse.json(
         {
-          error: rpcError.message || "Failed to approve join request",
+          success: false, error: rpcError.message || "Failed to approve join request",
           code: "RPC_ERROR",
         },
         { status: 500 }
@@ -186,38 +188,42 @@ export async function POST(request: Request) {
       }
       return NextResponse.json(
         {
-          ok: true,
-          code: result.code || "OK",
-          message: result.message || "Join request approved",
-          approvedUserId: result.approvedUserId,
-          joinMessage: result.joinMessage ?? null,
+          success: true,
+          data: {
+            ok: true,
+            code: result.code || "OK",
+            message: result.message || "Join request approved",
+            approvedUserId: result.approvedUserId,
+            joinMessage: result.joinMessage ?? null,
+          },
         },
         { status: 200 }
       );
     }
 
     if (result.code === "UNAUTHORIZED") {
-      return NextResponse.json({ error: result.message || "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: result.message || "Unauthorized" }, { status: 401 });
     }
 
     if (result.code === "FORBIDDEN") {
-      return NextResponse.json({ error: result.message || "Forbidden" }, { status: 403 });
+      return NextResponse.json({ success: false, error: result.message || "Forbidden" }, { status: 403 });
     }
 
     if (result.code === "NOT_FOUND") {
-      return NextResponse.json({ error: result.message || "Not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: result.message || "Not found" }, { status: 404 });
     }
 
     if (result.code === "BAD_REQUEST") {
-      return NextResponse.json({ error: result.message || "Invalid request" }, { status: 400 });
+      return NextResponse.json({ success: false, error: result.message || "Invalid request" }, { status: 400 });
     }
 
     if (result.code === "CONFLICT") {
-      return NextResponse.json({ error: result.message || "Conflict" }, { status: 409 });
+      return NextResponse.json({ success: false, error: result.message || "Conflict" }, { status: 409 });
     }
 
     return NextResponse.json(
       {
+        success: false, 
         error: result.message || "Failed to approve join request",
         code: result.code || "INTERNAL",
       },
@@ -229,6 +235,6 @@ export async function POST(request: Request) {
       route: "/api/activities/approve-join",
     });
     const message = error instanceof Error ? error.message : "Malformed request body";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ esuccess: false, rror: message }, { status: 400 });
   }
 }

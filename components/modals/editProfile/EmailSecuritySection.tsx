@@ -64,7 +64,7 @@ export default function EmailSecuritySection() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email: trimmedEmail }),
               });
-              const result = (await res.json()) as { error?: string };
+              const result = (await res.json()) as { error?: string; data?: unknown };
 
               setSubmitting(false);
 

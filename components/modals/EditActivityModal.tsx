@@ -54,8 +54,8 @@ export default function EditActivityModal({
     );
     
     if (!res.ok) {
-      const err = await res.json();
-      setError(err.error || "Failed to update activity");
+      const payload = (await res.json()) as { error?: string };
+      setError(payload.error || "Failed to update activity");
       setSaving(false);
       return;
     }    

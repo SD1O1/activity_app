@@ -24,7 +24,7 @@ export async function POST(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
   const { data: activity, error: activityError } = await admin
@@ -34,11 +34,11 @@ export async function POST(
     .maybeSingle();
 
   if (activityError || !activity) {
-    return NextResponse.json({ error: "Activity not found" }, { status: 404 });
+    return NextResponse.json({ success: false, error: "Activity not found" }, { status: 404 });
   }
 
   if (activity.host_id !== user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
   const { data: members } = await admin
@@ -47,7 +47,6 @@ export async function POST(
     .eq("activity_id", activityId)
     .eq("status", "active")
     .neq("user_id", user.id);
-
 
   const { data: rpcResult, error: rpcError } = await admin.rpc(
     "delete_activity_cascade_atomic",
@@ -65,6 +64,7 @@ export async function POST(
     });
     return NextResponse.json(
       {
+        success: false,
         error:
           "Failed to delete activity atomically. Ensure delete_activity_cascade_atomic() exists and cleanup constraints/indexes are applied.",
       },
@@ -99,19 +99,19 @@ export async function POST(
   }
 
   if (result.code === "NOT_FOUND") {
-    return NextResponse.json({ error: result.message || "Activity not found" }, { status: 404 });
+    return NextResponse.json({ success: false, error: result.message || "Activity not found" }, { status: 404 });
   }
 
   if (result.code === "FORBIDDEN") {
-    return NextResponse.json({ error: result.message || "Forbidden" }, { status: 403 });
+    return NextResponse.json({ success: false, error: result.message || "Forbidden" }, { status: 403 });
   }
 
   if (result.code === "BAD_REQUEST") {
-    return NextResponse.json({ error: result.message || "Invalid request" }, { status: 400 });
+    return NextResponse.json({ success: false, error: result.message || "Invalid request" }, { status: 400 });
   }
 
   return NextResponse.json(
-    { error: result.message || "Internal server error" },
+    { success: false, error: result.message || "Internal server error" },
     { status: 500 }
   );
 }

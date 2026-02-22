@@ -15,7 +15,7 @@ export async function POST() {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const nowIso = new Date().toISOString();
@@ -29,14 +29,14 @@ export async function POST() {
 
     if (error) {
       return NextResponse.json(
-        { error: "Failed to complete stale activities" },
+        { success: false, error: "Failed to complete stale activities" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ success: true, updatedCount: data?.length ?? 0 });
+    return NextResponse.json({ success: true, data: { updatedCount: data?.length ?? 0 } });
   } catch (error) {
     console.error("auto-complete-stale error", { error });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }

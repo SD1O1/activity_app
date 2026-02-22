@@ -63,8 +63,8 @@ export default function ActivityDetail({ activity }: Props) {
         return;
       }
 
-      const data: Participant[] = await res.json();
-      setParticipants(data);
+      const payload = (await res.json()) as { data?: Participant[] };
+      setParticipants(payload.data ?? []);
     };
 
     void loadParticipants();
@@ -124,7 +124,7 @@ export default function ActivityDetail({ activity }: Props) {
     });
 
     if (!res.ok) {
-      const payload = await res.json().catch(() => ({}));
+      const payload = await res.json().catch(() => ({} as { error?: string }));
       showToast(payload.error || "Failed to leave activity", "error");
       return;
     }
@@ -156,7 +156,7 @@ export default function ActivityDetail({ activity }: Props) {
               });
 
               if (!res.ok) {
-                const payload = await res.json().catch(() => ({}));
+                const payload = await res.json().catch(() => ({} as { error?: string }));
                 showToast(payload.error || "Failed to delete activity", "error");
                 return;
               }

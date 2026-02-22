@@ -21,7 +21,7 @@ export async function POST(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
   const { data: activity, error: fetchError } = await admin
@@ -32,16 +32,16 @@ export async function POST(
     .single();
 
   if (fetchError || !activity) {
-    return NextResponse.json({ error: "Activity not found" }, { status: 404 });
+    return NextResponse.json({ success: false, error: "Activity not found" }, { status: 404 });
   }
 
   if (activity.host_id !== user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
   if (typeof max_members === "number" && max_members < activity.member_count) {
     return NextResponse.json(
-      { error: "max_members cannot be less than current member_count" },
+      { success: false, error: "max_members cannot be less than current member_count" },
       { status: 409 }
     );
   }
@@ -63,7 +63,7 @@ export async function POST(
       userId: user.id,
       updateError,
     });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 
   return NextResponse.json({ success: true }, { status: 200 });

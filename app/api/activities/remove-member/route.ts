@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     const targetUserId = requestedUserId as string | undefined;
 
     if (!activityId || !targetUserId) {
-      return NextResponse.json({ error: "Missing activityId or userId" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Missing activityId or userId" }, { status: 400 });
     }
 
     const supabase = await createSupabaseServer();
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const { data: activityForNotification } = await admin
@@ -105,13 +105,13 @@ export async function POST(req: Request) {
 
       if (activityError) {
         return NextResponse.json(
-          { error: activityError.message || "Failed to load activity" },
+          { success: false, error: activityError.message || "Failed to load activity" },
           { status: 500 }
         );
       }
 
       if (!activity) {
-        return NextResponse.json({ error: "Activity not found" }, { status: 404 });
+        return NextResponse.json({ success: false, error: "Activity not found" }, { status: 404 });
       }
 
       const isHost = activity.host_id === user.id;
@@ -119,14 +119,14 @@ export async function POST(req: Request) {
 
       if (!isHost && !isSelfRemoval) {
         return NextResponse.json(
-          { error: "Only the host can remove other participants" },
+          { success: false, error: "Only the host can remove other participants" },
           { status: 403 }
         );
       }
 
       if (targetUserId === activity.host_id) {
         return NextResponse.json(
-          { error: "Host cannot be removed from their own activity" },
+          { success: false, error: "Host cannot be removed from their own activity" },
           { status: 400 }
         );
       }
@@ -141,13 +141,13 @@ export async function POST(req: Request) {
 
       if (memberLookupError) {
         return NextResponse.json(
-          { error: memberLookupError.message || "Failed to validate membership" },
+          { success: false, error: memberLookupError.message || "Failed to validate membership" },
           { status: 500 }
         );
       }
 
       if (!member?.id) {
-        return NextResponse.json({ error: "Member not found" }, { status: 404 });
+        return NextResponse.json({ success: false, error: "Member not found" }, { status: 404 });
       }
 
       const { error: deleteMembershipError } = await admin
@@ -157,7 +157,7 @@ export async function POST(req: Request) {
 
       if (deleteMembershipError) {
         return NextResponse.json(
-          { error: deleteMembershipError.message || "Failed to remove member" },
+          { success: false, error: deleteMembershipError.message || "Failed to remove member" },
           { status: 500 }
         );
       }
@@ -186,6 +186,7 @@ export async function POST(req: Request) {
         if (deleteConversationParticipantError) {
           return NextResponse.json(
             {
+              success: false, 
               error:
                 deleteConversationParticipantError.message ||
                 "Failed to remove conversation participant",
@@ -203,7 +204,7 @@ export async function POST(req: Request) {
 
       if (memberCountError || activeMemberCount === null) {
         return NextResponse.json(
-          { error: memberCountError?.message || "Failed to recalculate member count" },
+          { success: false, error: memberCountError?.message || "Failed to recalculate member count" },
           { status: 500 }
         );
       }
@@ -223,13 +224,13 @@ export async function POST(req: Request) {
 
       if (updateActivityError) {
         return NextResponse.json(
-          { error: updateActivityError.message || "Failed to update activity" },
+          { success: false, error: updateActivityError.message || "Failed to update activity" },
           { status: 500 }
         );
       }
 
       await sendHostLeaveNotification();
-      return NextResponse.json({ success: true, mode: "fallback" });
+      return NextResponse.json({ success: true, data: { mode: "fallback" } });
     }
 
     const result = (rpcResult ?? {}) as RemoveMemberRpcResult;
@@ -240,31 +241,31 @@ export async function POST(req: Request) {
     }
 
     if (result.code === "BAD_REQUEST") {
-      return NextResponse.json({ error: result.message || "Invalid request" }, { status: 400 });
+      return NextResponse.json({ success: false, error: result.message || "Invalid request" }, { status: 400 });
     }
 
     if (result.code === "UNAUTHORIZED") {
-      return NextResponse.json({ error: result.message || "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: result.message || "Unauthorized" }, { status: 401 });
     }
 
     if (result.code === "FORBIDDEN") {
-      return NextResponse.json({ error: result.message || "Forbidden" }, { status: 403 });
+      return NextResponse.json({ success: false, error: result.message || "Forbidden" }, { status: 403 });
     }
 
     if (result.code === "NOT_FOUND") {
-      return NextResponse.json({ error: result.message || "Not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: result.message || "Not found" }, { status: 404 });
     }
 
     if (result.code === "CONFLICT") {
-      return NextResponse.json({ error: result.message || "Conflict" }, { status: 409 });
+      return NextResponse.json({ success: false, error: result.message || "Conflict" }, { status: 409 });
     }
 
     return NextResponse.json(
-      { error: result.message || "Internal server error" },
+      { success: false, error: result.message || "Internal server error" },
       { status: 500 }
     );
   } catch (err) {
     console.error("remove-member error", { err });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }

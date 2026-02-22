@@ -30,7 +30,7 @@ export async function POST(req: Request) {
           : null;
 
     if (!activityId) {
-      return NextResponse.json({ error: "Missing activityId" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Missing activityId" }, { status: 400 });
     }
 
     const supabase = await createSupabaseServer();
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const { data: activity, error: activityError } = await admin
@@ -53,12 +53,12 @@ export async function POST(req: Request) {
       .single();
 
     if (activityError || !activity) {
-      return NextResponse.json({ error: "Activity not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "Activity not found" }, { status: 404 });
     }
 
     if (activity.host_id === user.id) {
       return NextResponse.json(
-        { error: "Hosts cannot request to join their own activity" },
+        { success: false, error: "Hosts cannot request to join their own activity" },
         { status: 400 }
       );
     }
@@ -75,14 +75,14 @@ export async function POST(req: Request) {
       }
       
       return NextResponse.json(
-        { error: "Activity has already ended" },
+        { success: false, error: "Activity has already ended" },
         { status: 409 }
       );
     }
 
     if (activity.member_count >= activity.max_members || activity.status === "full") {
       return NextResponse.json(
-        { error: "Activity is full" },
+        { success: false, error: "Activity is full" },
         { status: 409 }
       );
     }
@@ -101,14 +101,14 @@ export async function POST(req: Request) {
         membershipError,
       });
       return NextResponse.json(
-        { error: "Failed to validate membership status" },
+        { success: false, error: "Failed to validate membership status" },
         { status: 500 }
       );
     }
 
     if (membership) {
       return NextResponse.json(
-        { error: "You are already a member of this activity" },
+        { success: false, error: "You are already a member of this activity" },
         { status: 409 }
       );
     }
@@ -130,6 +130,7 @@ export async function POST(req: Request) {
       });
       return NextResponse.json(
         {
+          success: false, 
           error:
             "Failed to create join request atomically. Ensure request_join_atomic() is installed.",
         },
@@ -158,31 +159,33 @@ export async function POST(req: Request) {
       }
       return NextResponse.json({
         success: true,
-        message: result.message || "Join request sent",
-        duplicatePending: Boolean(result.duplicatePending),
+        data: {
+          message: result.message || "Join request sent",
+          duplicatePending: Boolean(result.duplicatePending),
+        },
       });
     }
 
     if (result.code === "BAD_REQUEST") {
       return NextResponse.json(
-        { error: result.message || "Invalid request" },
+        { success: false, error: result.message || "Invalid request" },
         { status: 400 }
       );
     }
 
     if (result.code === "CONFLICT") {
       return NextResponse.json(
-        { error: result.message || "Conflict" },
+        { success: false, error: result.message || "Conflict" },
         { status: 409 }
       );
     }
 
     return NextResponse.json(
-      { error: result.message || "Internal server error" },
+      { success: false, error: result.message || "Internal server error" },
       { status: 500 }
     );
   } catch (err) {
     console.error("request-join failed", { err });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }
