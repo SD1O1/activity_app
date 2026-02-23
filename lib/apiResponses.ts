@@ -11,7 +11,14 @@ export function successResponse<T>(data?: T, status = 200) {
 export function errorResponse(
   error: string,
   status: number,
-  extra: Record<string, unknown> = {}
+  code?: string
 ) {
-  return NextResponse.json({ success: false, error, ...extra }, { status });
+  return NextResponse.json(
+    {
+      success: false,
+      error,
+      ...(code ? { code } : {}),
+    },
+    { status }
+  );
 }

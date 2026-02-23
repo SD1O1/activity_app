@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
-import {
-  createSupabaseAdmin,
-  createSupabaseServer,
-} from "@/lib/supabaseServer";
+import { z } from "zod";
+import { createSupabaseAdmin, createSupabaseServer } from "@/lib/supabaseServer";
 import { requireApiUser } from "@/lib/apiAuth";
+import { errorResponse, successResponse } from "@/lib/apiResponses";
+import { parseJsonBody, uuidSchema } from "@/lib/validation";
+import { enforceRateLimit } from "@/lib/rateLimit";
+import { logger } from "@/lib/logger";
 
 type RequestJoinRpcResult = {
   ok: boolean;
@@ -12,27 +13,23 @@ type RequestJoinRpcResult = {
   duplicatePending?: boolean;
 };
 
+const bodySchema = z.object({
+  activityId: uuidSchema,
+  answers: z.array(z.string()).optional(),
+  message: z.string().optional(),
+  note: z.string().optional(),
+});
+
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const activityId = body?.activityId as string | undefined;
-    const answers = Array.isArray(body?.answers)
-      ? body.answers
-          .map((answer: unknown) =>
-            typeof answer === "string" ? answer.trim() : ""
-          )
-          .filter((answer: string) => answer.length > 0)
-      : [];
-    const message =
-      typeof body?.message === "string"
-        ? body.message
-        : typeof body?.note === "string"
-          ? body.note
-          : null;
+    const parsed = await parseJsonBody(req, bodySchema);
+    if ("error" in parsed) return parsed.error;
 
-    if (!activityId) {
-      return NextResponse.json({ success: false, error: "Missing activityId" }, { status: 400 });
-    }
+    const activityId = parsed.data.activityId;
+    const answers = (parsed.data.answers ?? [])
+      .map((answer) => answer.trim())
+      .filter((answer) => answer.length > 0);
+    const message = parsed.data.message ?? parsed.data.note ?? null;
 
     const supabase = await createSupabaseServer();
     const admin = createSupabaseAdmin();
@@ -43,6 +40,15 @@ export async function POST(req: Request) {
     }
     const { user } = auth;
 
+    const rateLimitResponse = enforceRateLimit({
+      routeKey: "request-join",
+      userId: user.id,
+      request: req,
+      limit: 20,
+      windowMs: 60_000,
+    });
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { data: activity, error: activityError } = await admin
       .from("activities")
       .select("id, host_id, status, starts_at, member_count, max_members")
@@ -51,13 +57,14 @@ export async function POST(req: Request) {
       .single();
 
     if (activityError || !activity) {
-      return NextResponse.json({ success: false, error: "Activity not found" }, { status: 404 });
+      return errorResponse("Activity not found", 404, "NOT_FOUND");
     }
 
     if (activity.host_id === user.id) {
-      return NextResponse.json(
-        { success: false, error: "Hosts cannot request to join their own activity" },
-        { status: 400 }
+      return errorResponse(
+        "Hosts cannot request to join their own activity",
+        400,
+        "BAD_REQUEST"
       );
     }
 
@@ -71,18 +78,12 @@ export async function POST(req: Request) {
           .eq("id", activityId)
           .in("status", ["open", "full"]);
       }
-      
-      return NextResponse.json(
-        { success: false, error: "Activity has already ended" },
-        { status: 409 }
-      );
+
+      return errorResponse("Activity has already ended", 409, "CONFLICT");
     }
 
     if (activity.member_count >= activity.max_members || activity.status === "full") {
-      return NextResponse.json(
-        { success: false, error: "Activity is full" },
-        { status: 409 }
-      );
+      return errorResponse("Activity is full", 409, "CONFLICT");
     }
 
     const { data: membership, error: membershipError } = await admin
@@ -93,47 +94,31 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     if (membershipError) {
-      console.error("request-join membership check failed", {
+      logger.error("request_join.membership_check_failed", {
         activityId,
         requesterId: user.id,
         membershipError,
       });
-      return NextResponse.json(
-        { success: false, error: "Failed to validate membership status" },
-        { status: 500 }
-      );
+      return errorResponse("Failed to validate membership status", 500, "INTERNAL");
     }
 
     if (membership) {
-      return NextResponse.json(
-        { success: false, error: "You are already a member of this activity" },
-        { status: 409 }
-      );
+      return errorResponse("You are already a member of this activity", 409, "CONFLICT");
     }
 
-    const { data: rpcResult, error: rpcError } = await admin.rpc(
-      "request_join_atomic",
-      {
-        p_activity_id: activityId,
-        p_requester_id: user.id,
-        p_message: message,
-      }
-    );
+    const { data: rpcResult, error: rpcError } = await admin.rpc("request_join_atomic", {
+      p_activity_id: activityId,
+      p_requester_id: user.id,
+      p_message: message,
+    });
 
     if (rpcError) {
-      console.error("request-join rpc failed", {
+      logger.error("request_join.rpc_failed", {
         activityId,
         requesterId: user.id,
         rpcError,
       });
-      return NextResponse.json(
-        {
-          success: false, 
-          error:
-            "Failed to create join request atomically. Ensure request_join_atomic() is installed.",
-        },
-        { status: 500 }
-      );
+      return errorResponse("Failed to create join request", 500, "RPC_ERROR");
     }
 
     const result = (rpcResult ?? {}) as RequestJoinRpcResult;
@@ -148,42 +133,34 @@ export async function POST(req: Request) {
           .eq("status", "pending");
 
         if (answersError) {
-          console.error("request-join answers update failed", {
+          logger.warn("request_join.answers_update_failed", {
             activityId,
             requesterId: user.id,
             answersError,
           });
         }
       }
-      return NextResponse.json({
-        success: true,
-        data: {
+
+      return successResponse(
+        {
           message: result.message || "Join request sent",
           duplicatePending: Boolean(result.duplicatePending),
         },
-      });
+        200
+      );
     }
 
     if (result.code === "BAD_REQUEST") {
-      return NextResponse.json(
-        { success: false, error: result.message || "Invalid request" },
-        { status: 400 }
-      );
+      return errorResponse(result.message || "Invalid request", 400, "BAD_REQUEST");
     }
 
     if (result.code === "CONFLICT") {
-      return NextResponse.json(
-        { success: false, error: result.message || "Conflict" },
-        { status: 409 }
-      );
+      return errorResponse(result.message || "Conflict", 409, "CONFLICT");
     }
 
-    return NextResponse.json(
-      { success: false, error: result.message || "Internal server error" },
-      { status: 500 }
-    );
+    return errorResponse(result.message || "Internal server error", 500, result.code || "INTERNAL");
   } catch (err) {
-    console.error("request-join failed", { err });
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+    logger.error("request_join.unhandled", { err });
+    return errorResponse("Internal server error", 500, "INTERNAL");
   }
 }

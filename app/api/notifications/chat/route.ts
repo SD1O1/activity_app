@@ -1,12 +1,19 @@
+import { z } from "zod";
 import { errorResponse, successResponse } from "@/lib/apiResponses";
-import {
-  createSupabaseAdmin,
-  createSupabaseServer,
-} from "@/lib/supabaseServer";
+import { createSupabaseAdmin, createSupabaseServer } from "@/lib/supabaseServer";
 import { requireApiUser } from "@/lib/apiAuth";
+import { parseJsonBody, uuidSchema } from "@/lib/validation";
+import { enforceRateLimit } from "@/lib/rateLimit";
+import { logger } from "@/lib/logger";
 
 const MAX_MESSAGE_AGE_SECONDS = 20;
 const DUPLICATE_NOTIFICATION_WINDOW_SECONDS = 15;
+
+const bodySchema = z.object({
+  conversationId: uuidSchema,
+  activityId: uuidSchema.optional(),
+  messageCreatedAt: z.string().datetime().optional(),
+});
 
 const toWindowBucket = (date: Date) =>
   Math.floor(date.getTime() / (DUPLICATE_NOTIFICATION_WINDOW_SECONDS * 1000));
@@ -21,7 +28,10 @@ const isMissingDedupeSetupError = (error: { message?: string } | null) => {
 };
 
 export async function POST(req: Request) {
-  const { conversationId, activityId, messageCreatedAt } = await req.json();
+  const parsed = await parseJsonBody(req, bodySchema);
+  if ("error" in parsed) return parsed.error;
+
+  const { conversationId, activityId, messageCreatedAt } = parsed.data;
 
   const supabase = await createSupabaseServer();
   const admin = createSupabaseAdmin();
@@ -32,19 +42,19 @@ export async function POST(req: Request) {
   }
   const { user } = auth;
 
-  if (!conversationId) {
-    return errorResponse("Invalid payload", 400);
-  }
+  const rateLimitResponse = enforceRateLimit({
+    routeKey: "chat-notify",
+    userId: user.id,
+    request: req,
+    limit: 60,
+    windowMs: 60_000,
+  });
+  if (rateLimitResponse) return rateLimitResponse;
 
   let messageTimestamp = new Date();
 
   if (messageCreatedAt) {
     const createdAtDate = new Date(messageCreatedAt);
-
-    if (!Number.isFinite(createdAtDate.getTime())) {
-      return errorResponse("Invalid messageCreatedAt", 400);
-    }
-
     const ageSeconds = (Date.now() - createdAtDate.getTime()) / 1000;
     if (ageSeconds > MAX_MESSAGE_AGE_SECONDS) {
       return successResponse({ skipped: "message_too_old" });
@@ -60,11 +70,11 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (convoError || !convo) {
-    return errorResponse("Conversation not found", 404);
+    return errorResponse("Conversation not found", 404, "NOT_FOUND");
   }
 
   if (activityId && convo.activity_id !== activityId) {
-    console.warn("chat notification activity mismatch", {
+    logger.warn("chat_notification.activity_mismatch", {
       conversationId,
       requestedActivityId: activityId,
       conversationActivityId: convo.activity_id,
@@ -77,15 +87,8 @@ export async function POST(req: Request) {
     { data: participantRecords, error: participantQueryError },
     { data: activityMembers, error: activityMembersError },
   ] = await Promise.all([
-    admin
-      .from("activities")
-      .select("host_id")
-      .eq("id", convo.activity_id)
-      .maybeSingle(),
-    admin
-      .from("conversation_participants")
-      .select("user_id")
-      .eq("conversation_id", conversationId),
+    admin.from("activities").select("host_id").eq("id", convo.activity_id).maybeSingle(),
+    admin.from("conversation_participants").select("user_id").eq("conversation_id", conversationId),
     admin
       .from("activity_members")
       .select("user_id")
@@ -93,49 +96,26 @@ export async function POST(req: Request) {
       .eq("status", "active"),
   ]);
 
-  if (activityError || !activity) {
-    console.error("chat notification activity lookup failed", {
+  if (activityError || !activity || participantQueryError || activityMembersError) {
+    logger.error("chat_notification.lookup_failed", {
       conversationId,
-      activityId: convo.activity_id,
       userId: user.id,
       activityError,
-    });
-    return errorResponse("Internal server error", 500);
-  }
-
-  if (participantQueryError) {
-    console.error("chat notification participant lookup failed", {
-      conversationId,
-      userId: user.id,
       participantQueryError,
-    });
-    return errorResponse("Internal server error", 500);
-  }
-
-  const participantIds = new Set(
-    (participantRecords ?? []).map((participant) => participant.user_id)
-  );
-
-  if (activityMembersError) {
-    console.error("chat notification activity members query failed", {
-      conversationId,
-      activityId: convo.activity_id,
-      userId: user.id,
       activityMembersError,
     });
-    return errorResponse("Internal server error", 500);
+    return errorResponse("Internal server error", 500, "INTERNAL");
   }
 
-  const activeMemberIds = new Set(
-    (activityMembers ?? []).map((member) => member.user_id)
-  );
+  const participantIds = new Set((participantRecords ?? []).map((participant) => participant.user_id));
+  const activeMemberIds = new Set((activityMembers ?? []).map((member) => member.user_id));
   activeMemberIds.add(activity.host_id);
 
   const isConversationParticipant = participantIds.has(user.id);
   const isActivityMember = activeMemberIds.has(user.id);
 
   if (!isConversationParticipant && !isActivityMember) {
-    return errorResponse("Forbidden", 403);
+    return errorResponse("Forbidden", 403, "FORBIDDEN");
   }
 
   const participantRows = Array.from(activeMemberIds).map((memberId) => ({
@@ -151,20 +131,19 @@ export async function POST(req: Request) {
     });
 
   if (participantUpsertError) {
-    console.error("chat notification participant sync failed", {
+    logger.error("chat_notification.participant_sync_failed", {
       conversationId,
       userId: user.id,
       participantUpsertError,
     });
-    return errorResponse("Internal server error", 500);
+    return errorResponse("Internal server error", 500, "INTERNAL");
   }
 
   const recipientIds = new Set([...participantIds, ...activeMemberIds]);
   recipientIds.delete(user.id);
 
   const dedupeWindow = toWindowBucket(messageTimestamp);
-  const rows = Array.from(recipientIds)
-  .map((recipientId) => ({
+  const rows = Array.from(recipientIds).map((recipientId) => ({
     user_id: recipientId,
     actor_id: user.id,
     type: "chat",
@@ -173,43 +152,41 @@ export async function POST(req: Request) {
     dedupe_key: `chat:${conversationId}:${user.id}:${recipientId}:${dedupeWindow}`,
   }));
 
-if (!rows.length) {
-  return successResponse();
-}
-
-const { error: upsertError } = await admin.from("notifications").upsert(rows, {
-  onConflict: "user_id,type,dedupe_key",
-  ignoreDuplicates: true,
-});
-
-if (upsertError) {
-  if (!isMissingDedupeSetupError(upsertError)) {
-    console.error("chat notification upsert failed", {
-      conversationId,
-      userId: user.id,
-      upsertError,
-    });
-    return errorResponse("Internal server error", 500);
+  if (!rows.length) {
+    return successResponse();
   }
 
-  const rowsWithoutDedupeKey = rows.map((row) => {
-    const { dedupe_key: omittedDedupeKey, ...rest } = row;
-    void omittedDedupeKey;
-    return rest;
+  const { error: upsertError } = await admin.from("notifications").upsert(rows, {
+    onConflict: "user_id,type,dedupe_key",
+    ignoreDuplicates: true,
   });
-  const { error: insertError } = await admin
-    .from("notifications")
-    .insert(rowsWithoutDedupeKey);
 
-  if (insertError) {
-    console.error("chat notification fallback insert failed", {
-      conversationId,
-      userId: user.id,
-      insertError,
+  if (upsertError) {
+    if (!isMissingDedupeSetupError(upsertError)) {
+      logger.error("chat_notification.upsert_failed", {
+        conversationId,
+        userId: user.id,
+        upsertError,
+      });
+      return errorResponse("Internal server error", 500, "INTERNAL");
+    }
+
+    const rowsWithoutDedupeKey = rows.map((row) => {
+      const { dedupe_key: dedupeKey, ...rest } = row;
+      void dedupeKey;
+      return rest;
     });
-    return errorResponse("Internal server error", 500);
-  }
-}
+    const { error: insertError } = await admin.from("notifications").insert(rowsWithoutDedupeKey);
 
-return successResponse();
+    if (insertError) {
+      logger.error("chat_notification.fallback_insert_failed", {
+        conversationId,
+        userId: user.id,
+        insertError,
+      });
+      return errorResponse("Internal server error", 500, "INTERNAL");
+    }
+  }
+
+  return successResponse();
 }

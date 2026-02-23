@@ -1,23 +1,15 @@
-import { NextResponse } from "next/server";
-import {
-  createSupabaseAdmin,
-  createSupabaseServer,
-} from "@/lib/supabaseServer";
+import { errorResponse, successResponse } from "@/lib/apiResponses";
+import { createSupabaseAdmin } from "@/lib/supabaseServer";
+import { isInternalServerRequest } from "@/lib/internalAuth";
+import { logger } from "@/lib/logger";
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
-    const supabase = await createSupabaseServer();
-    const admin = createSupabaseAdmin();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!isInternalServerRequest(req)) {
+      return errorResponse("Forbidden", 403, "FORBIDDEN");
     }
 
+    const admin = createSupabaseAdmin();
     const nowIso = new Date().toISOString();
 
     const { data, error } = await admin
@@ -28,15 +20,12 @@ export async function POST() {
       .select("id");
 
     if (error) {
-      return NextResponse.json(
-        { success: false, error: "Failed to complete stale activities" },
-        { status: 500 }
-      );
+      return errorResponse("Failed to complete stale activities", 500, "INTERNAL");
     }
 
-    return NextResponse.json({ success: true, data: { updatedCount: data?.length ?? 0 } });
+    return successResponse({ updatedCount: data?.length ?? 0 });
   } catch (error) {
-    console.error("auto-complete-stale error", { error });
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+    logger.error("activity.auto_complete_stale.unhandled", { error });
+    return errorResponse("Internal server error", 500, "INTERNAL");
   }
 }

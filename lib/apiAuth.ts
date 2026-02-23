@@ -15,7 +15,7 @@ export async function requireApiUser(supabase: {
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return { response: errorResponse("Unauthorized", 401) };
+    return { response: errorResponse("Unauthorized", 401, "UNAUTHORIZED") };
   }
 
   return { user };

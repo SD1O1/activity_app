@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
-import {
-  createSupabaseAdmin,
-} from "@/lib/supabaseServer";
+import { errorResponse, successResponse } from "@/lib/apiResponses";
+import { requireApiUser } from "@/lib/apiAuth";
+import { logger } from "@/lib/logger";
+import { createSupabaseServer } from "@/lib/supabaseServer";
+import { uuidSchema } from "@/lib/validation";
 
 export async function GET(
   _request: Request,
@@ -11,13 +12,19 @@ export async function GET(
     const resolvedParams = await Promise.resolve(params);
     const activityId = resolvedParams?.id;
 
-    if (!activityId) {
-      return NextResponse.json({ success: false, error: "Missing activityId" }, { status: 400 });
+    if (!activityId || !uuidSchema.safeParse(activityId).success) {
+      return errorResponse("Invalid activityId", 400, "BAD_REQUEST");
     }
 
-    const admin = createSupabaseAdmin();
+    const supabase = await createSupabaseServer();
 
-    const { data: activity, error: activityError } = await admin
+    const auth = await requireApiUser(supabase);
+    if ("response" in auth) {
+      return auth.response;
+    }
+    const { user } = auth;
+
+    const { data: activity, error: activityError } = await supabase
       .from("activities")
       .select("host_id")
       .eq("id", activityId)
@@ -25,25 +32,51 @@ export async function GET(
       .single();
 
     if (activityError || !activity) {
-      return NextResponse.json({ success: false, error: "Activity not found" }, { status: 404 });
+      return errorResponse("Activity not found", 404, "NOT_FOUND");
     }
 
-    const { data: hostProfile, error: hostError } = await admin
+    const isHost = activity.host_id === user.id;
+
+    let isApprovedMember = false;
+    if (!isHost) {
+      const { data: member, error: memberError } = await supabase
+        .from("activity_members")
+        .select("id")
+        .eq("activity_id", activityId)
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (memberError) {
+        logger.error("participants.member_check_failed", {
+          activityId,
+          userId: user.id,
+          memberError,
+        });
+        return errorResponse("Internal server error", 500, "INTERNAL");
+      }
+
+      isApprovedMember = !!member;
+    }
+
+    if (!isHost && !isApprovedMember) {
+      return errorResponse("Forbidden", 403, "FORBIDDEN");
+    }
+
+    const { data: hostProfile, error: hostError } = await supabase
       .from("profiles")
       .select("id, username, name, avatar_url, verified")
       .eq("id", activity.host_id)
       .single();
 
     if (hostError || !hostProfile) {
-      return NextResponse.json(
-        { success: false, error: "Host profile not found" },
-        { status: 500 }
-      );
+      return errorResponse("Host profile not found", 404, "NOT_FOUND");
     }
 
-    const { data: members, error: membersError } = await admin
+    const { data: members, error: membersError } = await supabase
       .from("activity_members")
-      .select(`
+      .select(
+        `
         profiles!activity_members_user_fk(
           id,
           username,
@@ -51,12 +84,18 @@ export async function GET(
           avatar_url,
           verified
         )
-      `)
+      `
+      )
       .eq("activity_id", activityId)
       .eq("status", "active");
 
     if (membersError) {
-      return NextResponse.json({ success: false, error: membersError.message }, { status: 500 });
+      logger.error("participants.members_query_failed", {
+        activityId,
+        userId: user.id,
+        membersError,
+      });
+      return errorResponse("Internal server error", 500, "INTERNAL");
     }
 
     const participants = [
@@ -70,15 +109,9 @@ export async function GET(
       })),
     ];
 
-    return NextResponse.json({ success: true, data: participants }, { status: 200 });
+    return successResponse(participants, 200);
   } catch (error) {
-    console.error("GET /api/activities/[id]/participants failed", {
-      error,
-      params,
-    });
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch participants" },
-      { status: 500 }
-    );
+    logger.error("participants.unhandled", { error });
+    return errorResponse("Failed to fetch participants", 500, "INTERNAL");
   }
 }

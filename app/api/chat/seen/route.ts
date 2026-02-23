@@ -1,24 +1,25 @@
+import { z } from "zod";
 import { errorResponse, successResponse } from "@/lib/apiResponses";
-import {
-  createSupabaseAdmin,
-  createSupabaseServer,
-} from "@/lib/supabaseServer";
+import { createSupabaseAdmin, createSupabaseServer } from "@/lib/supabaseServer";
 import { requireApiUser } from "@/lib/apiAuth";
+import { parseJsonBody, uuidSchema } from "@/lib/validation";
+import { enforceRateLimit } from "@/lib/rateLimit";
+import { logger } from "@/lib/logger";
+
+const bodySchema = z.object({
+  conversationId: uuidSchema,
+  seenAt: z.string().datetime().optional(),
+});
 
 export async function POST(req: Request) {
-  const { conversationId, seenAt } = await req.json();
+  const parsed = await parseJsonBody(req, bodySchema);
+  if ("error" in parsed) return parsed.error;
 
-  if (!conversationId) {
-    return errorResponse("Invalid payload", 400);
-  }
+  const { conversationId, seenAt } = parsed.data;
 
   let parsedSeenAt: string;
   if (seenAt) {
-    const seenDate = new Date(seenAt);
-    if (!Number.isFinite(seenDate.getTime())) {
-      return errorResponse("Invalid seenAt", 400);
-    }
-    parsedSeenAt = seenDate.toISOString();
+    parsedSeenAt = new Date(seenAt).toISOString();
   } else {
     parsedSeenAt = new Date().toISOString();
   }
@@ -32,6 +33,15 @@ export async function POST(req: Request) {
   }
   const { user } = auth;
 
+  const rateLimitResponse = enforceRateLimit({
+    routeKey: "chat-seen",
+    userId: user.id,
+    request: req,
+    limit: 90,
+    windowMs: 60_000,
+  });
+  if (rateLimitResponse) return rateLimitResponse;
+
   const { data: convo, error: convoError } = await admin
     .from("conversations")
     .select("id, activity_id")
@@ -39,7 +49,7 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (convoError || !convo) {
-    return errorResponse("Conversation not found", 404);
+    return errorResponse("Conversation not found", 404, "NOT_FOUND");
   }
 
   const { data: membership, error: membershipError } = await admin
@@ -50,12 +60,12 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (membershipError) {
-    console.error("chat seen membership check failed", {
+    logger.error("chat_seen.membership_check_failed", {
       conversationId,
       userId: user.id,
       membershipError,
     });
-    return errorResponse("Internal server error", 500);
+    return errorResponse("Internal server error", 500, "INTERNAL");
   }
 
   if (!membership) {
@@ -68,17 +78,17 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     if (activityMemberError) {
-      console.error("chat seen activity member check failed", {
+      logger.error("chat_seen.activity_member_check_failed", {
         conversationId,
         activityId: convo.activity_id,
         userId: user.id,
         activityMemberError,
       });
-      return errorResponse("Internal server error", 500);
+      return errorResponse("Internal server error", 500, "INTERNAL");
     }
 
     if (!isActivityMember) {
-      return errorResponse("Forbidden", 403);
+      return errorResponse("Forbidden", 403, "FORBIDDEN");
     }
 
     const { error: participantUpsertError } = await admin
@@ -95,12 +105,12 @@ export async function POST(req: Request) {
       );
 
     if (participantUpsertError) {
-      console.error("chat seen participant backfill failed", {
+      logger.error("chat_seen.participant_backfill_failed", {
         conversationId,
         userId: user.id,
         participantUpsertError,
       });
-      return errorResponse("Internal server error", 500);
+      return errorResponse("Internal server error", 500, "INTERNAL");
     }
   }
 
@@ -111,12 +121,12 @@ export async function POST(req: Request) {
     .eq("user_id", user.id);
 
   if (updateError) {
-    console.error("chat seen update failed", {
+    logger.error("chat_seen.update_failed", {
       conversationId,
       userId: user.id,
       updateError,
     });
-    return errorResponse("Internal server error", 500);
+    return errorResponse("Internal server error", 500, "INTERNAL");
   }
 
   return successResponse({ seenAt: parsedSeenAt });

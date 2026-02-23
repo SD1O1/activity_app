@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
-import {
-  createSupabaseAdmin,
-  createSupabaseServer,
-} from "@/lib/supabaseServer";
+import { z } from "zod";
+import { createSupabaseAdmin, createSupabaseServer } from "@/lib/supabaseServer";
 import { requireApiUser } from "@/lib/apiAuth";
+import { errorResponse, successResponse } from "@/lib/apiResponses";
+import { parseJsonBody, uuidSchema } from "@/lib/validation";
+import { enforceRateLimit } from "@/lib/rateLimit";
+import { logger } from "@/lib/logger";
 
 type ApproveJoinRpcResult = {
   ok: boolean;
@@ -13,41 +14,33 @@ type ApproveJoinRpcResult = {
   joinMessage?: string | null;
 };
 
+const bodySchema = z
+  .object({
+    joinRequestId: uuidSchema.optional(),
+    join_request_id: uuidSchema.optional(),
+    activityId: uuidSchema.optional(),
+    id: uuidSchema.optional(),
+    participantId: uuidSchema.optional(),
+    userId: uuidSchema.optional(),
+  })
+  .superRefine((value, ctx) => {
+    const joinRequestId = value.joinRequestId ?? value.join_request_id;
+    const activityId = value.activityId ?? value.id;
+    const participantId = value.participantId ?? value.userId;
+    if (!joinRequestId && (!activityId || !participantId)) {
+      ctx.addIssue({ code: "custom", message: "Missing required fields" });
+    }
+  });
+
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const parsed = await parseJsonBody(request, bodySchema);
+    if ("error" in parsed) return parsed.error;
 
-    const joinRequestId =
-      typeof body?.joinRequestId === "string" && body.joinRequestId.trim().length > 0
-        ? body.joinRequestId.trim()
-        : typeof body?.join_request_id === "string" && body.join_request_id.trim().length > 0
-          ? body.join_request_id.trim()
-          : undefined;
-
-    const activityId =
-      typeof body?.activityId === "string" && body.activityId.trim().length > 0
-        ? body.activityId.trim()
-        : typeof body?.id === "string" && body.id.trim().length > 0
-          ? body.id.trim()
-          : undefined;
-
-    const participantId =
-      typeof body?.participantId === "string" && body.participantId.trim().length > 0
-        ? body.participantId.trim()
-        : typeof body?.userId === "string" && body.userId.trim().length > 0
-          ? body.userId.trim()
-          : undefined;
-
-    if (!joinRequestId && (!activityId || !participantId)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Missing required fields: provide joinRequestId or both activityId and participantId",
-        },
-        { status: 400 }
-      );
-    }
+    const body = parsed.data;
+    let resolvedJoinRequestId = body.joinRequestId ?? body.join_request_id;
+    let resolvedActivityId = body.activityId ?? body.id;
+    let resolvedParticipantId = body.participantId ?? body.userId;
 
     const supabase = await createSupabaseServer();
     const admin = createSupabaseAdmin();
@@ -58,60 +51,47 @@ export async function POST(request: Request) {
     }
     const { user } = auth;
 
-    let resolvedJoinRequestId = joinRequestId;
+    const rateLimitResponse = enforceRateLimit({
+      routeKey: "approve-join",
+      userId: user.id,
+      request,
+      limit: 20,
+      windowMs: 60_000,
+    });
+    if (rateLimitResponse) return rateLimitResponse;
 
     if (!resolvedJoinRequestId) {
       const { data: joinRequest, error: joinRequestLookupError } = await supabase
         .from("join_requests")
         .select("id")
-        .eq("activity_id", activityId)
-        .eq("requester_id", participantId)
+        .eq("activity_id", resolvedActivityId)
+        .eq("requester_id", resolvedParticipantId)
         .eq("status", "pending")
         .maybeSingle();
 
       if (joinRequestLookupError) {
-        console.error("approve-join join request lookup failed", {
+        logger.error("approve_join.lookup_failed", {
           joinRequestLookupError,
-          activityId,
-          participantId,
+          activityId: resolvedActivityId,
+          participantId: resolvedParticipantId,
           userId: user.id,
         });
-        return NextResponse.json(
-          {
-            success: false,
-            error: joinRequestLookupError.message || "Failed to find join request",
-          },
-          { status: 500 }
-        );
+        return errorResponse("Failed to find join request", 500, "INTERNAL");
       }
 
       if (!joinRequest?.id) {
-        return NextResponse.json(
-          { success: false, error: "Pending join request not found for activityId and participantId" },
-          { status: 400 }
-        );
+        return errorResponse("Pending join request not found", 400, "BAD_REQUEST");
       }
 
       resolvedJoinRequestId = joinRequest.id;
     }
 
-    let resolvedActivityId = activityId;
-    let resolvedParticipantId = participantId;
-
     if (!resolvedActivityId || !resolvedParticipantId) {
-      const { data: joinRequestMeta, error: joinRequestMetaError } = await admin
+      const { data: joinRequestMeta } = await admin
         .from("join_requests")
         .select("activity_id, requester_id")
         .eq("id", resolvedJoinRequestId)
         .maybeSingle();
-
-      if (joinRequestMetaError) {
-        console.error("approve-join join request metadata lookup failed", {
-          joinRequestMetaError,
-          joinRequestId: resolvedJoinRequestId,
-          userId: user.id,
-        });
-      }
 
       if (joinRequestMeta) {
         resolvedActivityId = resolvedActivityId ?? joinRequestMeta.activity_id;
@@ -127,20 +107,12 @@ export async function POST(request: Request) {
     );
 
     if (rpcError) {
-      console.error("approve-join rpc failed", {
-        rpcError,
+      logger.error("approve_join.rpc_failed", {
         joinRequestId: resolvedJoinRequestId,
-        activityId,
-        participantId,
         userId: user.id,
+        rpcError,
       });
-      return NextResponse.json(
-        {
-          success: false, error: rpcError.message || "Failed to approve join request",
-          code: "RPC_ERROR",
-        },
-        { status: 500 }
-      );
+      return errorResponse("Failed to approve join request", 500, "RPC_ERROR");
     }
 
     const result = (rpcResult ?? {}) as ApproveJoinRpcResult;
@@ -149,90 +121,54 @@ export async function POST(request: Request) {
       const approvedUserId = result.approvedUserId ?? resolvedParticipantId;
 
       if (approvedUserId && resolvedActivityId) {
-        const { data: conversation, error: conversationError } = await admin
+        const { data: conversation } = await admin
           .from("conversations")
           .select("id")
           .eq("activity_id", resolvedActivityId)
           .maybeSingle();
 
-        if (conversationError) {
-          console.error("approve-join conversation lookup failed", {
-            conversationError,
-            activityId: resolvedActivityId,
-            approvedUserId,
-          });
-        } else if (conversation?.id) {
-          const { error: participantUpsertError } = await admin
-            .from("conversation_participants")
-            .upsert(
-              {
-                conversation_id: conversation.id,
-                user_id: approvedUserId,
-              },
-              {
-                onConflict: "conversation_id,user_id",
-                ignoreDuplicates: true,
-              }
-            );
-
-          if (participantUpsertError) {
-            console.error("approve-join participant upsert failed", {
-              participantUpsertError,
-              conversationId: conversation.id,
-              approvedUserId,
-            });
-          }
+        if (conversation?.id) {
+          await admin.from("conversation_participants").upsert(
+            {
+              conversation_id: conversation.id,
+              user_id: approvedUserId,
+            },
+            {
+              onConflict: "conversation_id,user_id",
+              ignoreDuplicates: true,
+            }
+          );
         }
       }
-      return NextResponse.json(
+
+      return successResponse(
         {
-          success: true,
-          data: {
-            ok: true,
-            code: result.code || "OK",
-            message: result.message || "Join request approved",
-            approvedUserId: result.approvedUserId,
-            joinMessage: result.joinMessage ?? null,
-          },
+          ok: true,
+          code: result.code || "OK",
+          message: result.message || "Join request approved",
+          approvedUserId: result.approvedUserId,
+          joinMessage: result.joinMessage ?? null,
         },
-        { status: 200 }
+        200
       );
     }
 
-    if (result.code === "UNAUTHORIZED") {
-      return NextResponse.json({ success: false, error: result.message || "Unauthorized" }, { status: 401 });
-    }
+    const statusMap: Record<string, number> = {
+      UNAUTHORIZED: 401,
+      FORBIDDEN: 403,
+      NOT_FOUND: 404,
+      BAD_REQUEST: 400,
+      CONFLICT: 409,
+    };
 
-    if (result.code === "FORBIDDEN") {
-      return NextResponse.json({ success: false, error: result.message || "Forbidden" }, { status: 403 });
-    }
-
-    if (result.code === "NOT_FOUND") {
-      return NextResponse.json({ success: false, error: result.message || "Not found" }, { status: 404 });
-    }
-
-    if (result.code === "BAD_REQUEST") {
-      return NextResponse.json({ success: false, error: result.message || "Invalid request" }, { status: 400 });
-    }
-
-    if (result.code === "CONFLICT") {
-      return NextResponse.json({ success: false, error: result.message || "Conflict" }, { status: 409 });
-    }
-
-    return NextResponse.json(
-      {
-        success: false, 
-        error: result.message || "Failed to approve join request",
-        code: result.code || "INTERNAL",
-      },
-      { status: 500 }
+    const status = statusMap[result.code] ?? 500;
+    return errorResponse(
+      result.message || "Failed to approve join request",
+      status,
+      result.code || "INTERNAL"
     );
   } catch (error) {
-    console.error("POST /api/activities/approve-join failed", {
-      error,
-      route: "/api/activities/approve-join",
-    });
-    const message = error instanceof Error ? error.message : "Malformed request body";
-    return NextResponse.json({ esuccess: false, rror: message }, { status: 400 });
+    logger.error("approve_join.unhandled", { error });
+    return errorResponse("Malformed request body", 400, "BAD_REQUEST");
   }
 }

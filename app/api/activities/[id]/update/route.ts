@@ -1,19 +1,32 @@
-import { NextResponse } from "next/server";
-import {
-  createSupabaseAdmin,
-  createSupabaseServer,
-} from "@/lib/supabaseServer";
+import { z } from "zod";
+import { createSupabaseAdmin, createSupabaseServer } from "@/lib/supabaseServer";
+import { errorResponse, successResponse } from "@/lib/apiResponses";
+import { parseJsonBody, uuidSchema } from "@/lib/validation";
+import { logger } from "@/lib/logger";
 
-export async function POST(
-  req: Request,
-  context: { params: Promise<{ id: string }> }
-) {
+const activityTypeSchema = z.enum(["group", "one-on-one"]).optional();
+
+const bodySchema = z.object({
+  title: z.string().min(1).max(120).optional(),
+  description: z.string().max(5000).optional(),
+  type: activityTypeSchema,
+  max_members: z.number().int().positive().optional(),
+  cost_rule: z.string().max(1000).optional(),
+});
+
+export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
   const { id: activityId } = await context.params;
+  if (!uuidSchema.safeParse(activityId).success) {
+    return errorResponse("Invalid activityId", 400, "BAD_REQUEST");
+  }
+
+  const parsed = await parseJsonBody(req, bodySchema);
+  if ("error" in parsed) return parsed.error;
+
+  const { title, description, type, max_members, cost_rule } = parsed.data;
+
   const supabase = await createSupabaseServer();
   const admin = createSupabaseAdmin();
-  const body = await req.json();
-
-  const { title, description, type, max_members, cost_rule } = body;
 
   const {
     data: { user },
@@ -21,7 +34,7 @@ export async function POST(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    return errorResponse("Unauthorized", 401, "UNAUTHORIZED");
   }
 
   const { data: activity, error: fetchError } = await admin
@@ -32,18 +45,15 @@ export async function POST(
     .single();
 
   if (fetchError || !activity) {
-    return NextResponse.json({ success: false, error: "Activity not found" }, { status: 404 });
+    return errorResponse("Activity not found", 404, "NOT_FOUND");
   }
 
   if (activity.host_id !== user.id) {
-    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    return errorResponse("Forbidden", 403, "FORBIDDEN");
   }
 
   if (typeof max_members === "number" && max_members < activity.member_count) {
-    return NextResponse.json(
-      { success: false, error: "max_members cannot be less than current member_count" },
-      { status: 409 }
-    );
+    return errorResponse("max_members cannot be less than current member_count", 409, "CONFLICT");
   }
 
   const { error: updateError } = await admin
@@ -58,13 +68,13 @@ export async function POST(
     .eq("id", activityId);
 
   if (updateError) {
-    console.error("activity update failed", {
+    logger.error("activity.update_failed", {
       activityId,
       userId: user.id,
       updateError,
     });
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+    return errorResponse("Internal server error", 500, "INTERNAL");
   }
 
-  return NextResponse.json({ success: true }, { status: 200 });
+  return successResponse(undefined, 200);
 }
