@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
+import { errorResponse, successResponse } from "@/lib/apiResponses";
 import {
   createSupabaseAdmin,
   createSupabaseServer,
 } from "@/lib/supabaseServer";
+import { requireApiUser } from "@/lib/apiAuth";
+import { insertNotifications } from "@/lib/notifications";
 
 type DeleteActivityRpcResult = {
   ok: boolean;
@@ -18,14 +21,11 @@ export async function POST(
   const supabase = await createSupabaseServer();
   const admin = createSupabaseAdmin();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  const auth = await requireApiUser(supabase);
+  if ("response" in auth) {
+    return auth.response;
   }
+  const { user } = auth;
 
   const { data: activity, error: activityError } = await admin
     .from("activities")
@@ -34,11 +34,11 @@ export async function POST(
     .maybeSingle();
 
   if (activityError || !activity) {
-    return NextResponse.json({ success: false, error: "Activity not found" }, { status: 404 });
+    return errorResponse("Activity not found", 404);
   }
 
   if (activity.host_id !== user.id) {
-    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    return errorResponse("Forbidden", 403);
   }
 
   const { data: members } = await admin
@@ -76,7 +76,8 @@ export async function POST(
 
   if (result.ok) {
     if (members && members.length > 0) {
-      const { error: notifyError } = await admin.from("notifications").insert(
+      const { error: notifyError } = await insertNotifications(
+        admin,
         members.map((member) => ({
           user_id: member.user_id,
           actor_id: user.id,
@@ -95,23 +96,20 @@ export async function POST(
       }
     }
 
-    return NextResponse.json({ success: true });
+    return successResponse();
   }
 
   if (result.code === "NOT_FOUND") {
-    return NextResponse.json({ success: false, error: result.message || "Activity not found" }, { status: 404 });
+    return errorResponse(result.message || "Activity not found", 404);
   }
 
   if (result.code === "FORBIDDEN") {
-    return NextResponse.json({ success: false, error: result.message || "Forbidden" }, { status: 403 });
+    return errorResponse(result.message || "Forbidden", 403);
   }
 
   if (result.code === "BAD_REQUEST") {
-    return NextResponse.json({ success: false, error: result.message || "Invalid request" }, { status: 400 });
+    return errorResponse(result.message || "Invalid request", 400);
   }
 
-  return NextResponse.json(
-    { success: false, error: result.message || "Internal server error" },
-    { status: 500 }
-  );
+  return errorResponse(result.message || "Internal server error", 500);
 }

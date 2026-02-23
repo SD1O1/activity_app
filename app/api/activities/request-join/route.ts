@@ -3,6 +3,7 @@ import {
   createSupabaseAdmin,
   createSupabaseServer,
 } from "@/lib/supabaseServer";
+import { requireApiUser } from "@/lib/apiAuth";
 
 type RequestJoinRpcResult = {
   ok: boolean;
@@ -36,14 +37,11 @@ export async function POST(req: Request) {
     const supabase = await createSupabaseServer();
     const admin = createSupabaseAdmin();
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const auth = await requireApiUser(supabase);
+    if ("response" in auth) {
+      return auth.response;
     }
+    const { user } = auth;
 
     const { data: activity, error: activityError } = await admin
       .from("activities")

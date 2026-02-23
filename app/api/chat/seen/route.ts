@@ -1,21 +1,22 @@
-import { NextResponse } from "next/server";
+import { errorResponse, successResponse } from "@/lib/apiResponses";
 import {
   createSupabaseAdmin,
   createSupabaseServer,
 } from "@/lib/supabaseServer";
+import { requireApiUser } from "@/lib/apiAuth";
 
 export async function POST(req: Request) {
   const { conversationId, seenAt } = await req.json();
 
   if (!conversationId) {
-    return NextResponse.json({ success: false, error: "Invalid payload" }, { status: 400 });
+    return errorResponse("Invalid payload", 400);
   }
 
   let parsedSeenAt: string;
   if (seenAt) {
     const seenDate = new Date(seenAt);
     if (!Number.isFinite(seenDate.getTime())) {
-      return NextResponse.json({ success: false, error: "Invalid seenAt" }, { status: 400 });
+      return errorResponse("Invalid seenAt", 400);
     }
     parsedSeenAt = seenDate.toISOString();
   } else {
@@ -25,14 +26,11 @@ export async function POST(req: Request) {
   const supabase = await createSupabaseServer();
   const admin = createSupabaseAdmin();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  const auth = await requireApiUser(supabase);
+  if ("response" in auth) {
+    return auth.response;
   }
+  const { user } = auth;
 
   const { data: convo, error: convoError } = await admin
     .from("conversations")
@@ -41,7 +39,7 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (convoError || !convo) {
-    return NextResponse.json({ success: false, error: "Conversation not found" }, { status: 404 });
+    return errorResponse("Conversation not found", 404);
   }
 
   const { data: membership, error: membershipError } = await admin
@@ -57,7 +55,7 @@ export async function POST(req: Request) {
       userId: user.id,
       membershipError,
     });
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+    return errorResponse("Internal server error", 500);
   }
 
   if (!membership) {
@@ -76,11 +74,11 @@ export async function POST(req: Request) {
         userId: user.id,
         activityMemberError,
       });
-      return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+      return errorResponse("Internal server error", 500);
     }
 
     if (!isActivityMember) {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      return errorResponse("Forbidden", 403);
     }
 
     const { error: participantUpsertError } = await admin
@@ -102,7 +100,7 @@ export async function POST(req: Request) {
         userId: user.id,
         participantUpsertError,
       });
-      return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+      return errorResponse("Internal server error", 500);
     }
   }
 
@@ -118,8 +116,8 @@ export async function POST(req: Request) {
       userId: user.id,
       updateError,
     });
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+    return errorResponse("Internal server error", 500);
   }
 
-  return NextResponse.json({ success: true, data: { seenAt: parsedSeenAt } });
+  return successResponse({ seenAt: parsedSeenAt });
 }

@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { successResponse } from "@/lib/apiResponses";
+import { requireApiUser } from "@/lib/apiAuth";
+import { insertNotification } from "@/lib/notifications";
 import {
   createSupabaseAdmin,
   createSupabaseServer,
@@ -32,14 +35,11 @@ export async function POST(req: Request) {
     const supabase = await createSupabaseServer();
     const admin = createSupabaseAdmin();
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const auth = await requireApiUser(supabase);
+    if ("response" in auth) {
+      return auth.response;
     }
+    const { user } = auth;
 
     const { data: activityForNotification } = await admin
       .from("activities")
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
 
       const actorName = actorProfile?.name || actorProfile?.username || "A participant";
 
-      const { error: notifyError } = await admin.from("notifications").insert({
+      const { error: notifyError } = await insertNotification(admin, {
         user_id: activityForNotification.host_id,
         actor_id: user.id,
         type: "member_left",
@@ -237,7 +237,7 @@ export async function POST(req: Request) {
 
     if (result.ok) {
       await sendHostLeaveNotification();
-      return NextResponse.json({ success: true });
+      return successResponse();
     }
 
     if (result.code === "BAD_REQUEST") {
