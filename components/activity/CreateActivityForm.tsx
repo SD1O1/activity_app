@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import dynamic from "next/dynamic";
@@ -20,7 +20,6 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
   ]);
 
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("");
   const [date, setDate] = useState("");
   const [type, setType] = useState<"group" | "one-on-one">("group");
   const [maxMembers, setMaxMembers] = useState<number>(2);
@@ -33,7 +32,6 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
     name: string;
   };
   
-  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [tagError, setTagError] = useState("");
   const [isSearchingTags, setIsSearchingTags] = useState(false);
@@ -73,16 +71,6 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
   
     setFilteredTags(data || []);
   };  
-  
-  useEffect(() => {
-    supabase
-      .from("activity_tags")
-      .select("id, name")
-      .order("name")
-      .then(({ data }) => {
-        if (data) setAvailableTags(data);
-      });
-  }, []);  
 
   const toggleTag = (tag: Tag) => {
     if (selectedTags.some(t => t.id === tag.id)) {
@@ -163,6 +151,17 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
     }    
 
     const { public_lat, public_lng } = getPublicCoords(location.lat, location.lng);
+
+    const rollbackCreate = async (activityId: string, conversationId?: string) => {
+      if (conversationId) {
+        await supabase
+          .from("conversation_participants")
+          .delete()
+          .eq("conversation_id", conversationId);
+        await supabase.from("conversations").delete().eq("id", conversationId);
+      }
+      await supabase.from("activities").delete().eq("id", activityId);
+    };
     
     const { data: activity, error } = await supabase
       .from("activities")
@@ -199,7 +198,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
       .single();
 
     if (conversationError || !conversation) {
-      await supabase.from("activities").delete().eq("id", activity.id);
+      await rollbackCreate(activity.id);
       setFormError(conversationError?.message || "Failed to initialize activity chat");
       setLoading(false);
       return;
@@ -214,17 +213,14 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
       });
 
     if (hostParticipantError) {
-      await supabase.from("conversations").delete().eq("id", conversation.id);
-      await supabase.from("activities").delete().eq("id", activity.id);
+      await rollbackCreate(activity.id, conversation.id);
       setFormError(hostParticipantError.message || "Failed to initialize activity chat participants");
       setLoading(false);
       return;
     }
 
     if (selectedTags.length === 0) {
-      await supabase.from("conversation_participants").delete().eq("conversation_id", conversation.id);
-      await supabase.from("conversations").delete().eq("id", conversation.id);
-      await supabase.from("activities").delete().eq("id", activity.id);
+      await rollbackCreate(activity.id, conversation.id);
       setFormError("Please select at least one activity tag");
       setLoading(false);
       return;
@@ -238,9 +234,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
     );
 
     if (tagInsertError) {
-      await supabase.from("conversation_participants").delete().eq("conversation_id", conversation.id);
-      await supabase.from("conversations").delete().eq("id", conversation.id);
-      await supabase.from("activities").delete().eq("id", activity.id);
+      await rollbackCreate(activity.id, conversation.id);
       setFormError(tagInsertError.message || "Failed to link activity tags");
       setLoading(false);
       return;
@@ -267,7 +261,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
         />
       </div>
 
-      {/* Category */}
+      {/* Activity tags */}
       <input
         value={tagQuery}
         onChange={(e) => handleTagSearch(e.target.value)}

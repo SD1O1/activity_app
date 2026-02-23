@@ -7,7 +7,6 @@ import ProfileBasicsSection from "./ProfileBasicsSection";
 import PhoneVerificationSection from "./PhoneVerificationSection";
 import EmailSecuritySection from "./EmailSecuritySection";
 import PasswordSecuritySection from "./PasswordSecuritySection";
-import { useToast } from "@/components/ui/ToastProvider";
 
 const PROFILE_PHOTOS_BUCKET =
   process.env.NEXT_PUBLIC_SUPABASE_PROFILE_PHOTOS_BUCKET ?? "profile-photos";
@@ -40,7 +39,6 @@ export default function EditProfileModal({
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const { showToast } = useToast();
 
   /* -------------------- load profile -------------------- */
   useEffect(() => {

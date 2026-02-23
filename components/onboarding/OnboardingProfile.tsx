@@ -49,7 +49,7 @@ export default function OnboardingProfile() {
   });
 
   const [otp, setOtp] = useState("");
-  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpLoading] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
