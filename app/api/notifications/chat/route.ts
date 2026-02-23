@@ -72,11 +72,26 @@ export async function POST(req: Request) {
     });
   }
 
-  const { data: activity, error: activityError } = await admin
-    .from("activities")
-    .select("host_id")
-    .eq("id", convo.activity_id)
-    .maybeSingle();
+  const [
+    { data: activity, error: activityError },
+    { data: participantRecords, error: participantQueryError },
+    { data: activityMembers, error: activityMembersError },
+  ] = await Promise.all([
+    admin
+      .from("activities")
+      .select("host_id")
+      .eq("id", convo.activity_id)
+      .maybeSingle(),
+    admin
+      .from("conversation_participants")
+      .select("user_id")
+      .eq("conversation_id", conversationId),
+    admin
+      .from("activity_members")
+      .select("user_id")
+      .eq("activity_id", convo.activity_id)
+      .eq("status", "active"),
+  ]);
 
   if (activityError || !activity) {
     console.error("chat notification activity lookup failed", {
@@ -87,11 +102,6 @@ export async function POST(req: Request) {
     });
     return errorResponse("Internal server error", 500);
   }
-
-  const { data: participantRecords, error: participantQueryError } = await admin
-    .from("conversation_participants")
-    .select("user_id")
-    .eq("conversation_id", conversationId);
 
   if (participantQueryError) {
     console.error("chat notification participant lookup failed", {
@@ -105,12 +115,6 @@ export async function POST(req: Request) {
   const participantIds = new Set(
     (participantRecords ?? []).map((participant) => participant.user_id)
   );
-
-  const { data: activityMembers, error: activityMembersError } = await admin
-    .from("activity_members")
-    .select("user_id")
-    .eq("activity_id", convo.activity_id)
-    .eq("status", "active");
 
   if (activityMembersError) {
     console.error("chat notification activity members query failed", {
@@ -158,6 +162,7 @@ export async function POST(req: Request) {
   const recipientIds = new Set([...participantIds, ...activeMemberIds]);
   recipientIds.delete(user.id);
 
+  const dedupeWindow = toWindowBucket(messageTimestamp);
   const rows = Array.from(recipientIds)
   .map((recipientId) => ({
     user_id: recipientId,
@@ -165,7 +170,7 @@ export async function POST(req: Request) {
     type: "chat",
     message: "sent you a message",
     activity_id: convo.activity_id,
-    dedupe_key: `chat:${conversationId}:${user.id}:${recipientId}:${toWindowBucket(messageTimestamp)}`,
+    dedupe_key: `chat:${conversationId}:${user.id}:${recipientId}:${dedupeWindow}`,
   }));
 
 if (!rows.length) {
