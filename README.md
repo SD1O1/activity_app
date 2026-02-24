@@ -2,6 +2,24 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+## Environment setup
+
+Before starting the app, create a local env file:
+
+```bash
+cp .env.example .env.local
+```
+
+Then fill in the values in `.env.local`:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `INTERNAL_API_SECRET`
+
+If `INTERNAL_API_SECRET` is missing, the app will throw this runtime error:
+`Invalid environment configuration: INTERNAL_API_SECRET`.
+
 First, run the development server:
 
 ```bash

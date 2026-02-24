@@ -13,7 +13,9 @@ if (!parsedEnv.success) {
   const missing = parsedEnv.error.issues
     .map((issue) => issue.path.join("."))
     .join(", ");
-  throw new Error(`Invalid environment configuration: ${missing}`);
-}
+    throw new Error(
+      `Invalid environment configuration: ${missing}. Copy .env.example to .env.local and set all required values.`
+    );
+  }
 
 export const env = parsedEnv.data;
