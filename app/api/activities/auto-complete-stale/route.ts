@@ -1,11 +1,14 @@
 import { errorResponse, successResponse } from "@/lib/apiResponses";
 import { createSupabaseAdmin } from "@/lib/supabaseServer";
-import { isInternalServerRequest } from "@/lib/internalAuth";
+import { isInternalServerRequest, isScheduledServerRequest } from "@/lib/internalAuth";
 import { logger } from "@/lib/logger";
 
 export async function POST(req: Request) {
   try {
-    if (!isInternalServerRequest(req)) {
+    const isInternal = isInternalServerRequest(req);
+    const isScheduled = isScheduledServerRequest(req);
+
+    if (!isInternal && !isScheduled) {
       return errorResponse("Forbidden", 403, "FORBIDDEN");
     }
 

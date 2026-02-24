@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams  } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import NotificationItem from "./NotificationItem";
 import { useNotifications } from "./NotificationContext";
 import { getBlockedUserIds } from "@/lib/blocking";
 
 type FilterType = "all" | "join" | "approved" | "chat";
+
+const DEFAULT_NOTIFICATIONS_PAGE_SIZE = 50;
 
 function formatTime(dateString: string) {
   return new Date(dateString).toLocaleString();
@@ -17,7 +19,16 @@ export default function NotificationsView() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { clearUnreadCount } = useNotifications();
+
+  const page = Math.max(Number(searchParams.get("page") ?? "0") || 0, 0);
+  const limit = Math.min(
+    Math.max(Number(searchParams.get("limit") ?? String(DEFAULT_NOTIFICATIONS_PAGE_SIZE)) || DEFAULT_NOTIFICATIONS_PAGE_SIZE, 1),
+    DEFAULT_NOTIFICATIONS_PAGE_SIZE
+  );
+  const rangeFrom = page * limit;
+  const rangeTo = rangeFrom + limit - 1;
 
   useEffect(() => {
     const loadNotifications = async () => {
@@ -54,7 +65,8 @@ export default function NotificationsView() {
           is_read
         `)
         .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(rangeFrom, rangeTo);
 
       if (error || !list) {
         setNotifications([]);
@@ -95,7 +107,7 @@ export default function NotificationsView() {
     };
 
     loadNotifications();
-  }, [clearUnreadCount]);
+  }, [clearUnreadCount, limit, rangeFrom, rangeTo]);
 
   const filteredNotifications = notifications.filter((n) => {
     if (activeFilter === "all") return true;

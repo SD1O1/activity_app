@@ -7,6 +7,8 @@ import EditProfileModal from "../modals/editProfile";
 import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
 import ActivityCard from "@/components/cards/ActivityCard";
 
+const PROFILE_ACTIVITY_PAGE_SIZE = 50;
+
 export default function ProfileView() {
   const router = useRouter();
   const { user } = useClientAuthProfile();
@@ -56,7 +58,8 @@ export default function ProfileView() {
       `)
       .eq("host_id", userId)
       .neq("status", "deleted")
-      .order("starts_at", { ascending: true });
+      .order("starts_at", { ascending: true })
+      .limit(PROFILE_ACTIVITY_PAGE_SIZE);
 
     if (data) {
       setHostedActivities(
@@ -93,7 +96,8 @@ export default function ProfileView() {
         )
       `)
       .eq("user_id", userId)
-      .eq("status", "active");
+      .eq("status", "active")
+      .limit(PROFILE_ACTIVITY_PAGE_SIZE);
 
     if (!data) return;
 
@@ -118,7 +122,6 @@ export default function ProfileView() {
 
     const loadAll = async () => {
       setLoading(true);
-      await fetch("/api/activities/auto-complete-stale", { method: "POST" });
       await loadProfile();
       await loadHostedActivities();
       await loadJoinedActivities();

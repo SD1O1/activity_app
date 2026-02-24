@@ -5,7 +5,7 @@ import { createSupabaseServer } from "@/lib/supabaseServer";
 import { uuidSchema } from "@/lib/validation";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: { id?: string } | Promise<{ id?: string }> }
 ) {
   try {
@@ -15,6 +15,16 @@ export async function GET(
     if (!activityId || !uuidSchema.safeParse(activityId).success) {
       return errorResponse("Invalid activityId", 400, "BAD_REQUEST");
     }
+
+    const searchParams = new URL(request.url).searchParams;
+    const rawLimit = Number(searchParams.get("limit") ?? "50");
+    const rawOffset = Number(searchParams.get("offset") ?? "0");
+    const limit = Number.isFinite(rawLimit)
+      ? Math.min(Math.max(Math.trunc(rawLimit), 1), 50)
+      : 50;
+    const offset = Number.isFinite(rawOffset)
+      ? Math.max(Math.trunc(rawOffset), 0)
+      : 0;
 
     const supabase = await createSupabaseServer();
 
@@ -87,7 +97,8 @@ export async function GET(
       `
       )
       .eq("activity_id", activityId)
-      .eq("status", "active");
+      .eq("status", "active")
+      .range(offset, offset + limit - 1);
 
     if (membersError) {
       logger.error("participants.members_query_failed", {

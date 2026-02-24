@@ -29,7 +29,6 @@ export default function Page() {
       } = await supabase.auth.getUser();
 
       if (viewer) {
-        await fetch("/api/activities/auto-complete-stale", { method: "POST" });
         await fetch(`/api/activities/${id}/auto-complete`, { method: "POST" });
       }
       

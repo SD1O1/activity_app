@@ -8,6 +8,8 @@ import { getBlockedUserIds } from "@/lib/blocking";
 import { cityToLatLng, getBoundingBox } from "@/lib/geo";
 import { ActivityListItem } from "@/types/activity";
 
+const ACTIVITIES_PAGE_SIZE = 50;
+
 export default function ActivitiesPage() {
   const [activities, setActivities] = useState<ActivityListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,10 +27,6 @@ export default function ActivitiesPage() {
       const {
         data: { user: viewer },
       } = await supabase.auth.getUser();
-
-      if (viewer) {
-        await fetch("/api/activities/auto-complete-stale", { method: "POST" });
-      }
 
       // blocked users
       const { blockedUserIds } = viewer
@@ -74,7 +72,8 @@ export default function ActivitiesPage() {
         `)
         .eq("status", "open")
         .gte("starts_at", new Date().toISOString())
-        .order("starts_at", { ascending: true });
+        .order("starts_at", { ascending: true })
+        .limit(ACTIVITIES_PAGE_SIZE);
 
       if (activityIds) query = query.in("id", activityIds);
       if (viewer) query = query.neq("host_id", viewer.id);

@@ -4,6 +4,8 @@ import { PublicProfileHeader } from "./PublicProfileHeader";
 import { ProfileCredibility } from "./ProfileCredibility";
 import Link from "next/link";
 
+const PUBLIC_HOSTED_ACTIVITY_PAGE_SIZE = 50;
+
 /* Utility to calculate age */
 function getAge(dob: string | null) {
   if (!dob) return null;
@@ -101,7 +103,8 @@ export async function PublicProfileView({
       public_lng
     `)
     .eq("host_id", profile.id)
-    .order("starts_at", { ascending: true });
+    .order("starts_at", { ascending: true })
+    .limit(PUBLIC_HOSTED_ACTIVITY_PAGE_SIZE);
 
   return (
     <div className="p-6 space-y-6">

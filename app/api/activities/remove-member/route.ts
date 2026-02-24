@@ -124,7 +124,7 @@ export async function POST(req: Request) {
 
       const { data: member, error: memberLookupError } = await admin
         .from("activity_members")
-        .select("id")
+        .select("*")
         .eq("activity_id", activityId)
         .eq("user_id", targetUserId)
         .eq("status", "active")
@@ -138,6 +138,57 @@ export async function POST(req: Request) {
         return errorResponse("Member not found", 404, "NOT_FOUND");
       }
 
+      const { data: conversation } = await admin
+        .from("conversations")
+        .select("id")
+        .eq("activity_id", activityId)
+        .maybeSingle();
+
+      let removedConversationParticipant: Record<string, any> | null = null;
+      if (conversation?.id) {
+        const { data: existingConversationParticipant } = await admin
+          .from("conversation_participants")
+          .select("*")
+          .eq("conversation_id", conversation.id)
+          .eq("user_id", targetUserId)
+          .maybeSingle();
+
+        removedConversationParticipant =
+          (existingConversationParticipant as Record<string, any> | null) ?? null;
+      }
+
+      const rollbackMembership = async () => {
+        const { error: rollbackMembershipError } = await admin
+          .from("activity_members")
+          .insert(member);
+
+        if (rollbackMembershipError) {
+          logger.error("remove_member.fallback_membership_rollback_failed", {
+            activityId,
+            actorId: user.id,
+            targetUserId,
+            rollbackMembershipError,
+          });
+        }
+      };
+
+      const rollbackConversationParticipant = async () => {
+        if (!removedConversationParticipant) return;
+
+        const { error: rollbackConversationParticipantError } = await admin
+          .from("conversation_participants")
+          .insert(removedConversationParticipant);
+
+        if (rollbackConversationParticipantError) {
+          logger.error("remove_member.fallback_conversation_participant_rollback_failed", {
+            activityId,
+            actorId: user.id,
+            targetUserId,
+            rollbackConversationParticipantError,
+          });
+        }
+      };
+
       const { error: deleteMembershipError } = await admin
         .from("activity_members")
         .delete()
@@ -147,12 +198,6 @@ export async function POST(req: Request) {
         return errorResponse("Failed to remove member", 500, "INTERNAL");
       }
 
-      const { data: conversation } = await admin
-        .from("conversations")
-        .select("id")
-        .eq("activity_id", activityId)
-        .maybeSingle();
-
       if (conversation?.id) {
         const { error: deleteConversationParticipantError } = await admin
           .from("conversation_participants")
@@ -161,6 +206,7 @@ export async function POST(req: Request) {
           .eq("user_id", targetUserId);
 
         if (deleteConversationParticipantError) {
+          await rollbackMembership();
           return errorResponse("Failed to remove conversation participant", 500, "INTERNAL");
         }
       }
@@ -172,6 +218,8 @@ export async function POST(req: Request) {
         .eq("status", "active");
 
       if (memberCountError || activeMemberCount === null) {
+        await rollbackConversationParticipant();
+        await rollbackMembership();
         return errorResponse("Failed to recalculate member count", 500, "INTERNAL");
       }
 
@@ -189,6 +237,8 @@ export async function POST(req: Request) {
         .eq("id", activityId);
 
       if (updateActivityError) {
+        await rollbackConversationParticipant();
+        await rollbackMembership();
         return errorResponse("Failed to update activity", 500, "INTERNAL");
       }
 

@@ -17,6 +17,7 @@ export function useChat(open: boolean, activityId: string) {
   const [myId, setMyId] = useState<string | null>(null);
   const [isOtherTyping, setIsOtherTyping] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [participantRealtimeReady, setParticipantRealtimeReady] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const typingChannelRef = useRef<RealtimeChannel | null>(null);
@@ -195,16 +196,19 @@ export function useChat(open: boolean, activityId: string) {
           syncParticipantSeen(payload.new.user_id, payload.new.last_seen_at);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        setParticipantRealtimeReady(status === "SUBSCRIBED");
+      });
 
     return () => {
+      setParticipantRealtimeReady(false);
       supabase.removeChannel(channel);
     };
   }, [conversationId]);
 
     /* ───────── FALLBACK: POLL PARTICIPANT SEEN ───────── */
     useEffect(() => {
-      if (!open || !conversationId) return;
+      if (!open || !conversationId || participantRealtimeReady) return;
   
       const refreshParticipants = async () => {
         const { data: parts } = await supabase
@@ -227,7 +231,7 @@ export function useChat(open: boolean, activityId: string) {
       return () => {
         window.clearInterval(interval);
       };
-    }, [open, conversationId]);
+    }, [open, conversationId, participantRealtimeReady]);
 
   /* ───────── TYPING INDICATOR ───────── */
   useEffect(() => {
