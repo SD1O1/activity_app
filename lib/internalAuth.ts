@@ -6,5 +6,9 @@ export function isInternalServerRequest(request: Request) {
 }
 
 export function isScheduledServerRequest(request: Request) {
-  return request.headers.get("x-vercel-cron") === "1";
+  const isVercelCron = request.headers.get("x-vercel-cron") === "1";
+  const authHeader = request.headers.get("authorization");
+  const expectedAuthHeader = `Bearer ${env.CRON_SECRET}`;
+
+  return isVercelCron && authHeader === expectedAuthHeader;
 }

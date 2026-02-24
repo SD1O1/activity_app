@@ -16,9 +16,10 @@ Then fill in the values in `.env.local`:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `INTERNAL_API_SECRET`
+- `CRON_SECRET`
 
-If `INTERNAL_API_SECRET` is missing, the app will throw this runtime error:
-`Invalid environment configuration: INTERNAL_API_SECRET`.
+If any required env vars (for example `INTERNAL_API_SECRET` or `CRON_SECRET`) are missing, the app will throw a runtime error like:
+`Invalid environment configuration: INTERNAL_API_SECRET, CRON_SECRET`.
 
 First, run the development server:
 
