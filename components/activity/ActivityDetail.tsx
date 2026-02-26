@@ -2,18 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import Header from "@/components/layout/Header";
 import JoinRequestModal from "@/components/modals/JoinRequestModal";
 import HostReviewModal from "@/components/modals/HostReviewModal";
 import ChatModal from "@/components/modals/chat/ChatModal";
 import AuthModal from "@/components/modals/AuthModal";
 import ReportModal from "@/components/modals/ReportModal";
 import EditActivityModal from "../modals/EditActivityModal";
-import HostMiniProfile from "../profile/HostMiniProfile";
-import ActivityHeader from "./ActivityHeader";
-import ActivityMeta from "./ActivityMeta";
-import ActivityAbout from "./ActivityAbout";
-import ActivityActions from "./ActivityActions";
 import ActivityLocationMap from "@/components/map/ActivityLocationMap";
 import ParticipantsRow from "./ParticipantsRow";
 import ActivityActionsMenu from "@/components/activity/ActivityActionsMenu";
@@ -36,6 +30,21 @@ type Participant = {
   verified: boolean | null;
   role: "host" | "member";
 };
+
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatTime(dateString: string) {
+  return new Date(dateString).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 export default function ActivityDetail({ activity }: Props) {
   const viewerRole = useViewerRole(activity.host_id);
@@ -68,10 +77,9 @@ export default function ActivityDetail({ activity }: Props) {
     };
 
     void loadParticipants();
-  }, [activity.id]);
+  }, [activity.id, showToast]);
 
   const tags = normalizeActivityTags(activity.activity_tag_relations);
-
   const canOpenChat = viewerRole === "host" || (viewerRole === "guest" && joinStatus === "approved");
 
   const handleRequestJoin = () => {
@@ -83,7 +91,7 @@ export default function ActivityDetail({ activity }: Props) {
     }
 
     if (!profileCompleted) {
-      window.location.href = "/onboarding/profile";
+      router.push("/onboarding/profile");
       return;
     }
 
@@ -97,10 +105,7 @@ export default function ActivityDetail({ activity }: Props) {
     const res = await fetch("/api/activities/remove-member", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        activityId: activity.id,
-        userId,
-      }),
+      body: JSON.stringify({ activityId: activity.id, userId }),
     });
 
     if (!res.ok) {
@@ -117,10 +122,7 @@ export default function ActivityDetail({ activity }: Props) {
     const res = await fetch("/api/activities/remove-member", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        activityId: activity.id,
-        userId: user.id,
-      }),
+      body: JSON.stringify({ activityId: activity.id, userId: user.id }),
     });
 
     if (!res.ok) {
@@ -135,26 +137,54 @@ export default function ActivityDetail({ activity }: Props) {
 
   const isHost = viewerRole === "host";
   const isApprovedGuest = joinStatus === "approved";
+  const isCompleted = activity.status === "completed";
   const showExactMap = isHost || isApprovedGuest;
 
   const lat = showExactMap && activity.exact_lat != null ? activity.exact_lat : activity.public_lat ?? activity.exact_lat;
-
   const lng = showExactMap && activity.exact_lng != null ? activity.exact_lng : activity.public_lng ?? activity.exact_lng;
+  const hasValidCoords = typeof lat === "number" && typeof lng === "number";
+
+  const cta = (() => {
+    if (isCompleted) return { label: "Activity Completed", disabled: true, action: () => {} };
+
+    if (viewerRole === "host") {
+      return { label: "Review Request", disabled: false, action: () => setOpenReview(true) };
+    }
+
+    if (joinStatus === "approved") {
+      return { label: "Joined", disabled: true, action: () => {} };
+    }
+
+    if (joinStatus === "pending") {
+      return { label: "Request Sent", disabled: true, action: () => {} };
+    }
+
+    if (joinStatus === "rejected") {
+      return { label: "Request Declined", disabled: true, action: () => {} };
+    }
+
+    if (activity.status === "full") {
+      return { label: "Activity Full", disabled: true, action: () => {} };
+    }
+
+    return { label: "Join Activity", disabled: false, action: handleRequestJoin };
+  })();
 
   return (
-    <main className="min-h-screen bg-white">
-      <Header
-        rightSlot={
+    <main className="min-h-screen bg-[#f6f6f7] pb-24 md:pb-28">
+      <header className="sticky top-0 z-20 h-16 border-b border-gray-200 bg-[#f6f6f7] px-4 md:h-20">
+        <div className="mx-auto flex h-full w-full max-w-5xl items-center justify-between">
+          <button onClick={() => router.back()} aria-label="Go back" className="text-2xl leading-none text-gray-800 md:text-3xl">
+            ←
+          </button>
+          <p className="text-xl font-semibold text-gray-900 md:text-3xl">Activity Details</p>
           <ActivityActionsMenu
             isHost={viewerRole === "host"}
             onEdit={() => setOpenEdit(true)}
             canLeaveActivity={viewerRole !== "host" && joinStatus === "approved" && activity.status !== "completed"}
             onLeaveActivity={handleLeaveActivity}
             onDelete={async () => {
-              const res = await fetch(`/api/activities/${activity.id}/delete`, {
-                method: "POST",
-              });
-
+              const res = await fetch(`/api/activities/${activity.id}/delete`, { method: "POST" });
               if (!res.ok) {
                 const payload = await res.json().catch(() => ({} as { error?: string }));
                 showToast(payload.error || "Failed to delete activity", "error");
@@ -166,39 +196,130 @@ export default function ActivityDetail({ activity }: Props) {
             }}
             onReport={() => setOpenReport(true)}
           />
-        }
-      />
+        </div>
+      </header>
 
-      <ActivityHeader title={activity.title} type={activity.type} tags={tags} />
+      <div className="mx-auto w-full max-w-5xl px-4 pt-4 md:px-6">
+        <img
+          src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1470&auto=format&fit=crop"
+          alt="Activity"
+          className="h-56 w-full rounded-3xl object-cover md:h-72 lg:h-[22rem]"
+        />
 
-      <div className="px-4 mt-4">
-        {activity.host && <HostMiniProfile host={activity.host} clickable size="md" />}
+        <h1 className="mt-5 text-4xl font-semibold leading-tight tracking-tight text-[#161212] md:text-5xl">{activity.title}</h1>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          {tags.length > 0 ? (
+            <span className="rounded-full border border-[#f3d7bc] bg-[#fdf4eb] px-4 py-2 text-sm font-medium text-[#ef8f25] md:text-base">
+              {tags[0].name}
+            </span>
+          ) : null}
+
+          <span className="rounded-full bg-[#e9ebef] px-4 py-2 text-sm font-medium text-[#3d4658] md:text-base">
+            {activity.type === "group" ? "Group Activity" : "1-on-1 Activity"}
+          </span>
+
+          {tags.slice(1).map((tag) => (
+            <span key={tag.id} className="rounded-full bg-[#e9ebef] px-4 py-2 text-sm font-medium text-[#3d4658] md:text-base">
+              {tag.name}
+            </span>
+          ))}
+        </div>
+
+        {activity.host && (
+          <section className="mt-6 flex items-center gap-4 rounded-3xl bg-[#ededee] px-4 py-4 md:px-5">
+            <img src={activity.host.avatar_url ?? "/avatar-placeholder.png"} alt={activity.host.name ?? "Host"} className="h-14 w-14 rounded-full object-cover" />
+            <div>
+              <p className="text-2xl font-semibold text-[#18181b] md:text-3xl">{activity.host.name ?? "Host"}</p>
+              <p className="text-base text-[#6b7280] md:text-lg">Host {activity.host.verified ? "✓" : ""}</p>
+            </div>
+          </section>
+        )}
+
+        <section className="mt-5 grid grid-cols-2 gap-3">
+          <div className="rounded-2xl bg-[#eceef2] p-4">
+            <p className="text-sm text-[#6b7280] md:text-base">Date</p>
+            <p className="mt-1 text-xl font-semibold text-[#16181d] md:text-2xl">{formatDate(activity.starts_at)}</p>
+          </div>
+
+          <div className="rounded-2xl bg-[#eceef2] p-4">
+            <p className="text-sm text-[#6b7280] md:text-base">Time</p>
+            <p className="mt-1 text-xl font-semibold text-[#16181d] md:text-2xl">{formatTime(activity.starts_at)}</p>
+          </div>
+
+          <div className="rounded-2xl bg-[#eceef2] p-4">
+            <p className="text-sm text-[#6b7280] md:text-base">Cost</p>
+            <p className="mt-1 text-xl font-semibold text-[#16181d] md:text-2xl">{activity.cost_rule === "free" ? "Free" : activity.cost_rule}</p>
+          </div>
+
+          <div className="rounded-2xl bg-[#eceef2] p-4">
+            <p className="text-sm text-[#6b7280] md:text-base">{activity.type === "group" ? "Group Activity" : "1-on-1 Activity"}</p>
+            <p className="mt-1 text-xl font-semibold text-[#16181d] md:text-2xl">
+              {activity.type === "group" ? `${activity.member_count}/${activity.max_members} Joined` : "Private"}
+            </p>
+          </div>
+        </section>
+
+        <section className="mt-8">
+          <h2 className="text-3xl font-semibold tracking-tight text-[#16181d] md:text-4xl">About this activity</h2>
+          <p className="mt-3 text-lg leading-relaxed text-[#374151] md:text-xl">{activity.description}</p>
+        </section>
+
+        <section className="mt-8">
+          <h2 className="text-3xl font-semibold tracking-tight text-[#16181d] md:text-4xl">Location</h2>
+          <p className="mt-3 text-lg text-[#4b5563] md:text-xl">{activity.location_name}</p>
+          <p className="text-sm text-[#9ca3af] md:text-base">Tap map for directions</p>
+        </section>
       </div>
 
-      <ActivityMeta
-        startsAt={activity.starts_at}
-        location={activity.location_name}
-        costRule={activity.cost_rule}
-        memberCount={activity.member_count}
-        maxMembers={activity.max_members}
-        showMemberProgress={activity.type === "group"}
-        lat={activity.public_lat}
-        lng={activity.public_lng}
-      />
+      {hasValidCoords && (
+        <div className="mx-auto w-full max-w-5xl">
+          <ActivityLocationMap lat={lat} lng={lng} blurred={!showExactMap} />
+        </div>
+      )}
 
-      <ActivityLocationMap lat={Number(lat)} lng={Number(lng)} blurred={!showExactMap} />
+      {participants.length > 0 && (isHost || isApprovedGuest) && (
+        <div className="mx-auto w-full max-w-5xl pb-4">
+          <ParticipantsRow
+            participants={participants}
+            currentUserId={user?.id}
+            isHost={user?.id === activity.host_id}
+            isJoined={joinStatus === "approved"}
+            onOpenProfile={(participant) => {
+              if (!participant.username) return;
+              router.push(`/u/${participant.username}`);
+            }}
+            onRemove={handleRemove}
+          />
+        </div>
+      )}
 
-      <ActivityAbout description={activity.description} />
+      <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-[#f6f6f7]/95 px-4 py-3 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-5xl items-center gap-4">
+          <button
+            onClick={cta.action}
+            disabled={cta.disabled}
+            className={`h-12 flex-1 rounded-full text-lg font-semibold md:h-14 md:text-2xl ${
+              cta.disabled ? "bg-[#d9dce2] text-[#6b7280]" : "bg-[#ef8f25] text-white"
+            }`}
+          >
+            {joinStatus === "approved" && <span className="mr-2">✓</span>}
+            {cta.label}
+          </button>
 
-      <ActivityActions
-        viewerRole={viewerRole}
-        joinStatus={joinStatus}
-        hasUnread={hasUnread}
-        onRequestJoin={handleRequestJoin}
-        onOpenChat={() => setOpenChat(true)}
-        onOpenReview={() => setOpenReview(true)}
-        activityStatus={activity.status}
-      />
+          <button
+            onClick={() => canOpenChat && setOpenChat(true)}
+            disabled={!canOpenChat}
+            aria-label="Open chat"
+            className={`relative flex h-12 w-12 items-center justify-center rounded-full text-xl md:h-14 md:w-14 md:text-2xl ${
+              canOpenChat ? "bg-[#e6e8ec] text-[#1f2937]" : "bg-[#eceef2] text-[#9ca3af]"
+            }`}
+          >
+            💬
+            {hasUnread && canOpenChat && <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500" />}
+          </button>
+        </div>
+      </div>
 
       <EditActivityModal
         open={openEdit}
@@ -223,27 +344,11 @@ export default function ActivityDetail({ activity }: Props) {
         }}
       />
 
-      <HostReviewModal
-        open={openReview}
-        onClose={() => setOpenReview(false)}
-        onResolved={computeJoinStatus}
-      />
+      <HostReviewModal open={openReview} onClose={() => setOpenReview(false)} onResolved={computeJoinStatus} />
 
       {canOpenChat && (
         <ChatModal open={openChat} activityId={activity.id} onClose={() => setOpenChat(false)} onChatClosed={checkUnread} />
       )}
-
-<ParticipantsRow
-        participants={participants}
-        currentUserId={user?.id}
-        isHost={user?.id === activity.host_id}
-        isJoined={joinStatus === "approved"}
-        onOpenProfile={(participant) => {
-          if (!participant.username) return;
-          router.push(`/u/${participant.username}`);
-        }}
-        onRemove={handleRemove}
-      />
 
       <AuthModal open={openAuth} onClose={() => setOpenAuth(false)} />
 

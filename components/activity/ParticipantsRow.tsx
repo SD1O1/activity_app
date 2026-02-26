@@ -26,7 +26,6 @@ export default function ParticipantsRow({
 }: Props) {
   const canOpenProfile = isHost || isJoined;
 
-  // Put "You" first
   const orderedParticipants = [...participants].sort((a, b) => {
     if (a.id === currentUserId) return -1;
     if (b.id === currentUserId) return 1;
@@ -34,68 +33,43 @@ export default function ParticipantsRow({
   });
 
   return (
-    <div className="px-4 mt-4">
-      <p className="mb-2 text-sm text-gray-600">
-        Participants ({participants.length})
-      </p>
+    <section className="px-4 mt-8 md:px-6">
+      <h2 className="text-2xl font-semibold md:text-3xl">
+        Participants <span className="text-xl text-gray-400 md:text-2xl">({participants.length})</span>
+      </h2>
 
-      <div className="flex gap-4 overflow-x-auto pb-2">
+      <div className="mt-5 flex gap-5 overflow-x-auto pb-2 md:flex-wrap md:overflow-visible">
         {orderedParticipants.map((participant) => {
           const isYou = participant.id === currentUserId;
-          const isHostUser = participant.role === "host";
-
-          const displayName = isYou
-            ? "You"
-            : isHostUser
-            ? "Host"
-            : participant.name ?? "User";
-
+          const displayName = isYou ? "You" : participant.name ?? "User";
           const canOpenParticipantProfile = canOpenProfile && !!participant.username;
 
           return (
-            <div
-              key={participant.id}
-              className="flex min-w-[64px] flex-col items-center"
-            >
+            <div key={participant.id} className="flex min-w-[68px] flex-col items-center md:min-w-[84px]">
               <button
                 type="button"
                 disabled={!canOpenParticipantProfile}
-                onClick={() =>
-                  canOpenParticipantProfile && onOpenProfile?.(participant)
-                }
-                className={!canOpenParticipantProfile ? "cursor-default opacity-80" : ""}
+                onClick={() => canOpenParticipantProfile && onOpenProfile?.(participant)}
+                className={!canOpenParticipantProfile ? "cursor-default" : ""}
               >
                 <img
                   src={participant.avatar_url ?? "/avatar-placeholder.png"}
                   alt={displayName}
-                  className="h-12 w-12 rounded-full object-cover"
+                  className="h-14 w-14 rounded-full object-cover md:h-16 md:w-16"
                 />
               </button>
 
-              <div className="mt-1 flex items-center text-xs">
-                <span className="font-medium">{displayName}</span>
+              <p className="mt-2 text-sm text-gray-900">{displayName}</p>
 
-                {participant.verified && (
-                  <span className="ml-1 text-blue-500">✔</span>
-                )}
-              </div>
-
-              {/* Host can remove only members (not self, not host) */}
-              {isHost &&
-                !isYou &&
-                participant.role === "member" &&
-                onRemove && (
-                  <button
-                    onClick={() => onRemove(participant.id)}
-                    className="mt-1 text-[10px] text-red-500 hover:underline"
-                  >
-                    Remove
-                  </button>
-                )}
+              {isHost && !isYou && participant.role === "member" && onRemove && (
+                <button onClick={() => onRemove(participant.id)} className="mt-1 text-[11px] text-red-500 hover:underline">
+                  Remove
+                </button>
+              )}
             </div>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }
