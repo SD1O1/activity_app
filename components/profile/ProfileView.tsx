@@ -57,7 +57,7 @@ export default function ProfileView() {
         )
       `)
       .eq("host_id", userId)
-      .neq("status", "deleted")
+      .not("status", "eq", "deleted")
       .order("starts_at", { ascending: true })
       .limit(PROFILE_ACTIVITY_PAGE_SIZE);
 
@@ -79,7 +79,7 @@ export default function ProfileView() {
       .from("activity_members")
       .select(`
         activity_id,
-        activities:activities!activity_members_activity_fk (
+        activities(
           id,
           title,
           type,
@@ -97,6 +97,7 @@ export default function ProfileView() {
       `)
       .eq("user_id", userId)
       .eq("status", "active")
+      .not("activities.status", "eq", "deleted")
       .limit(PROFILE_ACTIVITY_PAGE_SIZE);
 
     if (!data) return;

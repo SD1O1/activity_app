@@ -81,13 +81,14 @@ export async function PublicProfileView({
       supabase
         .from("activities")
         .select("id", { count: "exact", head: true })
-        .eq("host_id", profile.id),
+        .eq("host_id", profile.id)
+        .not("status", "eq", "deleted"),
 
       supabase
-        .from("join_requests")
+        .from("activity_members")
         .select("id", { count: "exact", head: true })
         .eq("user_id", profile.id)
-        .eq("status", "approved"),
+        .eq("status", "active"),
     ]);
 
   /* 5️⃣ Hosted activities (public-safe) */
@@ -103,6 +104,7 @@ export async function PublicProfileView({
       public_lng
     `)
     .eq("host_id", profile.id)
+    .not("status", "eq", "deleted")
     .order("starts_at", { ascending: true })
     .limit(PUBLIC_HOSTED_ACTIVITY_PAGE_SIZE);
 

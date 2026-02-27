@@ -45,34 +45,6 @@ export async function GET(
       return errorResponse("Activity not found", 404, "NOT_FOUND");
     }
 
-    const isHost = activity.host_id === user.id;
-
-    let isApprovedMember = false;
-    if (!isHost) {
-      const { data: member, error: memberError } = await supabase
-        .from("activity_members")
-        .select("id")
-        .eq("activity_id", activityId)
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .maybeSingle();
-
-      if (memberError) {
-        logger.error("participants.member_check_failed", {
-          activityId,
-          userId: user.id,
-          memberError,
-        });
-        return errorResponse("Internal server error", 500, "INTERNAL");
-      }
-
-      isApprovedMember = !!member;
-    }
-
-    if (!isHost && !isApprovedMember) {
-      return errorResponse("Forbidden", 403, "FORBIDDEN");
-    }
-
     const { data: hostProfile, error: hostError } = await supabase
       .from("profiles")
       .select("id, username, name, avatar_url, verified")
@@ -87,7 +59,7 @@ export async function GET(
       .from("activity_members")
       .select(
         `
-        profiles!activity_members_user_fk(
+        profiles(
           id,
           username,
           name,
