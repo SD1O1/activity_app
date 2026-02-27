@@ -14,13 +14,14 @@ import AuthModal from "@/components/modals/AuthModal";
 import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
 
 type ActivityTag = { id: string; name: string };
+type ActivityTagRelation = { activity_tags: ActivityTag | ActivityTag[] | null };
 type ActivityRow = {
   id: string;
   title: string;
   type: "group" | "one-on-one";
   starts_at: string;
   host_id: string;
-  activity_tag_relations?: { activity_tags: ActivityTag }[];
+  activity_tag_relations?: ActivityTagRelation[];
   host?: { name?: string | null; avatar_url?: string | null; verified?: boolean | null } | null;
 };
 
@@ -76,8 +77,8 @@ export default function HomePage() {
 
       const hostMap = Object.fromEntries((hosts || []).map((h) => [h.id, h]));
 
-      const enrichedActivities = activityRows.map((a) => ({
-        ...(a as ActivityRow),
+      const enrichedActivities: ActivityRow[] = activityRows.map((a) => ({
+        ...a,
         host: hostMap[a.host_id] || null,
       }));
 
@@ -112,7 +113,12 @@ export default function HomePage() {
 
         <div className="space-y-4">
           {activities.map((activity, idx) => {
-            const tags = activity.activity_tag_relations?.map((rel) => rel.activity_tags.name).filter(Boolean) ?? [];
+            const tags =
+              activity.activity_tag_relations
+                ?.flatMap((rel) => (Array.isArray(rel.activity_tags) ? rel.activity_tags : [rel.activity_tags]))
+                .filter((tag): tag is ActivityTag => Boolean(tag))
+                .map((tag) => tag.name)
+                .filter(Boolean) ?? [];
             const backgrounds = [
               "from-[#d7d8dc] to-[#111827]",
               "from-[#7f4a1d] to-[#201e1f]",
