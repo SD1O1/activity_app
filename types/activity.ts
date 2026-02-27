@@ -35,6 +35,8 @@ export type ActivityListItem = {
   category?: string | null;
   activity_tag_relations: ActivityTagRelation[] | null;
   host: PublicUser | null;
+  member_count?: number | null;
+  max_members?: number | null;
 };
 
 export type ActivityDetailItem = ActivityListItem & {
