@@ -337,6 +337,10 @@ export default function ActivityDetail({ activity }: Props) {
         hostId={activity.host_id}
         questions={activity.questions || []}
         userId={user?.id ?? null}
+        activityTitle={activity.title}
+        hostName={activity.host?.name}
+        startsAt={activity.starts_at}
+        locationName={activity.location_name}
         onSuccess={async () => {
           await computeJoinStatus();
           showToast("Join request sent", "success");
@@ -347,7 +351,14 @@ export default function ActivityDetail({ activity }: Props) {
       <HostReviewModal open={openReview} onClose={() => setOpenReview(false)} onResolved={computeJoinStatus} />
 
       {canOpenChat && (
-        <ChatModal open={openChat} activityId={activity.id} onClose={() => setOpenChat(false)} onChatClosed={checkUnread} />
+        <ChatModal
+          open={openChat}
+          activityId={activity.id}
+          activityTitle={activity.title}
+          hostName={activity.host?.name}
+          onClose={() => setOpenChat(false)}
+          onChatClosed={checkUnread}
+        />
       )}
 
       <AuthModal open={openAuth} onClose={() => setOpenAuth(false)} />

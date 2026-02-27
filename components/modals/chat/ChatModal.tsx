@@ -10,6 +10,8 @@ type Props = {
   onClose: () => void;
   activityId: string;
   onChatClosed?: () => void;
+  activityTitle?: string;
+  hostName?: string | null;
 };
 
 export default function ChatModal({
@@ -17,6 +19,8 @@ export default function ChatModal({
   onClose,
   activityId,
   onChatClosed,
+  activityTitle,
+  hostName,
 }: Props) {
   const {
     messages,
@@ -34,41 +38,42 @@ export default function ChatModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-end">
-      <div className="w-full bg-white rounded-t-2xl flex flex-col h-[80vh]">
-        {/* Header (inline, no separate file) */}
-        <div className="p-4 border-b flex justify-between items-center">
-          <h2 className="font-semibold">Activity Chat</h2>
-          <button
-            onClick={() => {
-              onClose();
-              onChatClosed?.();
-            }}
-            className="text-sm text-gray-500"
-          >
-            Close
-          </button>
+    <div className="fixed inset-0 z-50 flex items-end bg-black/45 sm:items-center sm:justify-center sm:p-4">
+      <div className="h-[90vh] w-full overflow-hidden rounded-t-[26px] bg-[#f3f3f3] sm:h-auto sm:max-h-[92vh] sm:max-w-2xl sm:rounded-[26px]">
+        <div className="flex h-full flex-col">
+          <div className="flex items-center justify-between border-b border-[#d8d8d8] px-6 py-7">
+            <div>
+              <h2 className="text-[42px] font-medium leading-none text-[#1f1f23] md:text-[34px]">
+                {activityTitle || "Activity Chat"}
+              </h2>
+              {hostName ? <p className="mt-1 text-[20px] text-[#77777c]">with {hostName}</p> : null}
+            </div>
+            <button
+              onClick={() => {
+                onClose();
+                onChatClosed?.();
+              }}
+              className="text-4xl leading-none text-[#5a5a5a]"
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
+
+          <ChatMessages
+            messages={messages}
+            myId={myId}
+            participants={participants}
+            bottomRef={bottomRef}
+            getMessageStatusText={getMessageStatusText}
+          />
+
+          <TypingIndicator show={isOtherTyping} />
+
+          {sendError ? <p className="px-6 pb-1 text-sm text-red-600">{sendError}</p> : null}
+
+          <ChatInput text={text} setText={setText} send={send} />
         </div>
-
-        <ChatMessages
-          messages={messages}
-          myId={myId}
-          participants={participants}
-          bottomRef={bottomRef}
-          getMessageStatusText={getMessageStatusText}
-        />
-
-        <TypingIndicator show={isOtherTyping} />
-
-        {sendError ? (
-          <p className="px-3 pb-1 text-xs text-red-600">{sendError}</p>
-        ) : null}
-        
-        <ChatInput
-          text={text}
-          setText={setText}
-          send={send}
-        />
       </div>
     </div>
   );
