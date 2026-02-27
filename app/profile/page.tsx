@@ -1,6 +1,5 @@
 "use client";
 
-import Header from "@/components/layout/Header";
 import ProfileView from "@/components/profile/ProfileView";
 import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
 import { useRouter } from "next/navigation";
@@ -23,8 +22,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="min-h-screen bg-white">
-      <Header />
+    <main className="min-h-screen bg-[#f4f4f4]">
       <ProfileView />
     </main>
   );

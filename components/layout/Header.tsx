@@ -9,9 +9,11 @@ import { useNotifications } from "@/components/notifications/NotificationContext
 
 type HeaderProps = {
   rightSlot?: React.ReactNode;
+  centerSlot?: React.ReactNode;
+  className?: string;
 };
 
-export default function Header({ rightSlot }: HeaderProps) {
+export default function Header({ rightSlot, centerSlot, className = "" }: HeaderProps) {
   const router = useRouter();
   const { unreadCount } = useNotifications();
 
@@ -35,40 +37,26 @@ export default function Header({ rightSlot }: HeaderProps) {
 
   return (
     <>
-      <header className="h-14 border-b flex items-center justify-between px-4 bg-white">
-        {/* LEFT */}
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="text-xl"
-        >
+      <header className={`h-16 border-b border-[#e3e6ea] flex items-center justify-between px-5 bg-[#f4f4f4] ${className}`}>
+        <button onClick={() => setSidebarOpen(true)} className="text-2xl text-[#334155]">
           ☰
         </button>
 
-        {/* CENTER */}
-        <div className="text-sm font-semibold">
-          PerfectBench
-        </div>
+        <div className="text-sm font-semibold text-[#111827]">{centerSlot ?? "PerfectBench"}</div>
 
-        {/* RIGHT */}
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-[32px] justify-end items-center gap-3">
           {rightSlot ? (
             rightSlot
           ) : (
             <>
               {!isLoggedIn && (
-                <button
-                  onClick={() => setOpenAuth(true)}
-                  className="text-sm border px-3 py-1 rounded"
-                >
+                <button onClick={() => setOpenAuth(true)} className="text-sm border px-3 py-1 rounded">
                   Login
                 </button>
               )}
 
               {isLoggedIn && (
-                <button
-                  onClick={() => router.push("/notifications")}
-                  className="relative"
-                >
+                <button onClick={() => router.push("/notifications")} className="relative text-xl" aria-label="Notifications">
                   🔔
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 h-4 min-w-[16px] rounded-full bg-red-500 text-white text-xs flex items-center justify-center px-1">
@@ -82,16 +70,9 @@ export default function Header({ rightSlot }: HeaderProps) {
         </div>
       </header>
 
-      <Sidebar
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        isLoggedIn={isLoggedIn}
-      />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} isLoggedIn={isLoggedIn} />
 
-      <AuthModal
-        open={openAuth}
-        onClose={() => setOpenAuth(false)}
-      />
+      <AuthModal open={openAuth} onClose={() => setOpenAuth(false)} />
     </>
   );
 }

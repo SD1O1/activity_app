@@ -1,44 +1,73 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import EditProfileModal from "../modals/editProfile";
 import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
-import ActivityCard from "@/components/cards/ActivityCard";
+
+type ProfileRecord = {
+  id: string;
+  name: string | null;
+  dob: string | null;
+  city: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+  interests: string[] | null;
+  verified?: boolean | null;
+};
+
+type ActivityItem = {
+  id: string;
+  title: string;
+  type: "group" | "one-on-one";
+  starts_at: string;
+  location_name: string | null;
+  host_id: string;
+  status?: string | null;
+};
 
 const PROFILE_ACTIVITY_PAGE_SIZE = 50;
+
+function getAge(dob?: string | null) {
+  if (!dob) return null;
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+  return age;
+}
+
+function formatWhen(value: string) {
+  return new Date(value).toLocaleString(undefined, {
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 export default function ProfileView() {
   const router = useRouter();
   const { user } = useClientAuthProfile();
   const userId = user?.id;
 
-  const [profile, setProfile] = useState<any>(null);
-  const [hostedActivities, setHostedActivities] = useState<any[]>([]);
-  const [joinedActivities, setJoinedActivities] = useState<any[]>([]);
+  const [profile, setProfile] = useState<ProfileRecord | null>(null);
+  const [hostedActivities, setHostedActivities] = useState<ActivityItem[]>([]);
+  const [joinedActivities, setJoinedActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditOpen, setIsEditOpen] = useState(false);
-
   const [activityTab, setActivityTab] = useState<"hosted" | "joined">("hosted");
 
-  /* -------------------- LOAD PROFILE -------------------- */
   const loadProfile = async () => {
     if (!userId) return;
-
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-
-    if (data) setProfile(data);
+    const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
+    if (data) setProfile(data as ProfileRecord);
   };
 
-  /* -------------------- LOAD HOSTED ACTIVITIES -------------------- */
   const loadHostedActivities = async () => {
     if (!userId) return;
-
     const { data } = await supabase
       .from("activities")
       .select(`
@@ -48,30 +77,16 @@ export default function ProfileView() {
         starts_at,
         location_name,
         host_id,
-        status,
-        activity_tag_relations (
-          activity_tags (
-            id,
-            name
-          )
-        )
+        status
       `)
       .eq("host_id", userId)
       .not("status", "eq", "deleted")
       .order("starts_at", { ascending: true })
       .limit(PROFILE_ACTIVITY_PAGE_SIZE);
 
-    if (data) {
-      setHostedActivities(
-        data.map((a) => ({
-          ...a,
-          host: profile,
-        }))
-      );
-    }
+    setHostedActivities((data as ActivityItem[]) ?? []);
   };
 
-  /* -------------------- LOAD JOINED ACTIVITIES -------------------- */
   const loadJoinedActivities = async () => {
     if (!userId) return;
 
@@ -86,13 +101,7 @@ export default function ProfileView() {
           starts_at,
           location_name,
           host_id,
-          status,
-          activity_tag_relations (
-            activity_tags (
-              id,
-              name
-            )
-          )
+          status
         )
       `)
       .eq("user_id", userId)
@@ -100,27 +109,18 @@ export default function ProfileView() {
       .not("activities.status", "eq", "deleted")
       .limit(PROFILE_ACTIVITY_PAGE_SIZE);
 
-    if (!data) return;
-
-    const joined = data
-    .map((member: any) => {
-      const relation = member.activities;
-      return Array.isArray(relation) ? relation[0] : relation;
-    })
-      .filter(
-        (activity: any) =>
-          activity &&
-          activity.status !== "deleted" &&
-          activity.host_id !== userId
-      );
+    const joined = (data ?? [])
+      .map((member) => {
+        const relation = member.activities as unknown;
+        return Array.isArray(relation) ? (relation[0] as ActivityItem) : (relation as ActivityItem);
+      })
+      .filter((activity) => activity && activity.status !== "deleted" && activity.host_id !== userId);
 
     setJoinedActivities(joined);
   };
 
-  /* -------------------- INIT -------------------- */
   useEffect(() => {
     if (!userId) return;
-
     const loadAll = async () => {
       setLoading(true);
       await loadProfile();
@@ -128,185 +128,120 @@ export default function ProfileView() {
       await loadJoinedActivities();
       setLoading(false);
     };
-
     loadAll();
   }, [userId]);
 
-  const getAge = (dob?: string) => {
-    if (!dob) return "--";
-    const birthDate = new Date(dob);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-    return age;
-  };
+  const age = useMemo(() => getAge(profile?.dob), [profile?.dob]);
+  const visibleActivities = activityTab === "hosted" ? hostedActivities : joinedActivities;
 
-  if (loading) {
-    return (
-      <p className="p-6 text-sm text-gray-500">
-        Loading profile…
-      </p>
-    );
-  }
+  if (loading) return <p className="p-6 text-sm text-gray-500">Loading profile…</p>;
 
   return (
-    <main className="min-h-screen bg-white relative">
-      {/* PROFILE HEADER */}
-      <section className="flex flex-col items-center px-4 py-6">
-        <div className="h-24 w-24 rounded-full bg-gray-300 overflow-hidden">
-          {profile?.avatar_url && (
-            <img
-              src={profile.avatar_url}
-              alt="Profile"
-              className="h-full w-full object-cover"
-            />
-          )}
-        </div>
+    <main className="min-h-screen bg-[#f4f4f4] pb-28 text-[#121826]">
+      <div className="mx-auto w-full max-w-[560px]">
+        <section className="flex items-center justify-between border-b border-[#e5e7eb] px-5 py-4">
+          <h1 className="text-[42px] font-semibold leading-none">My Profile</h1>
+          <button type="button" className="text-3xl leading-none text-[#6b7280]">⋮</button>
+        </section>
 
-        <h2 className="mt-4 text-lg font-semibold">
-          {profile?.name || "Your name"}, {getAge(profile?.dob)}
-        </h2>
+        <section className="px-5 pt-6 text-center">
+          <div className="relative mx-auto h-44 w-44 overflow-hidden rounded-full border-4 border-white bg-gray-200 shadow">
+            {profile?.avatar_url ? (
+              <Image src={profile.avatar_url} alt="Profile" fill className="object-cover" unoptimized />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-5xl text-gray-500">{(profile?.name || "U").charAt(0)}</div>
+            )}
+            {profile?.verified && <div className="absolute bottom-2 right-2 rounded-full bg-[#2d9bf0] px-2 py-1 text-white">✓</div>}
+          </div>
 
-        {profile?.city && (
-          <p className="mt-1 text-sm text-gray-500">
-            📍 {profile.city}
-          </p>
-        )}
+          <h2 className="mt-5 text-6xl font-semibold leading-tight">{profile?.name || "Your name"}{age ? `, ${age}` : ""}</h2>
+          {profile?.city && <p className="mt-1 text-3xl text-[#6b7280]">📍 {profile.city}</p>}
 
-        <p className="mt-2 text-sm text-gray-600 text-center">
-          {profile?.bio || "Tell people something about you"}
-        </p>
-
-        <button
-          onClick={() => setIsEditOpen(true)}
-          className="mt-3 text-sm font-semibold underline"
-        >
-          Edit profile
-        </button>
-      </section>
-
-      {/* INTERESTS */}
-      <section className="px-4 mt-6">
-        <h3 className="text-sm font-semibold mb-2">Interests</h3>
-
-        {profile?.interests?.length ? (
-          <div className="flex flex-wrap gap-2">
-            {profile.interests.map((interest: string) => (
-              <span
-                key={interest}
-                className="rounded-full bg-gray-100 px-3 py-1 text-xs"
-              >
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {(profile?.interests ?? []).map((interest) => (
+              <span key={interest} className="rounded-full px-3 py-1 text-sm font-semibold" style={{ background: "#ece8ff", color: "#6d28d9" }}>
                 {interest}
               </span>
             ))}
           </div>
-        ) : (
-          <p className="text-sm text-gray-500">
-            No interests added yet
-          </p>
-        )}
-      </section>
 
-      {/* ACTIVITY TOGGLE */}
-      <section className="px-4 mt-8">
-        <div className="flex rounded-xl border overflow-hidden">
-          <button
-            onClick={() => setActivityTab("hosted")}
-            className={`flex-1 py-3 text-sm font-semibold ${
-              activityTab === "hosted"
-                ? "bg-black text-white"
-                : "bg-white text-gray-600"
-            }`}
-          >
-            Hosted ({hostedActivities.length})
-          </button>
+          <p className="mx-auto mt-4 max-w-[90%] text-[34px] leading-snug text-[#6b7280]">{profile?.bio || "Tell people something about you"}</p>
 
           <button
-            onClick={() => setActivityTab("joined")}
-            className={`flex-1 py-3 text-sm font-semibold ${
-              activityTab === "joined"
-                ? "bg-black text-white"
-                : "bg-white text-gray-600"
-            }`}
+            onClick={() => setIsEditOpen(true)}
+            className="mt-6 w-full rounded-2xl bg-[#eef0f3] px-4 py-4 text-2xl font-semibold"
           >
-            Joined ({joinedActivities.length})
+            Edit Profile Details
           </button>
-        </div>
-      </section>
+        </section>
 
-      {/* ACTIVITIES LIST */}
-      <section className="px-4 mt-6">
-        {activityTab === "hosted" && (
-          <>
-            {hostedActivities.length === 0 ? (
-              <div className="rounded-lg border p-3 text-sm text-gray-500">
-                You haven’t created any activities yet.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {hostedActivities.map((activity) => (
-                  <ActivityCard
-                    key={activity.id}
-                    title={activity.title}
-                    subtitle="Hosted by you"
-                    distance=""
-                    time={new Date(activity.starts_at).toLocaleString()}
-                    type={activity.type}
-                    tags={
-                      activity.activity_tag_relations?.map(
-                        (rel: any) => rel.activity_tags
-                      ) ?? []
-                    }
-                    host={profile}
-                    hideHost
-                    onClick={() =>
-                      router.push(`/activity/${activity.id}`)
-                    }
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
+        <section className="mt-6 grid grid-cols-2 gap-4 px-5">
+          <div className="rounded-3xl border border-[#e5e7eb] bg-white px-4 py-5 text-center shadow-sm">
+            <p className="text-6xl font-bold">{hostedActivities.length}</p>
+            <p className="mt-1 text-2xl font-semibold tracking-wide text-[#6b7280]">HOSTED</p>
+          </div>
+          <div className="rounded-3xl border border-[#e5e7eb] bg-white px-4 py-5 text-center shadow-sm">
+            <p className="text-6xl font-bold">{joinedActivities.length}</p>
+            <p className="mt-1 text-2xl font-semibold tracking-wide text-[#6b7280]">JOINED</p>
+          </div>
+        </section>
 
-        {activityTab === "joined" && (
-          <>
-            {joinedActivities.length === 0 ? (
-              <div className="rounded-lg border p-3 text-sm text-gray-500">
-                You haven’t joined any activities yet.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {joinedActivities.map((activity) => (
-                  <ActivityCard
-                    key={activity.id}
-                    title={activity.title}
-                    subtitle="You joined this activity"
-                    distance=""
-                    time={new Date(activity.starts_at).toLocaleString()}
-                    type={activity.type}
-                    tags={
-                      activity.activity_tag_relations?.map(
-                        (rel: any) => rel.activity_tags
-                      ) ?? []
-                    }
-                    onClick={() =>
-                      router.push(`/activity/${activity.id}`)
-                    }
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </section>
+        <section className="mt-6 border-b border-[#d9dce2]">
+          <div className="grid grid-cols-2 px-5">
+            <button
+              onClick={() => setActivityTab("hosted")}
+              className={`pb-3 text-3xl font-semibold ${activityTab === "hosted" ? "border-b-4 border-[#f08f26] text-[#111827]" : "text-[#9ca3af]"}`}
+            >
+              Hosting
+            </button>
+            <button
+              onClick={() => setActivityTab("joined")}
+              className={`pb-3 text-3xl font-semibold ${activityTab === "joined" ? "border-b-4 border-[#f08f26] text-[#111827]" : "text-[#9ca3af]"}`}
+            >
+              Joined
+            </button>
+          </div>
+        </section>
 
+        <section className="space-y-4 px-5 pt-5">
+          {visibleActivities.length === 0 ? (
+            <div className="rounded-3xl border border-[#e5e7eb] bg-white p-5 text-xl text-[#6b7280]">
+              {activityTab === "hosted" ? "You haven’t created any activities yet." : "You haven’t joined any activities yet."}
+            </div>
+          ) : (
+            visibleActivities.map((activity) => {
+              const isPast = activity.status === "completed";
+              return (
+                <div key={activity.id} className="rounded-3xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f2e3cf] text-2xl">☕</div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-4xl font-semibold">{activity.title}</h3>
+                      <p className="mt-1 text-2xl text-[#6b7280]">🕒 {formatWhen(activity.starts_at)}</p>
+                      <p className="mt-2 truncate text-2xl text-[#6b7280]">📍 {activity.location_name || "Location TBD"}</p>
+                    </div>
+                    {isPast && <span className="rounded-xl bg-[#f3f4f6] px-3 py-1 text-sm font-semibold text-[#9ca3af]">DONE</span>}
+                  </div>
 
-      {/* CREATE ACTIVITY */}
+                  <div className="mt-4 flex items-center gap-3">
+                    <button
+                      onClick={() => router.push(`/activity/${activity.id}`)}
+                      className={`flex-1 rounded-xl py-2 text-2xl font-semibold ${isPast ? "bg-[#e5e7eb] text-[#6b7280]" : "bg-[#f08f26] text-white"}`}
+                    >
+                      {isPast ? "View Recap" : activityTab === "hosted" ? "Manage" : "Open"}
+                    </button>
+                    {!isPast && <button className="rounded-xl bg-[#eef0f3] px-3 py-2 text-xl">💬</button>}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </section>
+      </div>
+
       <button
         onClick={() => router.push("/create")}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-black text-white text-2xl flex items-center justify-center"
+        className="fixed bottom-6 right-6 h-16 w-16 rounded-full bg-[#f08f26] text-4xl text-white shadow-lg"
       >
         +
       </button>

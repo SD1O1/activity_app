@@ -5,33 +5,40 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
-import ActivityCard from "@/components/cards/ActivityCard";
 import CategoriesRow from "@/components/home/CategoriesRow";
 import HomeActions from "./HomeActions";
 import TrySomethingNew from "./TrySomethingNew";
+import Footer from "@/components/layout/Footer";
 import SearchModal from "@/components/modals/SearchModal";
 import AuthModal from "@/components/modals/AuthModal";
 import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
+
+type ActivityTag = { id: string; name: string };
+type ActivityRow = {
+  id: string;
+  title: string;
+  type: "group" | "one-on-one";
+  starts_at: string;
+  host_id: string;
+  activity_tag_relations?: { activity_tags: ActivityTag }[];
+  host?: { name?: string | null; avatar_url?: string | null; verified?: boolean | null } | null;
+};
 
 export default function HomePage() {
   const router = useRouter();
 
   const [openSearch, setOpenSearch] = useState(false);
   const [openAuthModal, setOpenAuthModal] = useState(false);
-  const [activities, setActivities] = useState<any[]>([]);
+  const [activities, setActivities] = useState<ActivityRow[]>([]);
 
-  const { user, profileCompleted, loading } =
-    useClientAuthProfile();
+  const { user, profileCompleted, loading } = useClientAuthProfile();
 
   useEffect(() => {
     const fetchActivities = async () => {
-      // 🔹 viewer (may be null)
       const {
         data: { user: viewer },
       } = await supabase.auth.getUser();
 
-      // 🔹 fetch activities
       let query = supabase
         .from("activities")
         .select(`
@@ -39,8 +46,6 @@ export default function HomePage() {
           title,
           type,
           starts_at,
-          public_lat,
-          public_lng,
           host_id,
           activity_tag_relations (
             activity_tags (
@@ -53,37 +58,26 @@ export default function HomePage() {
         .order("created_at", { ascending: false })
         .limit(10);
 
-      // 🔹 HIDE OWN ACTIVITIES (INTENTIONAL)
-      if (viewer) {
-        query = query.neq("host_id", viewer.id);
-      }
+      if (viewer) query = query.neq("host_id", viewer.id);
 
       const { data: activityRows, error } = await query;
 
       if (error || !activityRows) {
-        console.error("HOME ACTIVITY FETCH ERROR:", error);
         setActivities([]);
         return;
       }
 
-      // 🔹 collect host IDs
-      const hostIds = Array.from(
-        new Set(activityRows.map((a) => a.host_id))
-      );
+      const hostIds = Array.from(new Set(activityRows.map((a) => a.host_id)));
 
-      // 🔹 fetch host profiles
       const { data: hosts } = await supabase
         .from("profiles")
-        .select("id, username,name, avatar_url, dob, verified")
+        .select("id, name, avatar_url, verified")
         .in("id", hostIds);
 
-      const hostMap = Object.fromEntries(
-        (hosts || []).map((h) => [h.id, h])
-      );
+      const hostMap = Object.fromEntries((hosts || []).map((h) => [h.id, h]));
 
-      // 🔹 attach host to activity
       const enrichedActivities = activityRows.map((a) => ({
-        ...a,
+        ...(a as ActivityRow),
         host: hostMap[a.host_id] || null,
       }));
 
@@ -94,61 +88,60 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-white">
-      <Header />
+    <main className="min-h-screen bg-[#f4f4f4] pb-8">
+      <Header centerSlot={<span />} className="bg-[#f4f4f4]" />
 
-      {/* Search */}
-      <section className="px-4 py-6">
-        <h1 className="text-2xl font-bold">
-          Find your next adventure
-        </h1>
+      <section className="px-5 py-6">
+        <h1 className="text-[58px] font-bold leading-[1.02] text-[#111827]">Find your next adventure</h1>
 
-        <div
+        <button
           onClick={() => setOpenSearch(true)}
-          className="mt-4 rounded-xl border px-4 py-3 text-gray-400 cursor-pointer"
+          className="mt-5 w-full rounded-2xl border border-[#d8dde5] bg-white px-4 py-4 text-left text-2xl text-[#98a0b0]"
         >
-          What do you want to do?
-        </div>
+          🔎 &nbsp; What do you want to do?
+        </button>
       </section>
 
       <CategoriesRow />
 
-      {/* Activities */}
-      <section className="px-4">
-        <h2 className="mb-3 text-lg font-semibold">
-          Activities Near You
-        </h2>
+      <section className="px-5 mt-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-[38px] font-semibold text-[#111827]">Activities Near You</h2>
+          <button className="text-xl font-semibold text-[#f97316]">See All</button>
+        </div>
 
         <div className="space-y-4">
-          {activities.map((activity) => {
-            const tags =
-              activity.activity_tag_relations?.map(
-                (rel: any) => rel.activity_tags
-              ) ?? [];
+          {activities.map((activity, idx) => {
+            const tags = activity.activity_tag_relations?.map((rel) => rel.activity_tags.name).filter(Boolean) ?? [];
+            const backgrounds = [
+              "from-[#d7d8dc] to-[#111827]",
+              "from-[#7f4a1d] to-[#201e1f]",
+              "from-[#0e2940] to-[#0b0f1d]",
+            ];
 
             return (
-              <ActivityCard
+              <button
                 key={activity.id}
-                title={activity.title}
-                subtitle={activity.category}
-                distance="Nearby"
-                time={new Date(activity.starts_at).toLocaleString()}
-                type={activity.type}
-                tags={tags}
-                host={activity.host}
-                onClick={() =>
-                  router.push(`/activity/${activity.id}`)
-                }
-              />
+                onClick={() => router.push(`/activity/${activity.id}`)}
+                className={`w-full rounded-3xl bg-gradient-to-br p-5 text-left text-white shadow-md ${backgrounds[idx % backgrounds.length]}`}
+              >
+                <div className="flex items-center justify-between text-sm opacity-90">
+                  <span>{activity.host?.name || "Host"}</span>
+                  <span>{activity.type === "group" ? "GROUP" : "1-ON-1"}</span>
+                </div>
+
+                <h3 className="mt-20 text-4xl font-bold">{activity.title}</h3>
+                <p className="mt-1 text-lg opacity-90">🕒 {new Date(activity.starts_at).toLocaleString()}</p>
+
+                <div className="mt-3 flex items-center justify-between text-sm opacity-90">
+                  <span>{tags.slice(0, 2).join(" • ") || "Meet nearby"}</span>
+                  <span>{tags.length > 0 ? `${tags.length} TAGS` : "OPEN"}</span>
+                </div>
+              </button>
             );
           })}
         </div>
       </section>
-
-      <SearchModal
-        open={openSearch}
-        onClose={() => setOpenSearch(false)}
-      />
 
       <HomeActions
         user={user}
@@ -161,10 +154,9 @@ export default function HomePage() {
       <TrySomethingNew />
       <Footer />
 
-      <AuthModal
-        open={openAuthModal}
-        onClose={() => setOpenAuthModal(false)}
-      />
+      <SearchModal open={openSearch} onClose={() => setOpenSearch(false)} />
+
+      <AuthModal open={openAuthModal} onClose={() => setOpenAuthModal(false)} />
     </main>
   );
 }

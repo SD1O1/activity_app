@@ -15,12 +15,11 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
   const router = useRouter();
   const { showToast } = useToast();
 
-  const [questions, setQuestions] = useState<string[]>([
-    "",
-  ]);
+  const [questions, setQuestions] = useState<string[]>([""]);
 
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
   const [type, setType] = useState<"group" | "one-on-one">("group");
   const [maxMembers, setMaxMembers] = useState<number>(2);
   const [loading, setLoading] = useState(false);
@@ -31,7 +30,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
     id: string;
     name: string;
   };
-  
+
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [tagError, setTagError] = useState("");
   const [isSearchingTags, setIsSearchingTags] = useState(false);
@@ -49,7 +48,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
   } | null>(null);
 
   const removeTag = (tagId: string) => {
-    setSelectedTags(prev => prev.filter(tag => tag.id !== tagId));
+    setSelectedTags((prev) => prev.filter((tag) => tag.id !== tagId));
   };  
 
   const handleTagSearch = async (value: string) => {
@@ -73,8 +72,8 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
   };  
 
   const toggleTag = (tag: Tag) => {
-    if (selectedTags.some(t => t.id === tag.id)) {
-      setSelectedTags(selectedTags.filter(t => t.id !== tag.id));
+    if (selectedTags.some((t) => t.id === tag.id)) {
+      setSelectedTags(selectedTags.filter((t) => t.id !== tag.id));
       setTagError("");
       return;
     }
@@ -93,8 +92,10 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
     setFormError(null);
 
     const cleanedQuestions = questions
-    .map(q => q.trim())
-    .filter(q => q.length > 0);
+      .map((q) => q.trim())
+      .filter((q) => q.length > 0);
+
+    const dateTimeValue = date && time ? `${date}T${time}` : "";
 
     if (!title.trim()) {
       setFormError("Please enter an activity title.");
@@ -120,13 +121,13 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
       return;
     }
     
-    if (!date) {
+    if (!dateTimeValue) {
       setFormError("Please choose date and time.");
       setLoading(false);
       return;
     }
 
-    const startsAtMs = new Date(date).getTime();
+    const startsAtMs = new Date(dateTimeValue).getTime();
     if (Number.isNaN(startsAtMs) || startsAtMs < Date.now()) {
       setFormError("Please choose a future date and time.");
       setLoading(false);
@@ -173,7 +174,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
         exact_lng: location.lng,
         public_lat,
         public_lng,
-        starts_at: date,
+        starts_at: dateTimeValue,
         type,
         cost_rule: costRule,
         host_id: userId,
@@ -227,7 +228,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
     }
 
     const { error: tagInsertError } = await supabase.from("activity_tag_relations").insert(
-      selectedTags.map(tag => ({
+      selectedTags.map((tag) => ({
         activity_id: activity.id,
         tag_id: tag.id,
       }))
@@ -246,219 +247,203 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
     router.push("/activities");
   };
 
+  const resetForm = () => {
+    setTitle("");
+    setDate("");
+    setTime("");
+    setType("group");
+    setMaxMembers(2);
+    setCostRule("everyone_pays");
+    setDescription("");
+    setQuestions([""]);
+    setSelectedTags([]);
+    setTagError("");
+    setTagQuery("");
+    setFilteredTags([]);
+    setIsSearchingTags(false);
+    setLocation(null);
+    setFormError(null);
+  };
+
   return (
-    <div className="px-4 py-6 max-w-xl mx-auto">
-      <h1 className="text-xl font-semibold mb-6">Create an Activity</h1>
-
-      {/* Activity title */}
-      <div className="mb-5">
-        <label className="text-sm font-medium">Activity title</label>
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="e.g. Evening Coffee & Walk"
-          className="mt-2 w-full rounded-xl border px-4 py-3"
-        />
+    <div className="mx-auto min-h-screen w-full max-w-[540px] bg-[#f4f4f4] pb-8 text-[#151515]">
+      <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[#e4e4e4] bg-[#f4f4f4] px-5 py-4">
+        <button type="button" onClick={() => router.back()} className="text-lg text-[#946736]">Cancel</button>
+        <h1 className="text-3xl font-semibold leading-none tracking-[-0.03em] md:text-3xl">Create Activity</h1>
+        <button type="button" onClick={resetForm} className="text-lg text-[#946736]">Reset</button>
       </div>
 
-      {/* Activity tags */}
-      <input
-        value={tagQuery}
-        onChange={(e) => handleTagSearch(e.target.value)}
-        placeholder="Search activity tags…"
-        className="mt-2 w-full rounded-xl border px-4 py-3"
-        disabled={selectedTags.length >= 2}
-      />
+      <div className="space-y-8 px-5 pt-6">
+        <section>
+          <h2 className="text-[40px] font-semibold tracking-[-0.02em]">Category</h2>
+          <div className="mt-4 rounded-2xl border border-[#d8dce2] bg-white px-4 py-4">
+            <input
+              value={tagQuery}
+              onChange={(e) => handleTagSearch(e.target.value)}
+              placeholder="Search category"
+              className="w-full bg-transparent text-xl outline-none placeholder:text-[#98a0b0]"
+              disabled={selectedTags.length >= 2}
+            />
+          </div>
 
-      {filteredTags.length > 0 && (
-        <div className="mt-2 rounded-xl border bg-white shadow-sm">
-          {filteredTags.map(tag => (
-            <button
-              key={tag.id}
-              type="button"
-              onClick={() => {
-                toggleTag(tag);
-                setTagQuery("");
-                setFilteredTags([]);
-              }}
-              className="block w-full px-4 py-2 text-left hover:bg-gray-100"
-            >
-              {tag.name}
-            </button>
-          ))}
-        </div>
-      )}
+          {filteredTags.length > 0 && (
+            <div className="mt-2 rounded-2xl border border-[#d8dce2] bg-white shadow-sm">
+              {filteredTags.map((tag) => (
+                <button
+                  key={tag.id}
+                  type="button"
+                  onClick={() => {
+                    toggleTag(tag);
+                    setTagQuery("");
+                    setFilteredTags([]);
+                  }}
+                  className="block w-full px-4 py-3 text-left text-lg hover:bg-gray-100"
+                >
+                  {tag.name}
+                </button>
+              ))}
+            </div>
+          )}
 
-      <div className="mt-3 flex gap-2 flex-wrap">
-        {selectedTags.map(tag => (
-          <span
-            key={tag.id}
-            className="flex items-center gap-1 rounded-full bg-black px-3 py-1 text-xs text-white"
-          >
-            {tag.name}
-            <button onClick={() => removeTag(tag.id)}>✕</button>
-          </span>
-        ))}
-      </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {selectedTags.map((tag) => (
+              <span key={tag.id} className="flex items-center gap-2 rounded-full bg-[#f08f26] px-3 py-1 text-sm text-white">
+                {tag.name}
+                <button type="button" onClick={() => removeTag(tag.id)}>✕</button>
+              </span>
+            ))}
+          </div>
+          {tagError ? <p className="mt-2 text-sm text-red-600">{tagError}</p> : null}
+          {isSearchingTags && filteredTags.length === 0 && (
+            <p className="mt-2 text-sm text-[#758091]">No matching tags found</p>
+          )}
+        </section>
 
-      {tagError ? <p className="mt-2 text-xs text-red-600">{tagError}</p> : null}
-
-      {isSearchingTags && filteredTags.length === 0 && (
-        <div className="mt-2 rounded-xl border bg-white px-4 py-3 text-sm text-gray-500">
-          No matching tags found
-        </div>
-      )}
-
-      {/* Activity type */}
-      <div className="mb-5">
-        <label className="text-sm font-medium">Activity type</label>
-        <div className="grid grid-cols-2 gap-3 mt-3">
-          <button
-            onClick={() => setType("one-on-one")}
-            className={`rounded-xl border py-3 ${
-              type === "one-on-one" ? "bg-black text-white" : ""
-            }`}
-          >
-            One-on-One
-          </button>
-
-          <button
-            onClick={() => {
-              setType("group");
-              setMaxMembers((prev) => Math.max(prev, 2));
-            }}
-            className={`rounded-xl border py-3 ${
-              type === "group" ? "bg-black text-white" : ""
-            }`}
-          >
-            Group
-          </button>
-        </div>
-      </div>
-
-      {type === "group" && (
-        <div className="mb-5">
-          <label className="text-sm font-medium">
-            How many people are you looking for?
-          </label>
-
+        <section>
+          <h2 className="text-[40px] font-semibold tracking-[-0.02em]">Details</h2>
+          <label className="mt-4 block text-xl text-[#946736]">Activity Title</label>
           <input
-            type="number"
-            min={2}
-            value={maxMembers}
-            onChange={(e) => {
-              const nextValue = Number(e.target.value);
-              if (nextValue === 1) {
-                setType("one-on-one");
-                setMaxMembers(2);
-                setFormError("Switched to one-on-one because group activities must have at least 2 people.");
-                return;
-              }
-
-              setMaxMembers(nextValue);
-              if (formError?.startsWith("Switched to one-on-one")) {
-                setFormError(null);
-              }
-            }}
-            className="mt-2 w-full rounded-xl border px-4 py-3"
-            placeholder="e.g. 5"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Give it a catchy title"
+            className="mt-2 w-full rounded-2xl border border-[#d8dce2] bg-white px-4 py-4 text-xl placeholder:text-[#98a0b0]"
           />
 
-          <p className="mt-1 text-xs text-gray-500">
-            Excluding you (host)
-          </p>
-        </div>
-      )}
+          <label className="mt-5 block text-xl text-[#946736]">Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Describe the plan..."
+            rows={4}
+            className="mt-2 w-full resize-none rounded-2xl border border-[#d8dce2] bg-white px-4 py-4 text-xl placeholder:text-[#98a0b0]"
+          />
+        </section>
 
+        <section>
+          <h2 className="text-[40px] font-semibold tracking-[-0.02em]">Logistics</h2>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xl text-[#946736]">Date</label>
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-[#d8dce2] bg-white px-4 py-4 text-xl" />
+            </div>
+            <div>
+              <label className="text-xl text-[#946736]">Time</label>
+              <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="mt-2 w-full rounded-2xl border border-[#d8dce2] bg-white px-4 py-4 text-xl" />
+            </div>
+          </div>
 
-      {/* Location */}
-      <div className="mb-5">
-        <label className="text-sm font-medium">
-          Location
-        </label>
-
-        <button
-          type="button"
-          onClick={() => setShowLocationPicker(true)}
-          className="mt-2 w-full rounded-xl border px-4 py-3 text-left"
-        >
-          {location ? location.name : "Choose location"}
-        </button>
-
-        <p className="mt-1 text-xs text-gray-500">
-          Exact location is shared only after approval
-        </p>
-      </div>
-
-      {/* Date & time */}
-      <div className="mb-5">
-        <label className="text-sm font-medium">Date & Time</label>
-        <input
-          type="datetime-local"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          min={new Date().toISOString().slice(0, 16)}
-          className="mt-2 w-full rounded-xl border px-4 py-3"
-        />
-      </div>
-
-      <div className="mb-5">
-        <label className="text-sm font-medium">Cost</label>
-        <select
-          value={costRule}
-          onChange={(e) => setCostRule(e.target.value)}
-          className="mt-2 w-full rounded-xl border px-4 py-3"
-        >
-          <option value="everyone_pays">Everyone pays their own</option>
-          <option value="host_pays">Host will cover it</option>
-          <option value="split">Split equally</option>
-        </select>
-      </div>
-
-      {/* Description */}
-      <div className="mb-5">
-        <label className="text-sm font-medium">
-          About this activity
-        </label>
-
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Describe what this activity is about, what people should expect..."
-          rows={4}
-          className="mt-2 w-full rounded-xl border px-4 py-3 resize-none"
-        />
-      </div>
-
-      {/* Questions */}
-      <div className="mb-8">
-        <label className="text-sm font-medium">
-          Questions for people who want to join
-        </label>
-
-        <div className="mt-3 space-y-3">
-          {questions.map((q, index) => (
-            <input
-              placeholder="e.g. What do you like to talk about?"
-              key={index}
-              value={q}
-              onChange={(e) => {
-                const updated = [...questions];
-                updated[index] = e.target.value;
-                setQuestions(updated);
+          <label className="mt-5 block text-xl text-[#946736]">Activity Type</label>
+          <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setType("one-on-one")}
+              className={`rounded-2xl border py-4 text-xl ${type === "one-on-one" ? "border-[#f08f26] bg-[#f08f26] text-white" : "border-[#d8dce2] bg-white"}`}
+            >
+              1-on-1
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setType("group");
+                setMaxMembers((prev) => Math.max(prev, 2));
               }}
-              className="w-full rounded-xl border px-4 py-3"
-            />
-          ))}
-        </div>
+              className={`rounded-2xl border py-4 text-xl ${type === "group" ? "border-[#f08f26] bg-[#f08f26] text-white" : "border-[#d8dce2] bg-white"}`}
+            >
+              Group Activity
+            </button>
+          </div>
 
-        <button
-          type="button"
-          onClick={() => setQuestions([...questions, ""])}
-          className="mt-3 text-sm text-blue-600"
-        >
-          + Add another question
-        </button>
+          {type === "group" && (
+            <>
+              <label className="mt-5 block text-xl text-[#946736]">Number of Participants</label>
+              <input
+                type="number"
+                min={2}
+                value={maxMembers}
+                onChange={(e) => setMaxMembers(Number(e.target.value))}
+                className="mt-2 w-full rounded-2xl border border-[#d8dce2] bg-white px-4 py-4 text-xl placeholder:text-[#98a0b0]"
+                placeholder="How many people?"
+              />
+            </>
+          )}
+
+          <label className="mt-5 block text-xl text-[#946736]">Location</label>
+          <button
+            type="button"
+            onClick={() => setShowLocationPicker(true)}
+            className="mt-2 w-full rounded-2xl border border-[#d8dce2] bg-white px-4 py-4 text-left text-xl text-[#98a0b0]"
+          >
+            {location ? location.name : "Where are we meeting?"}
+          </button>
+
+          <div className="mt-4 flex h-36 items-center justify-center rounded-2xl bg-[#cfd6c1]">
+            <button
+              type="button"
+              onClick={() => setShowLocationPicker(true)}
+              className="rounded-xl bg-white px-6 py-3 text-xl font-medium text-[#f08f26]"
+            >
+              Select on Map
+            </button>
+          </div>
+
+          <label className="mt-5 block text-xl text-[#946736]">Cost Rule</label>
+          <select
+            value={costRule}
+            onChange={(e) => setCostRule(e.target.value)}
+            className="mt-2 w-full rounded-2xl border border-[#d8dce2] bg-white px-4 py-4 text-xl"
+          >
+            <option value="everyone_pays">Everyone pays their own</option>
+            <option value="host_pays">Host will cover it</option>
+            <option value="split">Split equally</option>
+          </select>
+        </section>
+
+        <section>
+          <h2 className="text-[40px] font-semibold tracking-[-0.02em]">Ask a Question (Optional)</h2>
+          <div className="mt-4 space-y-3">
+            {questions.map((q, index) => (
+              <input
+                placeholder="Type your question here..."
+                key={index}
+                value={q}
+                onChange={(e) => {
+                  const updated = [...questions];
+                  updated[index] = e.target.value;
+                  setQuestions(updated);
+                }}
+                className="w-full rounded-2xl border border-[#d8dce2] bg-white px-4 py-4 text-xl placeholder:text-[#98a0b0]"
+              />
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setQuestions([...questions, ""])}
+            className="mt-4 text-xl font-medium text-[#f08f26]"
+          >
+            + Add question
+          </button>
+        </section>
       </div>
 
       {showLocationPicker && (
@@ -486,15 +471,16 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
         </div>
       )}
 
-      {formError ? <p className="mb-3 text-sm text-red-600">{formError}</p> : null}
-
-      <button
-        onClick={handleCreate}
-        disabled={loading}
-        className="w-full rounded-xl bg-black py-4 text-white font-medium"
-      >
-        {loading ? "Creating..." : "Create Activity"}
-      </button>
+      <div className="px-5 pt-10">
+        {formError ? <p className="mb-3 text-sm text-red-600">{formError}</p> : null}
+        <button
+          onClick={handleCreate}
+          disabled={loading}
+          className="w-full rounded-2xl bg-[#f08f26] py-5 text-xl font-semibold text-white"
+        >
+          {loading ? "Creating..." : "Post Activity"}
+        </button>
+      </div>
     </div>
   );
 }
