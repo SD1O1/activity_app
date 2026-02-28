@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import ChatMessages from "./ChatMessages";
 import ChatInput from "./ChatInput";
 import TypingIndicator from "./TypingIndicator";
@@ -35,12 +36,23 @@ export default function ChatModal({
     sendError,
   } = useChat(open, activityId);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [open]);
+  
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-black/45 sm:items-center sm:justify-center sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-end overflow-y-auto overscroll-contain bg-black/45 sm:items-center sm:justify-center sm:p-4">
       <div className="h-[90vh] w-full overflow-hidden rounded-t-[26px] bg-[#f3f3f3] sm:h-auto sm:max-h-[92vh] sm:max-w-2xl sm:rounded-[26px]">
-        <div className="flex h-full flex-col">
+        <div className="flex h-full min-h-0 flex-col">
           <div className="flex items-center justify-between border-b border-[#d8d8d8] px-6 py-7">
             <div>
               <h2 className="text-[42px] font-medium leading-none text-[#1f1f23] md:text-[34px]">

@@ -8,7 +8,12 @@ import { logger } from "@/lib/logger";
 
 const bodySchema = z.object({
   conversationId: uuidSchema,
-  seenAt: z.string().datetime().optional(),
+  seenAt: z
+    .string()
+    .refine((value) => !Number.isNaN(Date.parse(value)), {
+      message: "Invalid seenAt timestamp",
+    })
+    .optional(),
 });
 
 export async function POST(req: Request) {

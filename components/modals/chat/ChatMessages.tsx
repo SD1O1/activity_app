@@ -29,7 +29,7 @@ export default function ChatMessages({
   const getParticipant = (userId: string) => participants?.find((p) => p.user_id === userId);
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+    <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6">
       {messages.map((m, index) => {
         const isMe = m.sender_id === myId;
 

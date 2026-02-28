@@ -12,7 +12,12 @@ const DUPLICATE_NOTIFICATION_WINDOW_SECONDS = 15;
 const bodySchema = z.object({
   conversationId: uuidSchema,
   activityId: uuidSchema.optional(),
-  messageCreatedAt: z.string().datetime().optional(),
+  messageCreatedAt: z
+    .string()
+    .refine((value) => !Number.isNaN(Date.parse(value)), {
+      message: "Invalid messageCreatedAt timestamp",
+    })
+    .optional(),
 });
 
 const toWindowBucket = (date: Date) =>
