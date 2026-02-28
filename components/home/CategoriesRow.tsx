@@ -4,10 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
-type Tag = {
-  id: string;
-  name: string;
-};
+type Tag = { id: string; name: string };
 
 const categories = [
   { name: "Walk", icon: "🚶" },
@@ -29,7 +26,6 @@ export default function CategoriesRow() {
       const { data, error } = await supabase.from("activity_tags").select("id, name");
       if (!error && data) setTags(data);
     };
-
     fetchTags();
   }, []);
 
@@ -40,31 +36,17 @@ export default function CategoriesRow() {
   };
 
   return (
-    <section className="px-5 mt-6">
-      <h2 className="mb-4 text-[36px] font-semibold text-[#111827]">Browse Categories</h2>
-
-      <div className="flex gap-4 overflow-x-auto pb-2">
+    <section className="px-4 pt-4">
+      <h2 className="mb-3 text-[16px] font-semibold text-[#111827]">Browse Categories</h2>
+      <div className="flex gap-3 overflow-x-auto pb-1">
         {categories.map((category, index) => {
           const isActive = index === 0;
           return (
-            <button
-              key={category.name}
-              onClick={() => handleCategoryClick(category.name)}
-              className="flex min-w-[68px] flex-col items-center"
-            >
-              <div
-                className={`flex h-16 w-16 items-center justify-center rounded-full text-2xl ${
-                  isActive
-                    ? "border-2 border-[#f97316] bg-white"
-                    : "bg-[#e9edf2] border border-transparent"
-                }`}
-              >
+            <button key={category.name} onClick={() => handleCategoryClick(category.name)} className="flex min-w-[60px] flex-col items-center gap-2">
+              <div className={`flex h-12 w-12 items-center justify-center rounded-full text-lg ${isActive ? "border-2 border-[#f97316] bg-white" : "bg-[#e9edf2] border border-transparent"}`}>
                 {category.icon}
               </div>
-
-              <span className={`mt-2 text-sm ${isActive ? "text-[#f97316]" : "text-[#334155]"}`}>
-                {category.name}
-              </span>
+              <span className={`text-[12px] font-medium ${isActive ? "text-[#f97316]" : "text-[#334155]"}`}>{category.name}</span>
             </button>
           );
         })}

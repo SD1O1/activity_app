@@ -118,9 +118,9 @@ export default function NotificationsView() {
   });
 
   return (
-    <>
+    <main className="mobile-app-container">
       {/* FILTER TABS */}
-      <div className="sticky top-0 z-10 bg-white border-b">
+      <div className="sticky top-0 z-10 bg-white border-b border-black/5">
         <div className="flex gap-2 px-4 py-2">
           {[
             { key: "all", label: "All" },
@@ -131,10 +131,10 @@ export default function NotificationsView() {
             <button
               key={tab.key}
               onClick={() => setActiveFilter(tab.key as FilterType)}
-              className={`px-3 py-1.5 text-sm rounded-full border ${
+              className={`px-3 py-1.5 text-[14px] rounded-lg border-b-2 ${
                 activeFilter === tab.key
-                  ? "bg-black text-white border-black"
-                  : "bg-white text-gray-600 border-gray-300"
+                  ? "font-semibold text-[#111827] border-[#f59e5b]"
+                  : "font-medium text-gray-500 border-transparent"
               }`}
             >
               {tab.label}
@@ -167,6 +167,6 @@ export default function NotificationsView() {
           ))}
         </section>
       )}
-    </>
+    </main>
   );
 }
