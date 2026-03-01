@@ -12,9 +12,6 @@ const categories = [
   { name: "Coffee", icon: "☕" },
   { name: "Work", icon: "💼" },
   { name: "Sports", icon: "🏀" },
-  { name: "Music", icon: "🎵" },
-  { name: "Yoga", icon: "🧘" },
-  { name: "Food", icon: "🍽️" },
 ];
 
 export default function CategoriesRow() {
@@ -37,16 +34,16 @@ export default function CategoriesRow() {
 
   return (
     <section className="pt-6">
-      <h2 className="mb-3 text-[16px] font-semibold text-[#111827]">Browse Categories</h2>
+      <h2 className="mb-3 text-lg font-semibold text-gray-800">Browse Categories</h2>
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
         {categories.map((category, index) => {
           const isActive = index === 0;
           return (
             <button key={category.name} onClick={() => handleCategoryClick(category.name)} className="flex min-w-[56px] flex-col items-center gap-1.5">
-              <div className={`flex h-11 w-11 items-center justify-center rounded-full text-[18px] ${isActive ? "border-[2.5px] border-[#f97316] bg-[#fff7ed] ring-2 ring-[#fed7aa]" : "border border-transparent bg-[#e9edf2]"}`}>
+              <div className={`flex h-11 w-11 items-center justify-center rounded-full border text-[18px] ${isActive ? "border-orange-400 bg-orange-50 text-orange-700" : "border-transparent bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
                 {category.icon}
               </div>
-              <span className={`text-[12px] font-medium ${isActive ? "text-[#f97316]" : "text-[#334155]"}`}>{category.name}</span>
+              <span className={`text-[12px] font-medium ${isActive ? "text-orange-600" : "text-gray-600"}`}>{category.name}</span>
             </button>
           );
         })}

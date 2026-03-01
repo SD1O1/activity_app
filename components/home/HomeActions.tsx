@@ -25,7 +25,7 @@ export default function HomeActions({ onOpenSearch, user, profileCompleted, load
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <button
           onClick={onOpenSearch}
-          className="app-card p-5 text-[#111827] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.14)]"
+          className="app-card border border-gray-100 bg-white p-5 text-gray-900 transition-all duration-200 hover:shadow-md"
         >
           <div className="text-2xl">🔍</div>
           <div className="mt-3 text-[16px] font-semibold">Find Activity</div>
@@ -34,9 +34,9 @@ export default function HomeActions({ onOpenSearch, user, profileCompleted, load
         <button
           onClick={handleCreate}
           disabled={loading}
-          className="app-card p-5 text-[#111827] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.14)] disabled:opacity-50"
+          className="app-card border border-gray-100 bg-white p-5 text-gray-900 transition-all duration-200 hover:shadow-md disabled:opacity-50"
         >
-          <div className="text-2xl text-[#f97316]">＋</div>
+          <div className="text-2xl text-orange-500">＋</div>
           <div className="mt-3 text-[16px] font-semibold">Create Activity</div>
         </button>
       </div>
