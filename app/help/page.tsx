@@ -8,8 +8,8 @@ export const metadata: Metadata = {
 
 export default function HelpPage() {
   return (
-    <main className="mobile-app-container px-4 py-6">
-      <div className="mx-auto max-w-[420px] space-y-6 text-slate-700">
+    <main className="mobile-app-container py-6">
+      <div className="mx-auto max-w-2xl space-y-6 text-slate-700">
         <header className="space-y-3">
           <h1 className="text-[20px] font-semibold tracking-tight text-slate-900">Help Center</h1>
           <p className="leading-6">

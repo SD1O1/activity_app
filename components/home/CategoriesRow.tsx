@@ -36,7 +36,7 @@ export default function CategoriesRow() {
   };
 
   return (
-    <section className="px-4 pt-4">
+    <section className="pt-4">
       <h2 className="mb-3 text-[16px] font-semibold text-[#111827]">Browse Categories</h2>
       <div className="flex gap-3 overflow-x-auto pb-1">
         {categories.map((category, index) => {

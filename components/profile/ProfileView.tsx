@@ -138,13 +138,13 @@ export default function ProfileView() {
 
   return (
     <main className="mobile-app-container pb-24 text-[#121826]">
-      <div className="mx-auto w-full max-w-[420px]">
-        <section className="flex items-center justify-between border-b border-[#e5e7eb] px-5 py-4">
-          <h1 className="text-[20px] font-semibold leading-none">My Profile</h1>
+      <div className="mx-auto w-full max-w-full">
+        <section className="flex items-center justify-between border-b border-[#e5e7eb] py-4">
+          <h1 className="text-[20px] md:text-[24px] font-semibold leading-none">My Profile</h1>
           <button type="button" className="text-[14px] leading-none text-[#6b7280]">⋮</button>
         </section>
 
-        <section className="px-5 pt-6 text-center">
+        <section className="pt-6 text-center max-w-2xl mx-auto">
           <div className="relative mx-auto h-28 w-28 overflow-hidden rounded-full border-4 border-white bg-gray-200 shadow">
             {profile?.avatar_url ? (
               <Image src={profile.avatar_url} alt="Profile" fill className="object-cover" unoptimized />
@@ -175,7 +175,7 @@ export default function ProfileView() {
           </button>
         </section>
 
-        <section className="mt-6 grid grid-cols-2 gap-4 px-5">
+        <section className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="app-card px-4 py-5 text-center shadow-sm">
             <p className="text-[24px] font-bold">{hostedActivities.length}</p>
             <p className="mt-1 text-[14px] font-semibold tracking-wide text-[#6b7280]">HOSTED</p>
@@ -187,7 +187,7 @@ export default function ProfileView() {
         </section>
 
         <section className="mt-6 border-b border-[#d9dce2]">
-          <div className="grid grid-cols-2 px-5">
+          <div className="grid grid-cols-2">
             <button
               onClick={() => setActivityTab("hosted")}
               className={`pb-3 text-[14px] font-semibold ${activityTab === "hosted" ? "border-b-4 border-[#f08f26] text-[#111827]" : "text-[#9ca3af]"}`}
@@ -203,7 +203,7 @@ export default function ProfileView() {
           </div>
         </section>
 
-        <section className="space-y-4 px-5 pt-5">
+        <section className="space-y-4 pt-5">
           {visibleActivities.length === 0 ? (
             <div className="app-card p-5 text-xl text-[#6b7280]">
               {activityTab === "hosted" ? "You haven’t created any activities yet." : "You haven’t joined any activities yet."}

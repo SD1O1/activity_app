@@ -172,8 +172,8 @@ export default function ActivityDetail({ activity }: Props) {
 
   return (
     <main className="mobile-app-container pb-24">
-      <header className="sticky top-0 z-20 h-14 border-b border-black/5 bg-white px-4">
-        <div className="mx-auto flex h-full w-full max-w-[420px] items-center justify-between">
+      <header className="sticky top-0 z-20 h-14 border-b border-black/5 bg-white">
+        <div className="mx-auto flex h-full w-full max-w-full items-center justify-between">
           <button onClick={() => router.back()} aria-label="Go back" className="text-lg leading-none text-gray-800">
             ←
           </button>
@@ -199,14 +199,14 @@ export default function ActivityDetail({ activity }: Props) {
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-[420px] px-4 pt-4 md:px-6">
+      <div className="mx-auto w-full max-w-full pt-4">
         <img
           src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1470&auto=format&fit=crop"
           alt="Activity"
           className="h-44 w-full rounded-2xl object-cover"
         />
 
-        <h1 className="mt-4 text-[24px] font-bold leading-tight text-[#161212]">{activity.title}</h1>
+        <h1 className="mt-4 text-[24px] md:text-[30px] font-bold leading-tight text-[#161212]">{activity.title}</h1>
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
           {tags.length > 0 ? (
@@ -236,24 +236,24 @@ export default function ActivityDetail({ activity }: Props) {
           </section>
         )}
 
-        <section className="mt-5 grid grid-cols-2 gap-3">
+        <section className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="rounded-2xl bg-[#eceef2] p-4">
-            <p className="text-sm text-[#6b7280] md:text-base">Date</p>
+            <p className="text-sm md:text-base text-[#6b7280]">Date</p>
             <p className="mt-1 text-[16px] font-semibold text-[#16181d]">{formatDate(activity.starts_at)}</p>
           </div>
 
           <div className="rounded-2xl bg-[#eceef2] p-4">
-            <p className="text-sm text-[#6b7280] md:text-base">Time</p>
+            <p className="text-sm md:text-base text-[#6b7280]">Time</p>
             <p className="mt-1 text-[16px] font-semibold text-[#16181d]">{formatTime(activity.starts_at)}</p>
           </div>
 
           <div className="rounded-2xl bg-[#eceef2] p-4">
-            <p className="text-sm text-[#6b7280] md:text-base">Cost</p>
+            <p className="text-sm md:text-base text-[#6b7280]">Cost</p>
             <p className="mt-1 text-[16px] font-semibold text-[#16181d]">{activity.cost_rule === "free" ? "Free" : activity.cost_rule}</p>
           </div>
 
           <div className="rounded-2xl bg-[#eceef2] p-4">
-            <p className="text-sm text-[#6b7280] md:text-base">{activity.type === "group" ? "Group Activity" : "1-on-1 Activity"}</p>
+            <p className="text-sm md:text-base text-[#6b7280]">{activity.type === "group" ? "Group Activity" : "1-on-1 Activity"}</p>
             <p className="mt-1 text-[16px] font-semibold text-[#16181d]">
               {activity.type === "group" ? `${activity.member_count}/${activity.max_members} Joined` : "Private"}
             </p>
@@ -273,13 +273,13 @@ export default function ActivityDetail({ activity }: Props) {
       </div>
 
       {hasValidCoords && (
-        <div className="mx-auto w-full max-w-[420px]">
+        <div className="mx-auto w-full max-w-full">
           <ActivityLocationMap lat={lat} lng={lng} blurred={!showExactMap} />
         </div>
       )}
 
       {participants.length > 0 && (isHost || isApprovedGuest) && (
-        <div className="mx-auto w-full max-w-[420px] pb-4">
+        <div className="mx-auto w-full max-w-full pb-4">
           <ParticipantsRow
             participants={participants}
             currentUserId={user?.id}
@@ -294,12 +294,12 @@ export default function ActivityDetail({ activity }: Props) {
         </div>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 border-t border-black/5 bg-white/95 px-4 py-3 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-[420px] items-center gap-4">
+      <div className="fixed bottom-0 right-4 z-20 border border-black/5 bg-white/95 px-3 py-3 backdrop-blur rounded-2xl shadow-sm md:right-6 lg:right-8">
+        <div className="flex items-center gap-3">
           <button
             onClick={cta.action}
             disabled={cta.disabled}
-            className={`h-12 flex-1 rounded-full text-lg font-semibold md:h-14 md:text-2xl ${
+            className={`h-11 min-w-[180px] rounded-xl text-[14px] md:min-w-[220px] md:text-[15px] font-semibold ${
               cta.disabled ? "bg-[#d9dce2] text-[#6b7280]" : "bg-[#ef8f25] text-white"
             }`}
           >
@@ -311,7 +311,7 @@ export default function ActivityDetail({ activity }: Props) {
             onClick={() => canOpenChat && setOpenChat(true)}
             disabled={!canOpenChat}
             aria-label="Open chat"
-            className={`relative flex h-12 w-12 items-center justify-center rounded-full text-xl md:h-14 md:w-14 md:text-2xl ${
+            className={`relative flex h-11 w-11 items-center justify-center rounded-xl text-[16px] ${
               canOpenChat ? "bg-[#e6e8ec] text-[#1f2937]" : "bg-[#eceef2] text-[#9ca3af]"
             }`}
           >

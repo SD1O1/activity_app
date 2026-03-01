@@ -16,13 +16,13 @@ export default function ActivitiesPageView({ activities, loading }: Props) {
   const mappedActivities = useMemo(() => activities.filter((activity) => activity.public_lat != null && activity.public_lng != null), [activities]);
 
   return (
-    <main className="mobile-app-container px-4 pb-6 pt-4">
+    <main className="mobile-app-container pb-6 pt-4">
       <section>
         <header className="mb-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#fef3c7] text-lg">⭐</div>
             <div>
-              <h1 className="text-[20px] font-semibold text-[#0f172a]">Activities</h1>
+              <h1 className="text-[20px] md:text-[24px] font-semibold text-[#0f172a]">Activities</h1>
               <p className="text-[13px] text-[#64748b]">Find partners nearby</p>
             </div>
           </div>
@@ -40,7 +40,7 @@ export default function ActivitiesPageView({ activities, loading }: Props) {
           </div>
         )}
 
-        <section className="space-y-3">
+        <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {loading ? (
             <p className="mt-8 text-center text-[14px] text-[#64748b]">Loading activities...</p>
           ) : activities.length === 0 ? (

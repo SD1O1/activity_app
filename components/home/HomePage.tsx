@@ -62,8 +62,8 @@ export default function HomePage() {
     <main className="mobile-app-container pb-8">
       <Header centerSlot={<span />} />
 
-      <section className="px-4 py-5 space-y-4">
-        <h1 className="text-[20px] font-semibold text-[#111827]">Find your next adventure</h1>
+      <section className="py-5 space-y-4">
+        <h1 className="text-[20px] md:text-[24px] font-semibold text-[#111827]">Find your next adventure</h1>
         <button onClick={() => setOpenSearch(true)} className="h-11 w-full rounded-xl border border-black/10 bg-white px-4 text-left text-[14px] text-[#98a0b0]">
           🔎 What do you want to do?
         </button>
@@ -71,13 +71,13 @@ export default function HomePage() {
 
       <CategoriesRow />
 
-      <section className="px-4 pt-5">
+      <section className="pt-5">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-[16px] font-semibold text-[#111827]">Activities Near You</h2>
           <button className="text-[14px] font-semibold text-[#f97316]">See All</button>
         </div>
 
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {activities.map((activity, idx) => {
             const tags = activity.activity_tag_relations?.flatMap((rel) => (Array.isArray(rel.activity_tags) ? rel.activity_tags : [rel.activity_tags])).filter((tag): tag is ActivityTag => Boolean(tag)).map((tag) => tag.name).filter(Boolean) ?? [];
             const backgrounds = ["from-[#d7d8dc] to-[#111827]", "from-[#7f4a1d] to-[#201e1f]", "from-[#0e2940] to-[#0b0f1d]"];

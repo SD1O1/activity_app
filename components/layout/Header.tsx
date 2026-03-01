@@ -37,7 +37,7 @@ export default function Header({ rightSlot, centerSlot, className = "" }: Header
 
   return (
     <>
-      <header className={`h-14 border-b border-black/5 flex items-center justify-between px-4 bg-white ${className}`}>
+      <header className={`h-14 border-b border-black/5 flex items-center justify-between px-0 md:px-0 bg-white ${className}`}>
         <button onClick={() => setSidebarOpen(true)} className="text-lg font-semibold text-[#334155]">
           ☰
         </button>

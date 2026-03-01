@@ -21,8 +21,8 @@ export default function HomeActions({ onOpenSearch, user, profileCompleted, load
   };
 
   return (
-    <section className="px-4 pt-5">
-      <div className="grid grid-cols-2 gap-3">
+    <section className="pt-5">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <button onClick={onOpenSearch} className="app-card p-4 text-[#111827]">
           <div className="text-xl">🔍</div>
           <div className="mt-2 text-[14px] font-semibold">Find Activity</div>

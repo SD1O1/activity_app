@@ -84,13 +84,13 @@ export async function PublicProfileView({ username }: PublicProfileViewProps) {
 
   return (
     <main className="mobile-app-container pb-8 text-[#121826]">
-      <div className="mx-auto w-full max-w-[420px]">
-        <section className="flex items-center justify-between border-b border-[#e5e7eb] px-5 py-4">
-          <h1 className="text-[20px] font-semibold leading-none">Profile</h1>
+      <div className="mx-auto w-full max-w-full">
+        <section className="flex items-center justify-between border-b border-[#e5e7eb] py-4">
+          <h1 className="text-[20px] md:text-[24px] font-semibold leading-none">Profile</h1>
           <ProfileActionsMenu isSelf={isSelf} profileId={profile.id} username={profile.username} />
         </section>
 
-        <section className="px-5 pt-6 text-center">
+        <section className="pt-6 text-center max-w-2xl mx-auto">
           <div className="relative mx-auto h-28 w-28 overflow-hidden rounded-full border-4 border-white bg-gray-200 shadow">
             {profile.avatar_url ? (
               <Image src={profile.avatar_url} alt={profile.name ?? "User"} fill className="object-cover" unoptimized />
@@ -114,7 +114,7 @@ export async function PublicProfileView({ username }: PublicProfileViewProps) {
           <p className="mx-auto mt-4 max-w-[90%] text-[14px] leading-snug text-[#6b7280]">{profile.bio || "No bio added yet."}</p>
         </section>
 
-        <section className="mt-6 grid grid-cols-2 gap-4 px-5">
+        <section className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="app-card px-4 py-5 text-center shadow-sm">
             <p className="text-[24px] font-bold">{hostedCount ?? 0}</p>
             <p className="mt-1 text-[14px] font-semibold tracking-wide text-[#6b7280]">HOSTED</p>
@@ -125,11 +125,11 @@ export async function PublicProfileView({ username }: PublicProfileViewProps) {
           </div>
         </section>
 
-        <section className="mt-6 border-b border-[#d9dce2] px-5 pb-3">
+        <section className="mt-6 border-b border-[#d9dce2] pb-3">
           <h3 className="text-[14px] font-semibold">Hosting</h3>
         </section>
 
-        <section className="space-y-4 px-5 pt-5">
+        <section className="space-y-4 pt-5">
           {!hostedActivities || hostedActivities.length === 0 ? (
             <div className="app-card p-5 text-xl text-[#6b7280]">No activities hosted yet.</div>
           ) : (
