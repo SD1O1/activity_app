@@ -171,13 +171,13 @@ export default function ActivityDetail({ activity }: Props) {
   })();
 
   return (
-    <main className="min-h-screen bg-[#f6f6f7] pb-24 md:pb-28">
-      <header className="sticky top-0 z-20 h-16 border-b border-gray-200 bg-[#f6f6f7] px-4 md:h-20">
-        <div className="mx-auto flex h-full w-full max-w-5xl items-center justify-between">
-          <button onClick={() => router.back()} aria-label="Go back" className="text-2xl leading-none text-gray-800 md:text-3xl">
+    <main className="mobile-app-container pb-24">
+      <header className="sticky top-0 z-20 h-14 border-b border-black/5 bg-white">
+        <div className="mx-auto flex h-full w-full max-w-full items-center justify-between">
+          <button onClick={() => router.back()} aria-label="Go back" className="text-lg leading-none text-gray-800">
             ←
           </button>
-          <p className="text-xl font-semibold text-gray-900 md:text-3xl">Activity Details</p>
+          <p className="text-[16px] font-semibold text-gray-900">Activity Details</p>
           <ActivityActionsMenu
             isHost={viewerRole === "host"}
             onEdit={() => setOpenEdit(true)}
@@ -199,28 +199,28 @@ export default function ActivityDetail({ activity }: Props) {
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-5xl px-4 pt-4 md:px-6">
+      <div className="mx-auto w-full max-w-full pt-4">
         <img
           src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1470&auto=format&fit=crop"
           alt="Activity"
-          className="h-56 w-full rounded-3xl object-cover md:h-72 lg:h-[22rem]"
+          className="h-44 w-full rounded-2xl object-cover"
         />
 
-        <h1 className="mt-5 text-4xl font-semibold leading-tight tracking-tight text-[#161212] md:text-5xl">{activity.title}</h1>
+        <h1 className="mt-4 text-[24px] md:text-[30px] font-bold leading-tight text-[#161212]">{activity.title}</h1>
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
           {tags.length > 0 ? (
-            <span className="rounded-full border border-[#f3d7bc] bg-[#fdf4eb] px-4 py-2 text-sm font-medium text-[#ef8f25] md:text-base">
+            <span className="rounded-full border border-[#f3d7bc] bg-[#fdf4eb] px-3 py-1.5 text-[12px] font-medium text-[#ef8f25] md:text-base">
               {tags[0].name}
             </span>
           ) : null}
 
-          <span className="rounded-full bg-[#e9ebef] px-4 py-2 text-sm font-medium text-[#3d4658] md:text-base">
+          <span className="rounded-full bg-[#e9ebef] px-3 py-1.5 text-[12px] font-medium text-[#3d4658] md:text-base">
             {activity.type === "group" ? "Group Activity" : "1-on-1 Activity"}
           </span>
 
           {tags.slice(1).map((tag) => (
-            <span key={tag.id} className="rounded-full bg-[#e9ebef] px-4 py-2 text-sm font-medium text-[#3d4658] md:text-base">
+            <span key={tag.id} className="rounded-full bg-[#e9ebef] px-3 py-1.5 text-[12px] font-medium text-[#3d4658] md:text-base">
               {tag.name}
             </span>
           ))}
@@ -230,56 +230,56 @@ export default function ActivityDetail({ activity }: Props) {
           <section className="mt-6 flex items-center gap-4 rounded-3xl bg-[#ededee] px-4 py-4 md:px-5">
             <img src={activity.host.avatar_url ?? "/avatar-placeholder.png"} alt={activity.host.name ?? "Host"} className="h-14 w-14 rounded-full object-cover" />
             <div>
-              <p className="text-2xl font-semibold text-[#18181b] md:text-3xl">{activity.host.name ?? "Host"}</p>
-              <p className="text-base text-[#6b7280] md:text-lg">Host {activity.host.verified ? "✓" : ""}</p>
+              <p className="text-[16px] font-semibold text-[#18181b]">{activity.host.name ?? "Host"}</p>
+              <p className="text-[13px] text-[#6b7280]">Host {activity.host.verified ? "✓" : ""}</p>
             </div>
           </section>
         )}
 
-        <section className="mt-5 grid grid-cols-2 gap-3">
+        <section className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="rounded-2xl bg-[#eceef2] p-4">
-            <p className="text-sm text-[#6b7280] md:text-base">Date</p>
-            <p className="mt-1 text-xl font-semibold text-[#16181d] md:text-2xl">{formatDate(activity.starts_at)}</p>
+            <p className="text-sm md:text-base text-[#6b7280]">Date</p>
+            <p className="mt-1 text-[16px] font-semibold text-[#16181d]">{formatDate(activity.starts_at)}</p>
           </div>
 
           <div className="rounded-2xl bg-[#eceef2] p-4">
-            <p className="text-sm text-[#6b7280] md:text-base">Time</p>
-            <p className="mt-1 text-xl font-semibold text-[#16181d] md:text-2xl">{formatTime(activity.starts_at)}</p>
+            <p className="text-sm md:text-base text-[#6b7280]">Time</p>
+            <p className="mt-1 text-[16px] font-semibold text-[#16181d]">{formatTime(activity.starts_at)}</p>
           </div>
 
           <div className="rounded-2xl bg-[#eceef2] p-4">
-            <p className="text-sm text-[#6b7280] md:text-base">Cost</p>
-            <p className="mt-1 text-xl font-semibold text-[#16181d] md:text-2xl">{activity.cost_rule === "free" ? "Free" : activity.cost_rule}</p>
+            <p className="text-sm md:text-base text-[#6b7280]">Cost</p>
+            <p className="mt-1 text-[16px] font-semibold text-[#16181d]">{activity.cost_rule === "free" ? "Free" : activity.cost_rule}</p>
           </div>
 
           <div className="rounded-2xl bg-[#eceef2] p-4">
-            <p className="text-sm text-[#6b7280] md:text-base">{activity.type === "group" ? "Group Activity" : "1-on-1 Activity"}</p>
-            <p className="mt-1 text-xl font-semibold text-[#16181d] md:text-2xl">
+            <p className="text-sm md:text-base text-[#6b7280]">{activity.type === "group" ? "Group Activity" : "1-on-1 Activity"}</p>
+            <p className="mt-1 text-[16px] font-semibold text-[#16181d]">
               {activity.type === "group" ? `${activity.member_count}/${activity.max_members} Joined` : "Private"}
             </p>
           </div>
         </section>
 
         <section className="mt-8">
-          <h2 className="text-3xl font-semibold tracking-tight text-[#16181d] md:text-4xl">About this activity</h2>
-          <p className="mt-3 text-lg leading-relaxed text-[#374151] md:text-xl">{activity.description}</p>
+          <h2 className="text-[16px] font-semibold text-[#16181d]">About this activity</h2>
+          <p className="mt-3 text-[14px] leading-relaxed text-[#374151]">{activity.description}</p>
         </section>
 
         <section className="mt-8">
-          <h2 className="text-3xl font-semibold tracking-tight text-[#16181d] md:text-4xl">Location</h2>
-          <p className="mt-3 text-lg text-[#4b5563] md:text-xl">{activity.location_name}</p>
-          <p className="text-sm text-[#9ca3af] md:text-base">Tap map for directions</p>
+          <h2 className="text-[16px] font-semibold text-[#16181d]">Location</h2>
+          <p className="mt-3 text-[14px] text-[#4b5563]">{activity.location_name}</p>
+          <p className="text-[13px] text-[#9ca3af]">Tap map for directions</p>
         </section>
       </div>
 
       {hasValidCoords && (
-        <div className="mx-auto w-full max-w-5xl">
+        <div className="mx-auto w-full max-w-full">
           <ActivityLocationMap lat={lat} lng={lng} blurred={!showExactMap} />
         </div>
       )}
 
       {participants.length > 0 && (isHost || isApprovedGuest) && (
-        <div className="mx-auto w-full max-w-5xl pb-4">
+        <div className="mx-auto w-full max-w-full pb-4">
           <ParticipantsRow
             participants={participants}
             currentUserId={user?.id}
@@ -294,12 +294,12 @@ export default function ActivityDetail({ activity }: Props) {
         </div>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-[#f6f6f7]/95 px-4 py-3 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-5xl items-center gap-4">
+      <div className="fixed bottom-0 right-4 z-20 border border-black/5 bg-white/95 px-3 py-3 backdrop-blur rounded-2xl shadow-sm md:right-6 lg:right-8">
+        <div className="flex items-center gap-3">
           <button
             onClick={cta.action}
             disabled={cta.disabled}
-            className={`h-12 flex-1 rounded-full text-lg font-semibold md:h-14 md:text-2xl ${
+            className={`h-11 min-w-[180px] rounded-xl text-[14px] md:min-w-[220px] md:text-[15px] font-semibold ${
               cta.disabled ? "bg-[#d9dce2] text-[#6b7280]" : "bg-[#ef8f25] text-white"
             }`}
           >
@@ -311,7 +311,7 @@ export default function ActivityDetail({ activity }: Props) {
             onClick={() => canOpenChat && setOpenChat(true)}
             disabled={!canOpenChat}
             aria-label="Open chat"
-            className={`relative flex h-12 w-12 items-center justify-center rounded-full text-xl md:h-14 md:w-14 md:text-2xl ${
+            className={`relative flex h-11 w-11 items-center justify-center rounded-xl text-[16px] ${
               canOpenChat ? "bg-[#e6e8ec] text-[#1f2937]" : "bg-[#eceef2] text-[#9ca3af]"
             }`}
           >

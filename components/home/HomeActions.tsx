@@ -10,46 +10,27 @@ type HomeActionsProps = {
   openAuthModal: () => void;
 };
 
-export default function HomeActions({
-  onOpenSearch,
-  user,
-  profileCompleted,
-  loading,
-  openAuthModal,
-}: HomeActionsProps) {
+export default function HomeActions({ onOpenSearch, user, profileCompleted, loading, openAuthModal }: HomeActionsProps) {
   const router = useRouter();
 
   const handleCreate = () => {
     if (loading) return;
-
-    if (!user) {
-      openAuthModal();
-      return;
-    }
-
-    if (!profileCompleted) {
-      router.push("/onboarding/profile");
-      return;
-    }
-
+    if (!user) return openAuthModal();
+    if (!profileCompleted) return router.push("/onboarding/profile");
     router.push("/create");
   };
 
   return (
-    <section className="px-5 mt-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <button onClick={onOpenSearch} className="rounded-3xl bg-[#0d1b42] py-5 text-white">
-          <div className="text-3xl">🔍</div>
-          <div className="mt-2 text-2xl font-semibold">Find an Activity</div>
+    <section className="pt-5">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <button onClick={onOpenSearch} className="app-card p-4 text-[#111827]">
+          <div className="text-xl">🔍</div>
+          <div className="mt-2 text-[14px] font-semibold">Find Activity</div>
         </button>
 
-        <button
-          onClick={handleCreate}
-          disabled={loading}
-          className="rounded-3xl border-2 border-[#f97316] bg-white py-5 text-[#111827] disabled:opacity-50"
-        >
-          <div className="text-3xl text-[#f97316]">＋</div>
-          <div className="mt-2 text-2xl font-semibold">Create Activity</div>
+        <button onClick={handleCreate} disabled={loading} className="app-card p-4 text-[#111827] disabled:opacity-50">
+          <div className="text-xl text-[#f97316]">＋</div>
+          <div className="mt-2 text-[14px] font-semibold">Create Activity</div>
         </button>
       </div>
     </section>

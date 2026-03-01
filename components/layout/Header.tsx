@@ -37,29 +37,29 @@ export default function Header({ rightSlot, centerSlot, className = "" }: Header
 
   return (
     <>
-      <header className={`h-16 border-b border-[#e3e6ea] flex items-center justify-between px-5 bg-[#f4f4f4] ${className}`}>
-        <button onClick={() => setSidebarOpen(true)} className="text-2xl text-[#334155]">
+      <header className={`h-14 border-b border-black/5 flex items-center justify-between px-0 md:px-0 bg-white ${className}`}>
+        <button onClick={() => setSidebarOpen(true)} className="text-lg font-semibold text-[#334155]">
           ☰
         </button>
 
-        <div className="text-sm font-semibold text-[#111827]">{centerSlot ?? "PerfectBench"}</div>
+        <div className="text-[14px] font-semibold text-[#111827]">{centerSlot ?? "PerfectBench"}</div>
 
-        <div className="flex min-w-[32px] justify-end items-center gap-3">
+        <div className="flex min-w-[32px] justify-end items-center gap-2">
           {rightSlot ? (
             rightSlot
           ) : (
             <>
               {!isLoggedIn && (
-                <button onClick={() => setOpenAuth(true)} className="text-sm border px-3 py-1 rounded">
+                <button onClick={() => setOpenAuth(true)} className="h-9 rounded-xl bg-[#f3f4f6] px-3 text-[14px] font-semibold text-[#111827]">
                   Login
                 </button>
               )}
 
               {isLoggedIn && (
-                <button onClick={() => router.push("/notifications")} className="relative text-xl" aria-label="Notifications">
+                <button onClick={() => router.push("/notifications")} className="relative text-lg" aria-label="Notifications">
                   🔔
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 h-4 min-w-[16px] rounded-full bg-red-500 text-white text-xs flex items-center justify-center px-1">
+                    <span className="absolute -top-1 -right-1 h-4 min-w-[16px] rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center px-1">
                       {unreadCount}
                     </span>
                   )}

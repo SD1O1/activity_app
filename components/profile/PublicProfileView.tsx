@@ -83,25 +83,25 @@ export async function PublicProfileView({ username }: PublicProfileViewProps) {
     .limit(PUBLIC_HOSTED_ACTIVITY_PAGE_SIZE);
 
   return (
-    <main className="min-h-screen bg-[#f4f4f4] pb-10 text-[#121826]">
-      <div className="mx-auto w-full max-w-[560px]">
-        <section className="flex items-center justify-between border-b border-[#e5e7eb] px-5 py-4">
-          <h1 className="text-[42px] font-semibold leading-none">Profile</h1>
+    <main className="mobile-app-container pb-8 text-[#121826]">
+      <div className="mx-auto w-full max-w-full">
+        <section className="flex items-center justify-between border-b border-[#e5e7eb] py-4">
+          <h1 className="text-[20px] md:text-[24px] font-semibold leading-none">Profile</h1>
           <ProfileActionsMenu isSelf={isSelf} profileId={profile.id} username={profile.username} />
         </section>
 
-        <section className="px-5 pt-6 text-center">
-          <div className="relative mx-auto h-44 w-44 overflow-hidden rounded-full border-4 border-white bg-gray-200 shadow">
+        <section className="pt-6 text-center max-w-2xl mx-auto">
+          <div className="relative mx-auto h-28 w-28 overflow-hidden rounded-full border-4 border-white bg-gray-200 shadow">
             {profile.avatar_url ? (
               <Image src={profile.avatar_url} alt={profile.name ?? "User"} fill className="object-cover" unoptimized />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-5xl text-gray-500">{(profile.name ?? "U").charAt(0)}</div>
+              <div className="flex h-full w-full items-center justify-center text-[14px] text-gray-500">{(profile.name ?? "U").charAt(0)}</div>
             )}
             {profile.verified && <div className="absolute bottom-2 right-2 rounded-full bg-[#2d9bf0] px-2 py-1 text-white">✓</div>}
           </div>
 
-          <h2 className="mt-5 text-6xl font-semibold leading-tight">{profile.name ?? "User"}{age ? `, ${age}` : ""}</h2>
-          {profile.city && <p className="mt-1 text-3xl text-[#6b7280]">📍 {profile.city}</p>}
+          <h2 className="mt-5 text-[24px] font-semibold leading-tight">{profile.name ?? "User"}{age ? `, ${age}` : ""}</h2>
+          {profile.city && <p className="mt-1 text-[14px] text-[#6b7280]">📍 {profile.city}</p>}
 
           <div className="mt-4 flex flex-wrap justify-center gap-2">
             {(profile.interests ?? []).map((interest: string) => (
@@ -111,42 +111,42 @@ export async function PublicProfileView({ username }: PublicProfileViewProps) {
             ))}
           </div>
 
-          <p className="mx-auto mt-4 max-w-[90%] text-[34px] leading-snug text-[#6b7280]">{profile.bio || "No bio added yet."}</p>
+          <p className="mx-auto mt-4 max-w-[90%] text-[14px] leading-snug text-[#6b7280]">{profile.bio || "No bio added yet."}</p>
         </section>
 
-        <section className="mt-6 grid grid-cols-2 gap-4 px-5">
-          <div className="rounded-3xl border border-[#e5e7eb] bg-white px-4 py-5 text-center shadow-sm">
-            <p className="text-6xl font-bold">{hostedCount ?? 0}</p>
-            <p className="mt-1 text-2xl font-semibold tracking-wide text-[#6b7280]">HOSTED</p>
+        <section className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="app-card px-4 py-5 text-center shadow-sm">
+            <p className="text-[24px] font-bold">{hostedCount ?? 0}</p>
+            <p className="mt-1 text-[14px] font-semibold tracking-wide text-[#6b7280]">HOSTED</p>
           </div>
-          <div className="rounded-3xl border border-[#e5e7eb] bg-white px-4 py-5 text-center shadow-sm">
-            <p className="text-6xl font-bold">{joinedCount ?? 0}</p>
-            <p className="mt-1 text-2xl font-semibold tracking-wide text-[#6b7280]">JOINED</p>
+          <div className="app-card px-4 py-5 text-center shadow-sm">
+            <p className="text-[24px] font-bold">{joinedCount ?? 0}</p>
+            <p className="mt-1 text-[14px] font-semibold tracking-wide text-[#6b7280]">JOINED</p>
           </div>
         </section>
 
-        <section className="mt-6 border-b border-[#d9dce2] px-5 pb-3">
-          <h3 className="text-3xl font-semibold">Hosting</h3>
+        <section className="mt-6 border-b border-[#d9dce2] pb-3">
+          <h3 className="text-[14px] font-semibold">Hosting</h3>
         </section>
 
-        <section className="space-y-4 px-5 pt-5">
+        <section className="space-y-4 pt-5">
           {!hostedActivities || hostedActivities.length === 0 ? (
-            <div className="rounded-3xl border border-[#e5e7eb] bg-white p-5 text-xl text-[#6b7280]">No activities hosted yet.</div>
+            <div className="app-card p-5 text-xl text-[#6b7280]">No activities hosted yet.</div>
           ) : (
             hostedActivities.map((activity) => {
               const isPast = activity.status === "completed";
               return (
-                <Link key={activity.id} href={`/activity/${activity.id}`} className="block rounded-3xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
+                <Link key={activity.id} href={`/activity/${activity.id}`} className="block app-card p-5 shadow-sm">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f2e3cf] text-2xl">☕</div>
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f2e3cf] text-[14px]">☕</div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="truncate text-4xl font-semibold">{activity.title}</h3>
-                      <p className="mt-1 text-2xl text-[#6b7280]">🕒 {formatWhen(activity.starts_at)}</p>
-                      <p className="mt-2 truncate text-2xl text-[#6b7280]">📍 {activity.location_name || "Location TBD"}</p>
+                      <h3 className="truncate text-[20px] font-semibold">{activity.title}</h3>
+                      <p className="mt-1 text-[14px] text-[#6b7280]">🕒 {formatWhen(activity.starts_at)}</p>
+                      <p className="mt-2 truncate text-[14px] text-[#6b7280]">📍 {activity.location_name || "Location TBD"}</p>
                     </div>
                     {isPast && <span className="rounded-xl bg-[#f3f4f6] px-3 py-1 text-sm font-semibold text-[#9ca3af]">DONE</span>}
                   </div>
-                  <div className={`mt-4 rounded-xl py-2 text-center text-2xl font-semibold ${isPast ? "bg-[#e5e7eb] text-[#6b7280]" : "bg-[#f08f26] text-white"}`}>
+                  <div className={`mt-4 rounded-xl py-2 text-center text-[14px] font-semibold ${isPast ? "bg-[#e5e7eb] text-[#6b7280]" : "bg-[#f08f26] text-white"}`}>
                     {isPast ? "View Recap" : "View Activity"}
                   </div>
                 </Link>

@@ -8,25 +8,25 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
-    <main className="min-h-screen bg-white px-4 py-12">
-      <div className="mx-auto max-w-3xl space-y-8 text-slate-700">
+    <main className="mobile-app-container py-6">
+      <div className="mx-auto max-w-2xl space-y-6 text-slate-700">
         <header className="space-y-3">
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Contact Us</h1>
-          <p className="leading-7">
+          <h1 className="text-[20px] font-semibold tracking-tight text-slate-900">Contact Us</h1>
+          <p className="leading-6">
             Need help with your account or an activity? Our support team is here to assist.
           </p>
         </header>
 
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold text-slate-900">Support</h2>
-          <p className="leading-7">
+          <h2 className="text-[16px] font-semibold text-slate-900">Support</h2>
+          <p className="leading-6">
             Email us at
             <a className="ml-1 font-medium text-slate-900" href="mailto:support@activityapp.example">
               support@activityapp.example
             </a>
             .
           </p>
-          <p className="leading-7">We typically respond within 1–2 business days.</p>
+          <p className="leading-6">We typically respond within 1–2 business days.</p>
         </section>
       </div>
     </main>
