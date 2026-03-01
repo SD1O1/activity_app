@@ -2,7 +2,7 @@ import DiscoveryCard from "./DiscoveryCard";
 
 export default function TrySomethingNew() {
   return (
-    <section className="pt-6 pb-4">
+    <section className="pt-6 pb-4 lg:mt-12">
       <h3 className="text-lg font-semibold text-gray-800">Try Something New</h3>
       <div className="mt-3 flex gap-3 overflow-x-auto pb-1">
         <DiscoveryCard title="Photography Walk" subtitle="Brooklyn Bridge" time="Sat, 3:00 PM" people="4" />
