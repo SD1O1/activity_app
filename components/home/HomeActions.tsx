@@ -21,16 +21,23 @@ export default function HomeActions({ onOpenSearch, user, profileCompleted, load
   };
 
   return (
-    <section className="pt-5">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <button onClick={onOpenSearch} className="app-card p-4 text-[#111827]">
-          <div className="text-xl">🔍</div>
-          <div className="mt-2 text-[14px] font-semibold">Find Activity</div>
+    <section className="pt-6">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <button
+          onClick={onOpenSearch}
+          className="app-card p-5 text-[#111827] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.14)]"
+        >
+          <div className="text-2xl">🔍</div>
+          <div className="mt-3 text-[16px] font-semibold">Find Activity</div>
         </button>
 
-        <button onClick={handleCreate} disabled={loading} className="app-card p-4 text-[#111827] disabled:opacity-50">
-          <div className="text-xl text-[#f97316]">＋</div>
-          <div className="mt-2 text-[14px] font-semibold">Create Activity</div>
+        <button
+          onClick={handleCreate}
+          disabled={loading}
+          className="app-card p-5 text-[#111827] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.14)] disabled:opacity-50"
+        >
+          <div className="text-2xl text-[#f97316]">＋</div>
+          <div className="mt-3 text-[16px] font-semibold">Create Activity</div>
         </button>
       </div>
     </section>

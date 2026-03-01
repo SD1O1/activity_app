@@ -36,14 +36,14 @@ export default function CategoriesRow() {
   };
 
   return (
-    <section className="pt-4">
+    <section className="pt-6">
       <h2 className="mb-3 text-[16px] font-semibold text-[#111827]">Browse Categories</h2>
-      <div className="flex gap-3 overflow-x-auto pb-1">
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
         {categories.map((category, index) => {
           const isActive = index === 0;
           return (
-            <button key={category.name} onClick={() => handleCategoryClick(category.name)} className="flex min-w-[60px] flex-col items-center gap-2">
-              <div className={`flex h-12 w-12 items-center justify-center rounded-full text-lg ${isActive ? "border-2 border-[#f97316] bg-white" : "bg-[#e9edf2] border border-transparent"}`}>
+            <button key={category.name} onClick={() => handleCategoryClick(category.name)} className="flex min-w-[56px] flex-col items-center gap-1.5">
+              <div className={`flex h-11 w-11 items-center justify-center rounded-full text-[18px] ${isActive ? "border-[2.5px] border-[#f97316] bg-[#fff7ed] ring-2 ring-[#fed7aa]" : "border border-transparent bg-[#e9edf2]"}`}>
                 {category.icon}
               </div>
               <span className={`text-[12px] font-medium ${isActive ? "text-[#f97316]" : "text-[#334155]"}`}>{category.name}</span>

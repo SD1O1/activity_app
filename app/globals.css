@@ -67,7 +67,7 @@
 
   .mobile-app-container {
     width: 100%;
-    max-width: 100%;
+    max-width: 1200px;
     min-height: 100vh;
     background: #fff;
     margin: 0 auto;
@@ -77,30 +77,15 @@
 
   @media (min-width: 768px) {
     .mobile-app-container {
-      max-width: 720px;
       padding-left: 24px;
       padding-right: 24px;
     }
   }
 
-  @media (min-width: 1024px) {
-    .mobile-app-container {
-      max-width: 1024px;
-      padding-left: 32px;
-      padding-right: 32px;
-    }
-  }
-
-  @media (min-width: 1280px) {
-    .mobile-app-container {
-      max-width: 1200px;
-    }
-  }
-
   .app-card {
     border-radius: 16px;
-    border: 1px solid rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.06);
     background: #fff;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
   }
 }

@@ -62,35 +62,37 @@ export default function HomePage() {
     <main className="mobile-app-container pb-8">
       <Header centerSlot={<span />} />
 
-      <section className="py-5 space-y-4">
-        <h1 className="text-[20px] md:text-[24px] font-semibold text-[#111827]">Find your next adventure</h1>
-        <button onClick={() => setOpenSearch(true)} className="h-11 w-full rounded-xl border border-black/10 bg-white px-4 text-left text-[14px] text-[#98a0b0]">
-          🔎 What do you want to do?
-        </button>
+      <section className="pt-6">
+        <div className="space-y-3">
+          <h1 className="text-[20px] font-semibold text-[#111827] md:text-[24px]">Find your next adventure</h1>
+          <button onClick={() => setOpenSearch(true)} className="h-11 w-full rounded-xl border border-black/10 bg-white px-4 text-left text-[14px] text-[#98a0b0]">
+            🔎 What do you want to do?
+          </button>
+        </div>
       </section>
 
       <CategoriesRow />
 
-      <section className="pt-5">
-        <div className="mb-3 flex items-center justify-between">
+      <section className="pt-6">
+        <div className="mb-4 flex items-center justify-between">
           <h2 className="text-[16px] font-semibold text-[#111827]">Activities Near You</h2>
-          <button className="text-[14px] font-semibold text-[#f97316]">See All</button>
+          <button className="text-[14px] font-medium text-[#f97316] transition hover:underline">See All</button>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {activities.map((activity, idx) => {
             const tags = activity.activity_tag_relations?.flatMap((rel) => (Array.isArray(rel.activity_tags) ? rel.activity_tags : [rel.activity_tags])).filter((tag): tag is ActivityTag => Boolean(tag)).map((tag) => tag.name).filter(Boolean) ?? [];
             const backgrounds = ["from-[#d7d8dc] to-[#111827]", "from-[#7f4a1d] to-[#201e1f]", "from-[#0e2940] to-[#0b0f1d]"];
 
             return (
-              <button key={activity.id} onClick={() => router.push(`/activity/${activity.id}`)} className={`w-full rounded-2xl bg-gradient-to-br p-4 text-left text-white shadow-sm ${backgrounds[idx % backgrounds.length]}`}>
+              <button key={activity.id} onClick={() => router.push(`/activity/${activity.id}`)} className={`flex h-full min-h-[200px] w-full flex-col rounded-2xl bg-gradient-to-br p-5 text-left text-white shadow-[0_10px_24px_rgba(15,23,42,0.2)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.24)] ${backgrounds[idx % backgrounds.length]}`}>
                 <div className="flex items-center justify-between text-[12px] opacity-90">
                   <span>{activity.host?.name || "Host"}</span>
                   <span>{activity.type === "group" ? "GROUP" : "1-ON-1"}</span>
                 </div>
-                <h3 className="mt-12 text-[24px] font-bold leading-tight">{activity.title}</h3>
-                <p className="mt-2 text-[13px] opacity-90">🕒 {new Date(activity.starts_at).toLocaleString()}</p>
-                <div className="mt-2 flex items-center justify-between text-[12px] opacity-90">
+                <h3 className="mt-10 text-[24px] font-semibold leading-tight">{activity.title}</h3>
+                  <p className="mt-3 text-[13px] opacity-90">🕒 {new Date(activity.starts_at).toLocaleString()}</p>
+                <div className="mt-3 flex items-center justify-between text-[12px] opacity-90">
                   <span>{tags.slice(0, 2).join(" • ") || "Meet nearby"}</span>
                   <span>{tags.length > 0 ? `${tags.length} TAGS` : "OPEN"}</span>
                 </div>
