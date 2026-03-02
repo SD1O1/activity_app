@@ -63,6 +63,8 @@ export default function ActivitiesPage() {
           public_lat,
           public_lng,
           host_id,
+          member_count,
+          max_members,
           activity_tag_relations (
             activity_tags (
               id,
@@ -188,6 +190,8 @@ export default function ActivitiesPage() {
     <ActivitiesPageView
       activities={activities}
       loading={loading}
+      timeFilter={time}
+      distanceFilter={distance}
     />
   );
 }
