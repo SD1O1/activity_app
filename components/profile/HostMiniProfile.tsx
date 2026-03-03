@@ -20,7 +20,7 @@ export default function HostMiniProfile({
     <>
       <div
         className={`rounded-full bg-gray-200 overflow-hidden ${
-          size === "sm" ? "h-8 w-8" : "h-10 w-10"
+          size === "sm" ? "h-12 w-12" : "h-14 w-14"
         }`}
       >
         {host.avatar_url && (
@@ -32,13 +32,13 @@ export default function HostMiniProfile({
         )}
       </div>
 
-      <div className="text-sm text-left">
-        <div className="flex items-center gap-1">
-          <span className="font-medium text-gray-900">{host.name ?? "Unknown"}</span>
-          {host.verified && <span className="text-xs text-blue-600">✓</span>}
+      <div className="text-left">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl font-semibold leading-tight text-neutral-900">{host.name ?? "Unknown"}</span>
+          {host.verified && <span className="text-lg text-blue-600">✓</span>}
         </div>
 
-        {host.username && <p className="text-xs text-gray-500">@{host.username}</p>}
+        <p className="text-base text-neutral-500">Host{host.username ? ` · @${host.username}` : ""}</p>
       </div>
     </>
   );
@@ -47,7 +47,7 @@ export default function HostMiniProfile({
     return (
       <Link
         href={`/u/${host.username}`}
-        className="flex items-center gap-3 cursor-pointer"
+        className="flex items-center gap-4 rounded-2xl bg-neutral-100 p-4"
         aria-label={`Open ${host.name ?? "host"} profile`}
       >
         {content}
@@ -55,5 +55,5 @@ export default function HostMiniProfile({
     );
   }
 
-  return <div className="flex items-center gap-3">{content}</div>;
+  return <div className="flex items-center gap-4 rounded-2xl bg-neutral-100 p-4">{content}</div>;
 }
