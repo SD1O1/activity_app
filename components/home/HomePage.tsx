@@ -1,37 +1,50 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
-import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import ActivityCard from "@/components/cards/ActivityCard";
 import CategoriesRow from "@/components/home/CategoriesRow";
 import HomeActions from "./HomeActions";
 import TrySomethingNew from "./TrySomethingNew";
 import SearchModal from "@/components/modals/SearchModal";
 import AuthModal from "@/components/modals/AuthModal";
+import Sidebar from "@/components/layout/Sidebar";
 import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
+import { useNotifications } from "@/components/notifications/NotificationContext";
+import { normalizeActivityTags } from "@/types/activity";
+
+type HomeActivity = {
+  id: string;
+  title: string;
+  type: "group" | "one-on-one";
+  starts_at: string;
+  location_name: string | null;
+  member_count: number | null;
+  max_members: number | null;
+  host_id: string;
+  activity_tag_relations: { activity_tags: { id: string; name: string } | { id: string; name: string }[] | null }[] | null;
+  host?: { id: string; name: string | null } | null;
+};
 
 export default function HomePage() {
   const router = useRouter();
+  const { unreadCount } = useNotifications();
 
   const [openSearch, setOpenSearch] = useState(false);
   const [openAuthModal, setOpenAuthModal] = useState(false);
-  const [activities, setActivities] = useState<any[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activities, setActivities] = useState<HomeActivity[]>([]);
 
-  const { user, profileCompleted, loading } =
-    useClientAuthProfile();
+  const { user, profileCompleted, loading } = useClientAuthProfile();
 
   useEffect(() => {
     const fetchActivities = async () => {
-      // 🔹 viewer (may be null)
       const {
         data: { user: viewer },
       } = await supabase.auth.getUser();
 
-      // 🔹 fetch activities
       let query = supabase
         .from("activities")
         .select(`
@@ -39,8 +52,9 @@ export default function HomePage() {
           title,
           type,
           starts_at,
-          public_lat,
-          public_lng,
+          location_name,
+          member_count,
+          max_members,
           host_id,
           activity_tag_relations (
             activity_tags (
@@ -51,12 +65,9 @@ export default function HomePage() {
         `)
         .eq("status", "open")
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(8);
 
-      // 🔹 HIDE OWN ACTIVITIES (INTENTIONAL)
-      if (viewer) {
-        query = query.neq("host_id", viewer.id);
-      }
+      if (viewer) query = query.neq("host_id", viewer.id);
 
       const { data: activityRows, error } = await query;
 
@@ -66,89 +77,112 @@ export default function HomePage() {
         return;
       }
 
-      // 🔹 collect host IDs
-      const hostIds = Array.from(
-        new Set(activityRows.map((a) => a.host_id))
+      const hostIds = Array.from(new Set(activityRows.map((a) => a.host_id)));
+      const { data: hosts } = await supabase.from("profiles").select("id, name").in("id", hostIds);
+
+      const hostMap = Object.fromEntries((hosts || []).map((h) => [h.id, h]));
+
+      setActivities(
+        (activityRows as HomeActivity[]).map((a) => ({
+          ...a,
+          host: hostMap[a.host_id] || null,
+        }))
       );
-
-      // 🔹 fetch host profiles
-      const { data: hosts } = await supabase
-        .from("profiles")
-        .select("id, username,name, avatar_url, dob, verified")
-        .in("id", hostIds);
-
-      const hostMap = Object.fromEntries(
-        (hosts || []).map((h) => [h.id, h])
-      );
-
-      // 🔹 attach host to activity
-      const enrichedActivities = activityRows.map((a) => ({
-        ...a,
-        host: hostMap[a.host_id] || null,
-      }));
-
-      setActivities(enrichedActivities);
     };
 
-    fetchActivities();
+    void fetchActivities();
   }, []);
 
+  const nearYou = useMemo(() => activities.slice(0, 3), [activities]);
+
   return (
-    <main className="min-h-screen bg-white">
-      <Header />
+    <main className="min-h-screen bg-neutral-100 pb-6">
+      <section className="mx-auto max-w-5xl px-4 pt-6 sm:px-6">
+        <div className="flex items-center justify-between">
+          <button onClick={() => setSidebarOpen(true)} className="grid h-12 w-12 place-items-center rounded-full border border-neutral-200 bg-white text-2xl shadow-sm">
+            ☰
+          </button>
 
-      {/* Search */}
-      <section className="px-4 py-6">
-        <h1 className="text-2xl font-bold">
-          Find your next adventure
-        </h1>
-
-        <div
-          onClick={() => setOpenSearch(true)}
-          className="mt-4 rounded-xl border px-4 py-3 text-gray-400 cursor-pointer"
-        >
-          What do you want to do?
+          <button
+            onClick={() => {
+              if (!user) {
+                setOpenAuthModal(true);
+                return;
+              }
+              router.push("/notifications");
+            }}
+            className="relative grid h-12 w-12 place-items-center rounded-full border border-amber-500 bg-white text-xl"
+            aria-label="Notifications"
+          >
+            🏆
+            {unreadCount > 0 && (
+              <span className="absolute -right-1 -top-1 grid h-5 min-w-[20px] place-items-center rounded-full bg-red-500 px-1 text-xs text-white">
+                {unreadCount}
+              </span>
+            )}
+          </button>
         </div>
+
+        <section className="mt-8">
+          <h1 className="text-6xl font-semibold leading-tight tracking-tight text-neutral-900 sm:text-7xl">
+            Find your next <span className="text-amber-500">adventure</span>
+          </h1>
+
+          <button
+            onClick={() => setOpenSearch(true)}
+            className="mt-5 flex w-full items-center gap-3 rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-left text-2xl text-neutral-400 shadow-sm"
+          >
+            <span>🔎</span>
+            <span>What do you want to do?</span>
+          </button>
+        </section>
       </section>
 
       <CategoriesRow />
 
-      {/* Activities */}
-      <section className="px-4">
-        <h2 className="mb-3 text-lg font-semibold">
-          Activities Near You
-        </h2>
+      <section className="mt-8 px-4 sm:px-6">
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-4xl font-semibold tracking-tight text-neutral-900">Activities Near You</h2>
+            <button onClick={() => router.push("/activities")} className="text-2xl font-medium text-amber-500">See All</button>
+          </div>
 
-        <div className="space-y-4">
-          {activities.map((activity) => {
-            const tags =
-              activity.activity_tag_relations?.map(
-                (rel: any) => rel.activity_tags
-              ) ?? [];
+          <div className="space-y-4">
+            {nearYou.map((activity) => {
+              const tags = normalizeActivityTags(activity.activity_tag_relations);
+              const primaryTag = tags[0]?.name ?? (activity.type === "group" ? "Group" : "1-on-1");
+              const timeLabel = new Date(activity.starts_at).toLocaleString(undefined, {
+                weekday: "short",
+                hour: "numeric",
+                minute: "2-digit",
+              });
 
-            return (
-              <ActivityCard
-                key={activity.id}
-                title={activity.title}
-                subtitle={activity.category}
-                distance="Nearby"
-                time={new Date(activity.starts_at).toLocaleString()}
-                type={activity.type}
-                tags={tags}
-                host={activity.host}
-                onClick={() =>
-                  router.push(`/activity/${activity.id}`)
-                }
-              />
-            );
-          })}
+              const joined = typeof activity.member_count === "number" ? activity.member_count : 0;
+
+              return (
+                <button
+                  key={activity.id}
+                  onClick={() => router.push(`/activity/${activity.id}`)}
+                  className="w-full rounded-3xl border border-neutral-200 bg-white p-4 text-left shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-3xl font-semibold text-neutral-900">{activity.title}</h3>
+                      <p className="mt-1 text-xl text-neutral-500">{activity.location_name || "Location shared after joining"}</p>
+                    </div>
+                    <span className="rounded-full bg-neutral-100 px-3 py-1 text-sm text-neutral-500">{primaryTag}</span>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between text-xl">
+                    <span className="text-amber-500">🕒 {timeLabel}</span>
+                    <span className="text-neutral-500">👥 {joined} joined</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
-
-      <SearchModal
-        open={openSearch}
-        onClose={() => setOpenSearch(false)}
-      />
 
       <HomeActions
         user={user}
@@ -161,10 +195,11 @@ export default function HomePage() {
       <TrySomethingNew />
       <Footer />
 
-      <AuthModal
-        open={openAuthModal}
-        onClose={() => setOpenAuthModal(false)}
-      />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} isLoggedIn={Boolean(user)} />
+
+      <SearchModal open={openSearch} onClose={() => setOpenSearch(false)} />
+
+      <AuthModal open={openAuthModal} onClose={() => setOpenAuthModal(false)} />
     </main>
   );
 }

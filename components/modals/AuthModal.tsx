@@ -44,13 +44,12 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
     };
   };
 
-  /* -------------------- email auth -------------------- */
   const handleEmailAuth = async () => {
     setLoading(true);
     setError(null);
     setInfo(null);
 
-    const { data, error } =
+    const { data, error: authError } =
       mode === "login"
         ? await supabase.auth.signInWithPassword({
             email: email.trim().toLowerCase(),
@@ -66,12 +65,11 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
 
     setLoading(false);
 
-    if (error) {
-      setError(error.message);
+    if (authError) {
+      setError(authError.message);
       return;
     }
 
-    // ✅ NEW: redirect immediately after signup
     if (mode === "signup" && data.user) {
       showToast("Account created. Let's finish your profile.", "success");
       onClose();
@@ -83,13 +81,12 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
     onClose();
   };
 
-  /* -------------------- social auth -------------------- */
   const handleOAuth = async (provider: "google" | "facebook") => {
     setLoading(true);
     setError(null);
     setInfo(null);
 
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo: `${window.location.origin}/onboarding/profile`,
@@ -98,53 +95,49 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
 
     setLoading(false);
 
-    if (error) {
-      setError(error.message);
-    }
+    if (oauthError) setError(oauthError.message);
   };
 
-  /* -------------------- render -------------------- */
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-sm rounded-xl bg-white p-6">
-        <h2 className="text-lg font-semibold mb-4 text-center">
-          {mode === "login" ? "Log in to your account" : "Create an account"}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+      <div className="w-full max-w-md rounded-[2rem] bg-neutral-100 p-6 shadow-2xl">
+        <h2 className="text-center text-5xl font-semibold tracking-tight text-slate-900">
+          {mode === "login" ? "Log in to your account" : "Create your account"}
         </h2>
 
-        {/* ---------- social auth ---------- */}
-        <div className="space-y-2 mb-4">
+        <div className="mt-6 space-y-3">
           <button
             onClick={() => handleOAuth("google")}
             disabled={loading}
-            className="w-full rounded-lg border py-2 text-sm font-medium"
+            className="w-full rounded-full border-4 border-amber-500 bg-white py-3 text-2xl font-semibold text-amber-600 disabled:opacity-60"
           >
-            Continue with Google
+            G Continue with Google
           </button>
 
           <button
             onClick={() => handleOAuth("facebook")}
             disabled={loading}
-            className="w-full rounded-lg border py-2 text-sm font-medium"
+            className="w-full rounded-[1.75rem] border-4 border-amber-500 bg-white py-3 text-2xl font-semibold text-amber-600 disabled:opacity-60"
           >
-            Continue with Facebook / Instagram
+            f Continue with Facebook / Instagram
           </button>
         </div>
 
-        <div className="my-4 text-center text-xs text-gray-400">
-          or continue with email
+        <div className="my-6 flex items-center gap-3 text-neutral-500">
+          <span className="h-px flex-1 bg-neutral-300" />
+          <span className="text-xl">or continue with email</span>
+          <span className="h-px flex-1 bg-neutral-300" />
         </div>
 
-        {/* ---------- email auth ---------- */}
         <input
           type="email"
           placeholder="Email address"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-lg border px-3 py-2 mb-3 text-sm"
+          className="w-full rounded-full border border-neutral-300 bg-white px-5 py-3 text-2xl text-neutral-700"
         />
 
-
-        <p className="mb-2 text-xs text-gray-500">
+        <p className="mt-3 text-lg text-neutral-500">
           Your email is private and used only for login and account recovery.
         </p>
 
@@ -153,58 +146,37 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-lg border px-3 py-2 mb-2 text-sm"
+          className="mt-4 w-full rounded-full border border-neutral-300 bg-white px-5 py-3 text-2xl text-neutral-700"
         />
 
         {mode === "signup" && !isPasswordValid && (
-          <p className="text-xs text-gray-500 mb-2">
-            Password must be at least 8 characters
-          </p>
+          <p className="mt-2 text-sm text-neutral-500">Password must be at least 8 characters</p>
         )}
 
-        {error && (
-          <p className="text-sm text-red-500 mb-2">{error}</p>
-        )}
-
-        {info && (
-          <p className="text-sm text-green-600 mb-2">{info}</p>
-        )}
+        {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
+        {info && <p className="mt-2 text-sm text-green-600">{info}</p>}
 
         <button
           onClick={handleEmailAuth}
-          disabled={
-            loading ||
-            !email ||
-            !password ||
-            (mode === "signup" && !isPasswordValid)
-          }
-          className="w-full rounded-lg bg-black py-2 text-white text-sm font-semibold disabled:opacity-50"
+          disabled={loading || !email || !password || (mode === "signup" && !isPasswordValid)}
+          className="mt-5 w-full rounded-full bg-amber-500 py-4 text-3xl font-semibold text-white shadow disabled:opacity-50"
         >
-          {loading
-            ? "Please wait..."
-            : mode === "login"
-            ? "Log In"
-            : "Create Account"}
+          {loading ? "Please wait..." : mode === "login" ? "Log In" : "Create Account"}
         </button>
 
-        {/* ---------- switch mode ---------- */}
         <button
           onClick={() => {
             setMode(mode === "login" ? "signup" : "login");
             setError(null);
             setInfo(null);
           }}
-          className="mt-3 text-sm text-gray-600"
+          className="mt-5 w-full text-center text-2xl text-neutral-600"
         >
-          {mode === "login"
-            ? "New here? Create an account"
-            : "Already have an account? Log in"}
+          {mode === "login" ? "New here? " : "Already have an account? "}
+          <span className="font-semibold text-amber-600">{mode === "login" ? "Create an account" : "Log in"}</span>
         </button>
 
-        <button
-          onClick={onClose}
-          className="mt-4 block w-full text-center text-sm text-gray-400"
-        >
+        <button onClick={onClose} className="mt-4 w-full text-center text-2xl text-neutral-400">
           Cancel
         </button>
       </div>
