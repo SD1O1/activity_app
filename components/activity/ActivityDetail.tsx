@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import Header from "@/components/layout/Header";
 import JoinRequestModal from "@/components/modals/JoinRequestModal";
 import HostReviewModal from "@/components/modals/HostReviewModal";
 import ChatModal from "@/components/modals/chat/ChatModal";
@@ -142,32 +141,34 @@ export default function ActivityDetail({ activity }: Props) {
   const lng = showExactMap && activity.exact_lng != null ? activity.exact_lng : activity.public_lng ?? activity.exact_lng;
 
   return (
-    <main className="min-h-screen bg-white">
-      <Header
-        rightSlot={
-          <ActivityActionsMenu
-            isHost={viewerRole === "host"}
-            onEdit={() => setOpenEdit(true)}
-            canLeaveActivity={viewerRole !== "host" && joinStatus === "approved" && activity.status !== "completed"}
-            onLeaveActivity={handleLeaveActivity}
-            onDelete={async () => {
-              const res = await fetch(`/api/activities/${activity.id}/delete`, {
-                method: "POST",
-              });
+    <main className="min-h-screen bg-neutral-50">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-neutral-200 bg-neutral-50/95 px-4 backdrop-blur-sm">
+        <button onClick={() => router.back()} aria-label="Go back" className="text-2xl text-neutral-800">
+          ←
+        </button>
+        <h2 className="text-xl font-semibold text-neutral-900 sm:text-2xl">Activity Details</h2>
+        <ActivityActionsMenu
+          isHost={viewerRole === "host"}
+          onEdit={() => setOpenEdit(true)}
+          canLeaveActivity={viewerRole !== "host" && joinStatus === "approved" && activity.status !== "completed"}
+          onLeaveActivity={handleLeaveActivity}
+          onDelete={async () => {
+            const res = await fetch(`/api/activities/${activity.id}/delete`, {
+              method: "POST",
+            });
 
-              if (!res.ok) {
-                const payload = await res.json().catch(() => ({} as { error?: string }));
-                showToast(payload.error || "Failed to delete activity", "error");
-                return;
-              }
+            if (!res.ok) {
+              const payload = await res.json().catch(() => ({} as { error?: string }));
+              showToast(payload.error || "Failed to delete activity", "error");
+              return;
+            }
 
-              showToast("Activity deleted", "success");
-              router.replace("/activities");
-            }}
-            onReport={() => setOpenReport(true)}
-          />
-        }
-      />
+            showToast("Activity deleted", "success");
+            router.replace("/activities");
+          }}
+          onReport={() => setOpenReport(true)}
+        />
+      </header>
 
       <ActivityHeader title={activity.title} type={activity.type} tags={tags} />
 
@@ -186,9 +187,21 @@ export default function ActivityDetail({ activity }: Props) {
         lng={activity.public_lng}
       />
 
-      <ActivityLocationMap lat={Number(lat)} lng={Number(lng)} blurred={!showExactMap} />
+      <ActivityLocationMap lat={Number(lat)} lng={Number(lng)} locationName={activity.location_name} blurred={!showExactMap} />
 
       <ActivityAbout description={activity.description} />
+
+      <ParticipantsRow
+        participants={participants}
+        currentUserId={user?.id}
+        isHost={user?.id === activity.host_id}
+        isJoined={joinStatus === "approved"}
+        onOpenProfile={(participant) => {
+          if (!participant.username) return;
+          router.push(`/u/${participant.username}`);
+        }}
+        onRemove={handleRemove}
+      />
 
       <ActivityActions
         viewerRole={viewerRole}
@@ -232,18 +245,6 @@ export default function ActivityDetail({ activity }: Props) {
       {canOpenChat && (
         <ChatModal open={openChat} activityId={activity.id} onClose={() => setOpenChat(false)} onChatClosed={checkUnread} />
       )}
-
-<ParticipantsRow
-        participants={participants}
-        currentUserId={user?.id}
-        isHost={user?.id === activity.host_id}
-        isJoined={joinStatus === "approved"}
-        onOpenProfile={(participant) => {
-          if (!participant.username) return;
-          router.push(`/u/${participant.username}`);
-        }}
-        onRemove={handleRemove}
-      />
 
       <AuthModal open={openAuth} onClose={() => setOpenAuth(false)} />
 

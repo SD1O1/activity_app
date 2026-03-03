@@ -27,7 +27,7 @@ function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
-export default function ActivityMeta({ startsAt, location, costRule, memberCount, maxMembers, showMemberProgress = true, lat, lng }: Props) {
+export default function ActivityMeta({ startsAt, costRule, memberCount, maxMembers, showMemberProgress = true, lat, lng }: Props) {
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [distanceError, setDistanceError] = useState(
     typeof navigator !== "undefined" ? !navigator.geolocation : false
@@ -48,24 +48,48 @@ export default function ActivityMeta({ startsAt, location, costRule, memberCount
     );
   }, [lat, lng]);
 
+  const eventDate = new Date(startsAt);
+
   return (
-    <section className="mt-6 px-4 space-y-2 text-sm text-gray-700">
-      <p>🕒 {new Date(startsAt).toLocaleString()}</p>
-      <p>📍 {location}</p>
+    <section className="mt-6 px-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <InfoCard icon="📅" label="Date" value={eventDate.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} />
+        <InfoCard icon="🕙" label="Time" value={eventDate.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })} />
+        <InfoCard icon="💸" label="Cost" value={costRule} />
+        {showMemberProgress && typeof memberCount === "number" && typeof maxMembers === "number" ? (
+          <InfoCard icon="👥" label="Group Activity" value={`${memberCount}/${maxMembers} joined`} />
+        ) : (
+          <InfoCard icon="🙋" label="Activity Type" value="Private" />
+        )}
+      </div>
 
-      {showMemberProgress && typeof memberCount === "number" && typeof maxMembers === "number" && (
-        <p>
-          👥 {memberCount} / {maxMembers} joined
+      {(lat != null && lng != null) && (
+        <p className="mt-3 text-sm text-neutral-500">
+          {distanceKm != null
+            ? `About ${distanceKm.toFixed(1)} km away from your location`
+            : distanceError
+            ? "Distance unavailable"
+            : "Calculating distance..."}
         </p>
       )}
-
-      {lat != null && lng != null && (
-        <p>
-          📏 {distanceKm != null ? `${distanceKm.toFixed(1)} km away` : distanceError ? "Distance unavailable" : "Calculating distance…"}
-        </p>
-      )}
-
-      <p>💸 {costRule}</p>
     </section>
+  );
+}
+
+type CardProps = {
+  icon: string;
+  label: string;
+  value: string;
+};
+
+function InfoCard({ icon, label, value }: CardProps) {
+  return (
+    <div className="rounded-2xl bg-neutral-100 p-4">
+      <div className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-sm">
+        {icon}
+      </div>
+      <p className="text-sm text-neutral-500">{label}</p>
+      <p className="text-xl font-semibold leading-tight text-neutral-900">{value}</p>
+    </div>
   );
 }
