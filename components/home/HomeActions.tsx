@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { User } from "@supabase/supabase-js";
 
 type HomeActionsProps = {
   onOpenSearch: () => void;
-  user: any | null;
+  user: User | null;
   profileCompleted: boolean;
   loading: boolean;
   openAuthModal: () => void;
@@ -36,21 +37,23 @@ export default function HomeActions({
   };
 
   return (
-    <section className="px-4 mt-6">
-      <div className="grid grid-cols-2 gap-4">
+    <section className="mt-8 px-4 sm:px-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <button
           onClick={onOpenSearch}
-          className="rounded-xl bg-black py-4 text-white font-medium"
+          className="rounded-3xl bg-slate-950 px-6 py-8 text-left text-white shadow"
         >
-          🔍 Find an Activity
+          <div className="text-4xl">🔎</div>
+          <p className="mt-3 text-2xl font-semibold">FIND ACTIVITY</p>
         </button>
 
         <button
           onClick={handleCreate}
           disabled={loading}
-          className="rounded-xl border py-4 font-medium disabled:opacity-50"
+          className="rounded-3xl border border-neutral-200 bg-white px-6 py-8 text-left shadow-sm disabled:opacity-60"
         >
-          ➕ Create Activity
+          <div className="text-4xl text-amber-500">＋</div>
+          <p className="mt-3 text-2xl font-semibold text-neutral-900">CREATE ACTIVITY</p>
         </button>
       </div>
     </section>
