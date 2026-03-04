@@ -13,39 +13,31 @@ type Props = {
 };
 
 export default function ChatModal({ open, onClose, activityId, onChatClosed }: Props) {
-  const {
-    messages,
-    text,
-    setText,
-    send,
-    isOtherTyping,
-    bottomRef,
-    getMessageStatusText,
-    myId,
-    participants,
-    sendError,
-  } = useChat(open, activityId);
+  const { messages, text, setText, send, isOtherTyping, bottomRef, getMessageStatusText, myId, participants, sendError } = useChat(open, activityId);
 
   if (!open) return null;
 
   const otherParticipant = participants.find((p) => p.user_id !== myId);
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/35 p-0 sm:p-4">
-      <div className="mx-auto flex h-full w-full max-w-2xl flex-col rounded-none bg-neutral-100 sm:h-[92vh] sm:rounded-[2rem] sm:shadow-2xl">
-        <div className="mx-auto mt-2 h-2 w-20 rounded-full bg-neutral-300 sm:hidden" />
+    <div className="fixed inset-0 z-50 flex items-end bg-black/40 backdrop-blur-[2px]">
+      <div className="flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-white sm:mx-auto sm:max-w-md">
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="h-1.5 w-10 rounded-full bg-gray-300" />
+        </div>
 
-        <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <div>
-            <h2 className="text-5xl font-semibold tracking-tight text-slate-900">Activity Chat</h2>
-            <p className="text-2xl text-neutral-500">{otherParticipant?.username ? `with @${otherParticipant.username}` : "Stay connected"}</p>
+            <h2 className="text-xl font-bold text-gray-900">Activity Chat</h2>
+            <p className="text-sm text-gray-500">{otherParticipant?.username ? `with @${otherParticipant.username}` : "Stay connected"}</p>
           </div>
           <button
             onClick={() => {
               onClose();
               onChatClosed?.();
             }}
-            className="grid h-12 w-12 place-items-center rounded-full bg-neutral-200 text-4xl text-neutral-600"
+            className="grid h-8 w-8 place-items-center rounded-full bg-gray-100 text-gray-500"
+            aria-label="Close chat"
           >
             ✕
           </button>

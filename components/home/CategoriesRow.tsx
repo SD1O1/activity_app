@@ -11,13 +11,10 @@ type Tag = {
 
 const categories = [
   { name: "Walk", icon: "🚶", color: "bg-orange-100 text-orange-500" },
-  { name: "Gym", icon: "🏋️", color: "bg-blue-100 text-blue-500" },
+  { name: "Gym", icon: "🏋️", color: "bg-blue-100 text-blue-600" },
   { name: "Coffee", icon: "☕", color: "bg-emerald-100 text-emerald-600" },
   { name: "Work", icon: "💼", color: "bg-purple-100 text-purple-600" },
-  { name: "Sports", icon: "⚽", color: "bg-yellow-100 text-yellow-600" },
-  { name: "Music", icon: "🎵", color: "bg-pink-100 text-pink-600" },
-  { name: "Yoga", icon: "🧘", color: "bg-lime-100 text-lime-600" },
-  { name: "Food", icon: "🍜", color: "bg-rose-100 text-rose-600" },
+  { name: "More", icon: "⋯", color: "bg-slate-100 text-slate-500" },
 ];
 
 export default function CategoriesRow() {
@@ -34,6 +31,10 @@ export default function CategoriesRow() {
   }, []);
 
   const handleCategoryClick = (categoryName: string) => {
+    if (categoryName === "More") {
+      router.push("/activities");
+      return;
+    }
     const tag = tags.find((t) => t.name.toLowerCase() === categoryName.toLowerCase());
     if (!tag) return;
     router.push(`/activities?tag=${tag.id}`);
@@ -41,21 +42,17 @@ export default function CategoriesRow() {
 
   return (
     <section className="mt-8 px-4 sm:px-6">
-      <h2 className="mb-4 text-4xl font-semibold tracking-tight text-neutral-900">Browse Categories</h2>
+      <div className="mx-auto max-w-5xl">
+        <h2 className="mb-4 text-[2.1rem] font-bold tracking-tight text-neutral-900 sm:text-3xl">Browse Categories</h2>
 
-      <div className="flex gap-5 overflow-x-auto pb-2">
-        {categories.map((category) => (
-          <button
-            key={category.name}
-            onClick={() => handleCategoryClick(category.name)}
-            className="flex min-w-[78px] flex-col items-center"
-          >
-            <div className={`grid h-16 w-16 place-items-center rounded-full text-2xl ${category.color}`}>
-              {category.icon}
-            </div>
-            <span className="mt-2 text-lg text-neutral-700">{category.name}</span>
-          </button>
-        ))}
+        <div className="flex gap-5 overflow-x-auto pb-2">
+          {categories.map((category) => (
+            <button key={category.name} onClick={() => handleCategoryClick(category.name)} className="flex min-w-[74px] flex-col items-center">
+              <div className={`grid h-16 w-16 place-items-center rounded-full text-2xl ${category.color}`}>{category.icon}</div>
+              <span className="mt-2 text-lg text-slate-700">{category.name}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </section>
   );
