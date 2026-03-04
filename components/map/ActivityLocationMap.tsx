@@ -12,12 +12,7 @@ type Props = {
   blurred?: boolean;
 };
 
-export default function ActivityLocationMap({
-  lat,
-  lng,
-  locationName,
-  blurred = false,
-}: Props) {
+export default function ActivityLocationMap({ lat, lng, locationName, blurred = false }: Props) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapRefInstance = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
@@ -29,16 +24,12 @@ export default function ActivityLocationMap({
       container: mapRef.current,
       style: "mapbox://styles/mapbox/streets-v12",
       center: [lng, lat],
-      zoom: blurred ? 12 : 15,
+      zoom: blurred ? 12 : 14,
       interactive: !blurred,
     });
 
     if (!blurred) {
-      markerRef.current = new mapboxgl.Marker({
-        color: "#f59e0b",
-      })
-        .setLngLat([lng, lat])
-        .addTo(mapRefInstance.current);
+      markerRef.current = new mapboxgl.Marker({ color: "#ea8b22" }).setLngLat([lng, lat]).addTo(mapRefInstance.current);
     }
 
     return () => {
@@ -49,16 +40,26 @@ export default function ActivityLocationMap({
     };
   }, [lat, lng, blurred]);
 
-  return (
-    <section className="mt-10 px-4">
-      <h2 className="text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl">Location</h2>
-      {locationName && <p className="mt-2 text-base text-neutral-500 sm:text-lg">📍 {locationName}</p>}
+  const [title, ...rest] = (locationName ?? "").split(",");
 
-      <div className="relative mt-4 h-[220px] overflow-hidden rounded-2xl sm:h-[280px]">
+  return (
+    <section className="mt-9 px-4 sm:px-5">
+      <h2 className="text-4xl font-semibold tracking-tight text-neutral-900 sm:text-[2rem]">Location</h2>
+      {locationName && (
+        <div className="mt-2 flex items-start gap-2 text-slate-500">
+          <span className="mt-0.5">📍</span>
+          <div>
+            <p className="text-xl font-medium text-slate-700">{title}</p>
+            {rest.length > 0 && <p className="text-xl">{rest.join(",").trim()}</p>}
+          </div>
+        </div>
+      )}
+
+      <div className="relative mt-4 h-[220px] overflow-hidden rounded-2xl border border-neutral-200 sm:h-[280px]">
         <div ref={mapRef} className={`h-full w-full ${blurred ? "blur-sm" : ""}`} />
 
         {blurred && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/50 px-4 text-center text-sm text-gray-700">
+          <div className="absolute inset-0 flex items-center justify-center bg-white/55 px-4 text-center text-sm text-gray-700">
             Approximate location · Exact spot shared after approval
           </div>
         )}

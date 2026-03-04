@@ -67,7 +67,7 @@ export default function ActivityDetail({ activity }: Props) {
     };
 
     void loadParticipants();
-  }, [activity.id]);
+  }, [activity.id, showToast]);
 
   const tags = normalizeActivityTags(activity.activity_tag_relations);
 
@@ -96,10 +96,7 @@ export default function ActivityDetail({ activity }: Props) {
     const res = await fetch("/api/activities/remove-member", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        activityId: activity.id,
-        userId,
-      }),
+      body: JSON.stringify({ activityId: activity.id, userId }),
     });
 
     if (!res.ok) {
@@ -116,10 +113,7 @@ export default function ActivityDetail({ activity }: Props) {
     const res = await fetch("/api/activities/remove-member", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        activityId: activity.id,
-        userId: user.id,
-      }),
+      body: JSON.stringify({ activityId: activity.id, userId: user.id }),
     });
 
     if (!res.ok) {
@@ -141,67 +135,69 @@ export default function ActivityDetail({ activity }: Props) {
   const lng = showExactMap && activity.exact_lng != null ? activity.exact_lng : activity.public_lng ?? activity.exact_lng;
 
   return (
-    <main className="min-h-screen bg-neutral-50">
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-neutral-200 bg-neutral-50/95 px-4 backdrop-blur-sm">
-        <button onClick={() => router.back()} aria-label="Go back" className="text-2xl text-neutral-800">
-          ←
-        </button>
-        <h2 className="text-xl font-semibold text-neutral-900 sm:text-2xl">Activity Details</h2>
-        <ActivityActionsMenu
-          isHost={viewerRole === "host"}
-          onEdit={() => setOpenEdit(true)}
-          canLeaveActivity={viewerRole !== "host" && joinStatus === "approved" && activity.status !== "completed"}
-          onLeaveActivity={handleLeaveActivity}
-          onDelete={async () => {
-            const res = await fetch(`/api/activities/${activity.id}/delete`, {
-              method: "POST",
-            });
+    <main className="min-h-screen bg-[#f3f3f4]">
+      <header className="sticky top-0 z-30 border-b border-neutral-200 bg-[#f7f7f7]/95 backdrop-blur-sm">
+        <div className="mx-auto flex h-16 w-full max-w-3xl items-center justify-between px-4 sm:px-5">
+          <button onClick={() => router.back()} aria-label="Go back" className="text-2xl text-neutral-900">
+            ←
+          </button>
+          <h2 className="text-2xl font-semibold text-neutral-900 sm:text-3xl">Activity Details</h2>
+          <ActivityActionsMenu
+            isHost={viewerRole === "host"}
+            onEdit={() => setOpenEdit(true)}
+            canLeaveActivity={viewerRole !== "host" && joinStatus === "approved" && activity.status !== "completed"}
+            onLeaveActivity={handleLeaveActivity}
+            onDelete={async () => {
+              const res = await fetch(`/api/activities/${activity.id}/delete`, { method: "POST" });
 
-            if (!res.ok) {
-              const payload = await res.json().catch(() => ({} as { error?: string }));
-              showToast(payload.error || "Failed to delete activity", "error");
-              return;
-            }
+              if (!res.ok) {
+                const payload = await res.json().catch(() => ({} as { error?: string }));
+                showToast(payload.error || "Failed to delete activity", "error");
+                return;
+              }
 
-            showToast("Activity deleted", "success");
-            router.replace("/activities");
-          }}
-          onReport={() => setOpenReport(true)}
-        />
+              showToast("Activity deleted", "success");
+              router.replace("/activities");
+            }}
+            onReport={() => setOpenReport(true)}
+          />
+        </div>
       </header>
 
-      <ActivityHeader title={activity.title} type={activity.type} tags={tags} />
+      <div className="mx-auto w-full max-w-3xl pb-6">
+        <ActivityHeader title={activity.title} type={activity.type} tags={tags} />
 
-      <div className="px-4 mt-4">
-        {activity.host && <HostMiniProfile host={activity.host} clickable size="md" />}
+        <div className="mt-5 px-4 sm:px-5">{activity.host && <HostMiniProfile host={activity.host} clickable size="md" />}</div>
+
+        <ActivityMeta
+          startsAt={activity.starts_at}
+          location={activity.location_name}
+          costRule={activity.cost_rule}
+          memberCount={activity.member_count}
+          maxMembers={activity.max_members}
+          showMemberProgress={activity.type === "group"}
+          lat={activity.public_lat}
+          lng={activity.public_lng}
+        />
+
+        {lat != null && lng != null && (
+          <ActivityLocationMap lat={Number(lat)} lng={Number(lng)} locationName={activity.location_name} blurred={!showExactMap} />
+        )}
+
+        <ActivityAbout description={activity.description} />
+
+        <ParticipantsRow
+          participants={participants}
+          currentUserId={user?.id}
+          isHost={user?.id === activity.host_id}
+          isJoined={joinStatus === "approved"}
+          onOpenProfile={(participant) => {
+            if (!participant.username) return;
+            router.push(`/u/${participant.username}`);
+          }}
+          onRemove={handleRemove}
+        />
       </div>
-
-      <ActivityMeta
-        startsAt={activity.starts_at}
-        location={activity.location_name}
-        costRule={activity.cost_rule}
-        memberCount={activity.member_count}
-        maxMembers={activity.max_members}
-        showMemberProgress={activity.type === "group"}
-        lat={activity.public_lat}
-        lng={activity.public_lng}
-      />
-
-      <ActivityLocationMap lat={Number(lat)} lng={Number(lng)} locationName={activity.location_name} blurred={!showExactMap} />
-
-      <ActivityAbout description={activity.description} />
-
-      <ParticipantsRow
-        participants={participants}
-        currentUserId={user?.id}
-        isHost={user?.id === activity.host_id}
-        isJoined={joinStatus === "approved"}
-        onOpenProfile={(participant) => {
-          if (!participant.username) return;
-          router.push(`/u/${participant.username}`);
-        }}
-        onRemove={handleRemove}
-      />
 
       <ActivityActions
         viewerRole={viewerRole}
@@ -236,15 +232,9 @@ export default function ActivityDetail({ activity }: Props) {
         }}
       />
 
-      <HostReviewModal
-        open={openReview}
-        onClose={() => setOpenReview(false)}
-        onResolved={computeJoinStatus}
-      />
+      <HostReviewModal open={openReview} onClose={() => setOpenReview(false)} onResolved={computeJoinStatus} />
 
-      {canOpenChat && (
-        <ChatModal open={openChat} activityId={activity.id} onClose={() => setOpenChat(false)} onChatClosed={checkUnread} />
-      )}
+      {canOpenChat && <ChatModal open={openChat} activityId={activity.id} onClose={() => setOpenChat(false)} onChatClosed={checkUnread} />}
 
       <AuthModal open={openAuth} onClose={() => setOpenAuth(false)} />
 
