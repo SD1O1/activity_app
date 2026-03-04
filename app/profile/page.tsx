@@ -1,6 +1,5 @@
 "use client";
 
-import Header from "@/components/layout/Header";
 import ProfileView from "@/components/profile/ProfileView";
 import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
 import { useRouter } from "next/navigation";
@@ -22,10 +21,5 @@ export default function ProfilePage() {
     return <AuthModal open={shouldOpenAuth} onClose={() => router.push("/")} />;
   }
 
-  return (
-    <main className="min-h-screen bg-white">
-      <Header />
-      <ProfileView />
-    </main>
-  );
+  return <ProfileView />;
 }

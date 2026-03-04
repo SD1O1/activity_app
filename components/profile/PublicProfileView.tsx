@@ -25,6 +25,13 @@ function getAge(dob: string | null) {
   return age;
 }
 
+function getActivityIcon(type: "group" | "one-on-one", status: string) {
+  if (status === "completed") return { icon: "🎬", box: "bg-purple-100 text-purple-600" };
+  return type === "group"
+    ? { icon: "☕", box: "bg-orange-100 text-[#ee8c2b]" }
+    : { icon: "🏋️", box: "bg-blue-100 text-blue-600" };
+}
+
 interface PublicProfileViewProps {
   username: string;
 }
@@ -38,7 +45,8 @@ export async function PublicProfileView({ username }: PublicProfileViewProps) {
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select(`
+    .select(
+      `
       id,
       username,
       name,
@@ -50,7 +58,8 @@ export async function PublicProfileView({ username }: PublicProfileViewProps) {
       verified,
       phone_verified,
       created_at
-    `)
+    `
+    )
     .eq("username", username)
     .single();
 
@@ -73,22 +82,14 @@ export async function PublicProfileView({ username }: PublicProfileViewProps) {
   const age = getAge(profile.dob);
 
   const [{ count: hostedCount }, { count: joinedCount }] = await Promise.all([
-    supabase
-      .from("activities")
-      .select("id", { count: "exact", head: true })
-      .eq("host_id", profile.id)
-      .not("status", "eq", "deleted"),
-
-    supabase
-      .from("activity_members")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", profile.id)
-      .eq("status", "active"),
+    supabase.from("activities").select("id", { count: "exact", head: true }).eq("host_id", profile.id).not("status", "eq", "deleted"),
+    supabase.from("activity_members").select("id", { count: "exact", head: true }).eq("user_id", profile.id).eq("status", "active"),
   ]);
 
   const { data: hostedActivities } = await supabase
     .from("activities")
-    .select(`
+    .select(
+      `
       id,
       title,
       type,
@@ -97,7 +98,8 @@ export async function PublicProfileView({ username }: PublicProfileViewProps) {
       status,
       public_lat,
       public_lng
-    `)
+    `
+    )
     .eq("host_id", profile.id)
     .not("status", "eq", "deleted")
     .order("starts_at", { ascending: true })
@@ -105,7 +107,7 @@ export async function PublicProfileView({ username }: PublicProfileViewProps) {
 
   return (
     <main className="min-h-screen bg-neutral-100 pb-12">
-      <section className="mx-auto w-full max-w-4xl px-4 py-5 sm:px-6">
+      <section className="mx-auto w-full max-w-3xl px-4 pb-8 sm:px-6">
         <PublicProfileHeader
           name={profile.name}
           age={age}
@@ -121,56 +123,57 @@ export async function PublicProfileView({ username }: PublicProfileViewProps) {
         {profile.interests && profile.interests.length > 0 && (
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             {profile.interests.map((interest: string, index: number) => (
-              <span
-                key={interest}
-                className={`rounded-full px-4 py-1.5 text-sm font-semibold ${INTEREST_STYLES[index % INTEREST_STYLES.length]}`}
-              >
+              <span key={interest} className={`rounded-full px-4 py-1.5 text-sm font-bold ${INTEREST_STYLES[index % INTEREST_STYLES.length]}`}>
                 {interest}
               </span>
             ))}
           </div>
         )}
 
-        {profile.bio && (
-          <p className="mx-auto mt-4 max-w-2xl text-center text-xl leading-relaxed text-neutral-600 sm:text-2xl">
-            {profile.bio}
-          </p>
-        )}
+        {profile.bio && <p className="mx-auto mt-4 max-w-2xl text-center text-xl leading-relaxed text-slate-600 sm:text-2xl">{profile.bio}</p>}
 
         <div className="mt-8">
           <ProfileCredibility hostedCount={hostedCount ?? 0} joinedCount={joinedCount ?? 0} />
         </div>
 
-        <section className="mt-8 border-b border-neutral-200 pb-3">
-          <h2 className="text-2xl font-semibold text-neutral-900">Hosted Activities</h2>
+        <section className="mt-8 border-b border-neutral-200">
+          <div className="grid grid-cols-2">
+            <div className="border-b-[3px] border-[#ee8c2b] py-3 text-center text-[2rem] font-bold text-slate-900 sm:text-[1.6rem]">Hosting</div>
+            <div className="border-b-[3px] border-transparent py-3 text-center text-[2rem] font-bold text-slate-400 sm:text-[1.6rem]">Joined</div>
+          </div>
         </section>
 
-        <section className="mt-4 space-y-3">
+        <section className="mt-4 space-y-4">
           {!hostedActivities || hostedActivities.length === 0 ? (
-            <p className="rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-500">
-              No activities hosted yet.
-            </p>
+            <p className="rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-500">No activities hosted yet.</p>
           ) : (
             hostedActivities.map((activity) => {
+              const activityTheme = getActivityIcon(activity.type, activity.status);
               const isDone = activity.status === "completed";
 
               return (
-                <Link
-                  key={activity.id}
-                  href={`/activity/${activity.id}`}
-                  className="block rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm transition hover:shadow"
-                >
+                <Link key={activity.id} href={`/activity/${activity.id}`} className="block rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-2xl font-semibold text-neutral-900">{activity.title}</h3>
-                    {isDone && (
-                      <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                        Done
-                      </span>
-                    )}
+                    <div className="flex items-start gap-3">
+                      <div className={`grid h-16 w-16 place-items-center rounded-2xl text-2xl ${activityTheme.box}`}>{activityTheme.icon}</div>
+                      <div>
+                        <h3 className="text-[2rem] font-bold leading-tight text-slate-900 sm:text-[1.8rem]">{activity.title}</h3>
+                        <p className="mt-1 text-xl text-slate-500 sm:text-base">
+                          🕒 {new Date(activity.starts_at).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}
+                        </p>
+                      </div>
+                    </div>
+                    {isDone && <span className="rounded-xl bg-neutral-100 px-3 py-1 text-xs font-bold uppercase text-neutral-500">Done</span>}
                   </div>
 
-                  <p className="mt-1 text-sm text-neutral-500">🕒 {new Date(activity.starts_at).toLocaleString()}</p>
-                  {activity.location_name && <p className="mt-1 text-base text-neutral-500">📍 {activity.location_name}</p>}
+                  <p className="mt-3 pl-[4.8rem] text-xl text-slate-500 sm:text-base">📍 {activity.location_name || "Location TBD"}</p>
+
+                  <div className="mt-4 flex items-center gap-2 pl-[4.8rem]">
+                    <span className={`flex-1 rounded-xl py-2 text-center text-2xl font-bold sm:text-xl ${isDone ? "bg-neutral-200 text-neutral-500" : "bg-[#ee8c2b] text-white"}`}>
+                      {isDone ? "View Recap" : "Manage"}
+                    </span>
+                    {!isDone && <span className="grid h-11 w-11 place-items-center rounded-xl bg-neutral-100 text-xl text-slate-600">💬</span>}
+                  </div>
                 </Link>
               );
             })

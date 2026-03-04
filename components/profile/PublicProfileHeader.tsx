@@ -28,36 +28,32 @@ export function PublicProfileHeader({
 
   return (
     <>
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">{isSelf ? "My Profile" : "Public Profile"}</h1>
+      <header className="sticky top-0 z-20 -mx-4 flex h-16 items-center justify-between border-b border-neutral-200 bg-neutral-100/95 px-5 backdrop-blur-sm sm:-mx-6 sm:px-6">
+        <h1 className="text-[2.65rem] font-bold tracking-tight text-slate-900 sm:text-[2.1rem]">{isSelf ? "My Profile" : "Public Profile"}</h1>
         <ProfileActionsMenu isSelf={isSelf} profileId={profileId} username={username} />
-      </div>
+      </header>
 
-      <div className="mt-6 flex flex-col items-center text-center">
-        <div className="relative h-32 w-32 overflow-hidden rounded-full border-4 border-white bg-gray-200 shadow sm:h-40 sm:w-40">
+      <div className="mt-7 flex flex-col items-center text-center">
+        <div className="relative h-40 w-40 overflow-hidden rounded-full border-4 border-white bg-gray-200 shadow sm:h-44 sm:w-44">
           {avatarUrl ? (
             <Image src={avatarUrl} alt={displayName} fill className="object-cover" unoptimized />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-3xl text-gray-500">
-              {displayName.charAt(0).toUpperCase()}
-            </div>
+            <div className="flex h-full w-full items-center justify-center text-3xl text-gray-500">{displayName.charAt(0).toUpperCase()}</div>
           )}
 
           {(verified || phoneVerified) && (
-            <span className="absolute bottom-1 right-1 grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-blue-500 text-white">
-              ✓
+            <span className="absolute bottom-1 right-1 grid h-10 w-10 place-items-center rounded-full border-2 border-white bg-[#1d9bf0] text-lg text-white">
+              ✪
             </span>
           )}
         </div>
 
-        <h2 className="mt-4 text-4xl font-semibold tracking-tight text-neutral-900 sm:text-5xl">
+        <h2 className="mt-5 text-6xl font-bold tracking-tight text-slate-900 sm:text-5xl">
           {displayName}
           {age ? `, ${age}` : ""}
         </h2>
 
-        {city?.trim() && (
-          <p className="mt-2 text-xl text-neutral-500">📍 {city.trim()}</p>
-        )}
+        {city?.trim() && <p className="mt-2 text-4xl font-medium text-slate-500 sm:text-2xl">📍 {city.trim()}</p>}
       </div>
     </>
   );

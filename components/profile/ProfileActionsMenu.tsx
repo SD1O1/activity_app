@@ -10,13 +10,8 @@ interface ProfileActionsMenuProps {
   username: string;
 }
 
-export function ProfileActionsMenu({
-  isSelf,
-  profileId,
-  username,
-}: ProfileActionsMenuProps) {
+export function ProfileActionsMenu({ isSelf, profileId, username }: ProfileActionsMenuProps) {
   const [open, setOpen] = useState(false);
-
   const [reportOpen, setReportOpen] = useState(false);
   const [reporterId, setReporterId] = useState<string | null>(null);
 
@@ -27,7 +22,6 @@ export function ProfileActionsMenu({
       }
     });
   }, []);
-
 
   async function handleBlock() {
     const {
@@ -42,60 +36,47 @@ export function ProfileActionsMenu({
     });
 
     setOpen(false);
-
-    // Redirect away from blocked profile
     window.location.href = "/";
   }
 
   return (
     <div className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="text-gray-500 hover:text-black"
-        aria-label="Profile actions"
-      >
-        ⋯
+      <button onClick={() => setOpen((v) => !v)} className="px-1 text-3xl text-slate-500 hover:text-[#ee8c2b]" aria-label="Profile actions">
+        ⋮
       </button>
 
       {open && (
-        <div className="absolute right-0 top-8 w-40 rounded-lg border bg-white shadow-md z-50">
-          {/* SHARE */}
+        <div className="absolute right-0 top-10 z-50 w-44 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg">
           <button
             onClick={() => {
-              navigator.clipboard.writeText(
-                `${window.location.origin}/u/${username}`
-              );
+              navigator.clipboard.writeText(`${window.location.origin}/u/${username}`);
               setOpen(false);
             }}
-            className="w-full px-4 py-2 text-left hover:bg-gray-100"
+            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
           >
             Share profile
           </button>
 
           {!isSelf && (
             <>
-              {/* REPORT (placeholder) */}
               <button
                 onClick={() => {
                   setReportOpen(true);
                   setOpen(false);
                 }}
-                className="w-full px-4 py-2 text-left hover:bg-gray-100"
+                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
               >
                 Report user
               </button>
 
-              {/* BLOCK */}
-              <button
-                onClick={handleBlock}
-                className="w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100"
-              >
+              <button onClick={handleBlock} className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100">
                 Block user
               </button>
             </>
           )}
         </div>
       )}
+
       {reporterId && (
         <ReportModal
           open={reportOpen}
