@@ -99,9 +99,9 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-      <div className="w-full max-w-md rounded-[2rem] bg-neutral-100 p-6 shadow-2xl">
-        <h2 className="text-center text-5xl font-semibold tracking-tight text-slate-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-[1.5rem] bg-white p-6 shadow-2xl sm:p-8">
+        <h2 className="text-center text-xl font-bold text-gray-900">
           {mode === "login" ? "Log in to your account" : "Create your account"}
         </h2>
 
@@ -109,24 +109,29 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
           <button
             onClick={() => handleOAuth("google")}
             disabled={loading}
-            className="w-full rounded-full border-4 border-amber-500 bg-white py-3 text-2xl font-semibold text-amber-600 disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-[#ff5c00] px-4 py-3 font-semibold text-[#ff5c00] transition hover:bg-[#ff5c00]/5 disabled:opacity-60"
           >
-            G Continue with Google
+            <span>G</span>
+            Continue with Google
           </button>
 
           <button
             onClick={() => handleOAuth("facebook")}
             disabled={loading}
-            className="w-full rounded-[1.75rem] border-4 border-amber-500 bg-white py-3 text-2xl font-semibold text-amber-600 disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-[#ff5c00] px-4 py-3 font-semibold text-[#ff5c00] transition hover:bg-[#ff5c00]/5 disabled:opacity-60"
           >
-            f Continue with Facebook / Instagram
+            <span>f</span>
+            Continue with Facebook / Instagram
           </button>
         </div>
 
-        <div className="my-6 flex items-center gap-3 text-neutral-500">
-          <span className="h-px flex-1 bg-neutral-300" />
-          <span className="text-xl">or continue with email</span>
-          <span className="h-px flex-1 bg-neutral-300" />
+        <div className="relative my-7">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-200" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="bg-white px-2 text-gray-500">or continue with email</span>
+          </div>
         </div>
 
         <input
@@ -134,10 +139,10 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
           placeholder="Email address"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-full border border-neutral-300 bg-white px-5 py-3 text-2xl text-neutral-700"
+          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:border-[#ff5c00] focus:ring-[#ff5c00]"
         />
 
-        <p className="mt-3 text-lg text-neutral-500">
+        <p className="mt-2 px-1 text-xs leading-relaxed text-gray-500">
           Your email is private and used only for login and account recovery.
         </p>
 
@@ -146,12 +151,10 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="mt-4 w-full rounded-full border border-neutral-300 bg-white px-5 py-3 text-2xl text-neutral-700"
+          className="mt-4 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:border-[#ff5c00] focus:ring-[#ff5c00]"
         />
 
-        {mode === "signup" && !isPasswordValid && (
-          <p className="mt-2 text-sm text-neutral-500">Password must be at least 8 characters</p>
-        )}
+        {mode === "signup" && !isPasswordValid && <p className="mt-2 text-sm text-gray-500">Password must be at least 8 characters</p>}
 
         {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
         {info && <p className="mt-2 text-sm text-green-600">{info}</p>}
@@ -159,26 +162,28 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
         <button
           onClick={handleEmailAuth}
           disabled={loading || !email || !password || (mode === "signup" && !isPasswordValid)}
-          className="mt-5 w-full rounded-full bg-amber-500 py-4 text-3xl font-semibold text-white shadow disabled:opacity-50"
+          className="mt-6 w-full rounded-xl bg-[#ff5c00] py-4 font-bold text-white shadow-lg shadow-orange-500/20 transition active:scale-[0.98] disabled:opacity-50"
         >
           {loading ? "Please wait..." : mode === "login" ? "Log In" : "Create Account"}
         </button>
 
-        <button
-          onClick={() => {
-            setMode(mode === "login" ? "signup" : "login");
-            setError(null);
-            setInfo(null);
-          }}
-          className="mt-5 w-full text-center text-2xl text-neutral-600"
-        >
-          {mode === "login" ? "New here? " : "Already have an account? "}
-          <span className="font-semibold text-amber-600">{mode === "login" ? "Create an account" : "Log in"}</span>
-        </button>
+        <div className="mt-7 space-y-3 text-center">
+          <button
+            onClick={() => {
+              setMode(mode === "login" ? "signup" : "login");
+              setError(null);
+              setInfo(null);
+            }}
+            className="text-sm text-gray-600"
+          >
+            {mode === "login" ? "New here? " : "Already have an account? "}
+            <span className="font-semibold text-[#ff5c00]">{mode === "login" ? "Create an account" : "Log in"}</span>
+          </button>
 
-        <button onClick={onClose} className="mt-4 w-full text-center text-2xl text-neutral-400">
-          Cancel
-        </button>
+          <button onClick={onClose} className="text-sm font-medium text-gray-400 transition hover:text-gray-600">
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );

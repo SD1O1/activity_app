@@ -18,7 +18,7 @@ export default function ChatMessages({ messages, myId, participants, bottomRef, 
   const getParticipant = (userId: string) => participants?.find((p) => p.user_id === userId);
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 py-4">
+    <div className="chat-area flex-1 overflow-y-auto p-5">
       {messages.map((m, index) => {
         const isMe = m.sender_id === myId;
 
@@ -37,26 +37,28 @@ export default function ChatMessages({ messages, myId, participants, bottomRef, 
         };
 
         return (
-          <div key={m.id} className="mb-3">
-            <div className={`flex items-end ${isMe ? "justify-end" : "justify-start"}`}>
+          <div key={m.id} className="mb-4">
+            <div className={`flex items-end gap-3 ${isMe ? "justify-end" : "justify-start"}`}>
               {!isMe && isFirstInGroup && (
-                <button onClick={handleAvatarClick} className="mr-3 shrink-0">
+                <button onClick={handleAvatarClick} className="shrink-0">
                   {avatarUrl ? (
-                    <Image src={avatarUrl} alt="avatar" width={38} height={38} className="h-10 w-10 rounded-full object-cover" unoptimized />
+                    <Image src={avatarUrl} alt="avatar" width={36} height={36} className="h-9 w-9 rounded-full object-cover" unoptimized />
                   ) : (
-                    <div className="grid h-10 w-10 place-items-center rounded-full bg-neutral-300 text-xs font-semibold text-neutral-600">
+                    <div className="grid h-9 w-9 place-items-center rounded-full bg-orange-100 text-xs font-semibold text-orange-700">
                       {(username ?? m.sender_id)[0].toUpperCase()}
                     </div>
                   )}
                 </button>
               )}
 
-              <div className={`max-w-[78%] rounded-[1.5rem] px-4 py-3 text-3xl leading-relaxed ${isMe ? "bg-amber-500 text-white" : "bg-neutral-200 text-slate-900"}`}>
-                {m.content}
+              <div className={`max-w-[78%] ${isMe ? "items-end" : "items-start"} flex flex-col`}>
+                <div className={`rounded-2xl px-4 py-3 text-[15px] leading-relaxed ${isMe ? "rounded-tr-none bg-[#ff6b00] text-white" : "rounded-tl-none bg-gray-100 text-gray-800"}`}>
+                  {m.content}
+                </div>
+
+                {isLastMessageFromMe && <span className="mt-1 px-1 text-[11px] text-gray-400">{getMessageStatusText(m)}</span>}
               </div>
             </div>
-
-            {isLastMessageFromMe && <div className="mt-1 pr-2 text-right text-sm italic text-neutral-400">{getMessageStatusText(m)}</div>}
           </div>
         );
       })}
