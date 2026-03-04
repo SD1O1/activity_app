@@ -232,23 +232,26 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
   };
 
   return (
-    <div className="mx-auto max-w-3xl pb-32">
-      <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-neutral-200 bg-neutral-100/95 px-4 backdrop-blur-sm sm:px-6">
-        <button onClick={() => router.back()} className="text-2xl text-amber-700">Cancel</button>
-        <h1 className="text-2xl font-semibold text-neutral-900">Create Activity</h1>
-        <button onClick={resetForm} className="text-2xl text-amber-700">Reset</button>
+    <div className="mx-auto w-full max-w-[700px] pb-32">
+      <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-neutral-200 bg-[#f4f4f5]/95 px-5 backdrop-blur-sm">
+        <button onClick={() => router.back()} className="text-[1.05rem] font-medium text-[#9a734c]">Cancel</button>
+        <h1 className="text-[2rem] font-bold text-neutral-900 sm:text-[2.1rem]">Create Activity</h1>
+        <button onClick={resetForm} className="text-[1.05rem] font-medium text-[#9a734c]">Reset</button>
       </header>
 
-      <div className="space-y-8 px-4 py-6 sm:px-6">
+      <div className="space-y-8 px-5 py-6">
         <section>
-          <h2 className="text-5xl font-semibold tracking-tight text-neutral-900">Category</h2>
-          <input
-            value={tagQuery}
-            onChange={(e) => handleTagSearch(e.target.value)}
-            placeholder="Search category"
-            className="mt-4 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-2xl text-neutral-700"
-            disabled={selectedTags.length >= 2}
-          />
+          <h2 className="text-[2.75rem] font-bold tracking-tight text-neutral-900">Category</h2>
+          <div className="relative mt-4">
+            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400">🔍</span>
+            <input
+              value={tagQuery}
+              onChange={(e) => handleTagSearch(e.target.value)}
+              placeholder="Search category"
+              className="w-full rounded-2xl border border-neutral-200 bg-white py-4 pl-11 pr-4 text-[1.05rem] text-neutral-700 placeholder:text-slate-400"
+              disabled={selectedTags.length >= 2}
+            />
+          </div>
 
           {filteredTags.length > 0 && (
             <div className="mt-2 rounded-2xl border border-neutral-200 bg-white shadow-sm">
@@ -261,7 +264,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
                     setTagQuery("");
                     setFilteredTags([]);
                   }}
-                  className="block w-full px-4 py-3 text-left text-lg hover:bg-neutral-50"
+                  className="block w-full px-4 py-3 text-left text-base hover:bg-neutral-50"
                 >
                   {tag.name}
                 </button>
@@ -271,7 +274,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
 
           <div className="mt-3 flex flex-wrap gap-2">
             {selectedTags.map((tag) => (
-              <span key={tag.id} className="flex items-center gap-2 rounded-full bg-amber-500 px-3 py-1 text-sm font-semibold text-white">
+              <span key={tag.id} className="flex items-center gap-2 rounded-full bg-[#ee8c2b] px-3 py-1 text-sm font-semibold text-white">
                 {tag.name}
                 <button onClick={() => removeTag(tag.id)}>✕</button>
               </span>
@@ -282,55 +285,64 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
         </section>
 
         <section>
-          <h2 className="text-4xl font-semibold tracking-tight text-neutral-900">Details</h2>
-          <label className="mt-4 block text-2xl text-amber-700">Activity Title</label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Give it a catchy title"
-            className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-2xl text-neutral-700"
-          />
+          <h2 className="text-[2.1rem] font-bold tracking-tight text-neutral-900">Details</h2>
+          <label className="mt-4 block text-[1.05rem] text-[#9a734c]">Activity Title</label>
+          <div className="relative mt-2">
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Give it a catchy title"
+              className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 pr-11 text-[1.05rem] text-neutral-700 placeholder:text-slate-400"
+            />
+            <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">✎</span>
+          </div>
 
-          <label className="mt-5 block text-2xl text-amber-700">Description</label>
+          <label className="mt-5 block text-[1.05rem] text-[#9a734c]">Description</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Describe the plan..."
             rows={4}
-            className="mt-2 w-full resize-none rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-2xl text-neutral-700"
+            className="mt-2 w-full resize-none rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-[1.05rem] text-neutral-700 placeholder:text-slate-400"
           />
         </section>
 
         <section>
-          <h2 className="text-4xl font-semibold tracking-tight text-neutral-900">Logistics</h2>
+          <h2 className="text-[2.1rem] font-bold tracking-tight text-neutral-900">Logistics</h2>
 
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-2xl text-amber-700">Date</label>
-              <input
-                type="date"
-                value={datePart}
-                onChange={(e) => setDatePart(e.target.value)}
-                min={new Date().toISOString().slice(0, 10)}
-                className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-2xl"
-              />
+              <label className="block text-[1.05rem] text-[#9a734c]">Date</label>
+              <div className="relative mt-2">
+                <input
+                  type="date"
+                  value={datePart}
+                  onChange={(e) => setDatePart(e.target.value)}
+                  min={new Date().toISOString().slice(0, 10)}
+                  className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 pl-10 text-[1.05rem]"
+                />
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#ee8c2b]">📅</span>
+              </div>
             </div>
             <div>
-              <label className="block text-2xl text-amber-700">Time</label>
-              <input
-                type="time"
-                value={timePart}
-                onChange={(e) => setTimePart(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-2xl"
-              />
+              <label className="block text-[1.05rem] text-[#9a734c]">Time</label>
+              <div className="relative mt-2">
+                <input
+                  type="time"
+                  value={timePart}
+                  onChange={(e) => setTimePart(e.target.value)}
+                  className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 pl-10 text-[1.05rem]"
+                />
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#ee8c2b]">🕒</span>
+              </div>
             </div>
           </div>
 
-          <label className="mt-5 block text-2xl text-amber-700">Activity Type</label>
+          <label className="mt-5 block text-[1.05rem] text-[#9a734c]">Activity Type</label>
           <div className="mt-2 grid grid-cols-2 gap-3">
             <button
               onClick={() => setType("one-on-one")}
-              className={`rounded-2xl border px-4 py-3 text-2xl font-semibold ${type === "one-on-one" ? "border-amber-500 bg-amber-500 text-white" : "border-neutral-200 bg-white"}`}
+              className={`rounded-2xl border px-4 py-3 text-lg font-semibold ${type === "one-on-one" ? "border-[#ee8c2b] bg-[#ee8c2b] text-white" : "border-neutral-200 bg-white text-neutral-900"}`}
             >
               1-on-1
             </button>
@@ -339,7 +351,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
                 setType("group");
                 setMaxMembers((prev) => Math.max(prev, 2));
               }}
-              className={`rounded-2xl border px-4 py-3 text-2xl font-semibold ${type === "group" ? "border-amber-500 bg-amber-500 text-white" : "border-neutral-200 bg-white"}`}
+              className={`rounded-2xl border px-4 py-3 text-lg font-semibold ${type === "group" ? "border-[#ee8c2b] bg-[#ee8c2b] text-white" : "border-neutral-200 bg-white text-neutral-900"}`}
             >
               Group Activity
             </button>
@@ -347,54 +359,58 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
 
           {type === "group" && (
             <>
-              <label className="mt-5 block text-2xl text-amber-700">Number of Participants</label>
-              <input
-                type="number"
-                min={2}
-                value={maxMembers}
-                onChange={(e) => {
-                  const nextValue = Number(e.target.value);
-                  if (nextValue === 1) {
-                    setType("one-on-one");
-                    setMaxMembers(2);
-                    setFormError("Switched to one-on-one because group activities must have at least 2 people.");
-                    return;
-                  }
-                  setMaxMembers(nextValue);
-                  if (formError?.startsWith("Switched to one-on-one")) setFormError(null);
-                }}
-                className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-2xl"
-                placeholder="How many people?"
-              />
+              <label className="mt-5 block text-[1.05rem] text-[#9a734c]">Number of Participants</label>
+              <div className="relative mt-2">
+                <input
+                  type="number"
+                  min={2}
+                  value={maxMembers}
+                  onChange={(e) => {
+                    const nextValue = Number(e.target.value);
+                    if (nextValue === 1) {
+                      setType("one-on-one");
+                      setMaxMembers(2);
+                      setFormError("Switched to one-on-one because group activities must have at least 2 people.");
+                      return;
+                    }
+                    setMaxMembers(nextValue);
+                    if (formError?.startsWith("Switched to one-on-one")) setFormError(null);
+                  }}
+                  className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 pl-10 text-[1.05rem]"
+                  placeholder="How many people?"
+                />
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#ee8c2b]">👥</span>
+              </div>
               <p className="mt-1 text-sm text-neutral-500">Excluding you (host)</p>
             </>
           )}
 
-          <label className="mt-5 block text-2xl text-amber-700">Location</label>
+          <label className="mt-5 block text-[1.05rem] text-[#9a734c]">Location</label>
           <button
             type="button"
             onClick={() => setShowLocationPicker(true)}
-            className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-left text-2xl text-neutral-600"
+            className="relative mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 pl-10 text-left text-[1.05rem] text-neutral-600"
           >
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#ee8c2b]">📍</span>
             {location ? location.name : "Where are we meeting?"}
           </button>
           <p className="mt-1 text-sm text-neutral-500">Exact location is shared only after approval</p>
 
-          <div className="mt-4 rounded-2xl bg-lime-100/40 p-6 text-center">
+          <div className="mt-4 rounded-2xl border border-neutral-200 bg-lime-100/30 p-6 text-center">
             <button
               type="button"
               onClick={() => setShowLocationPicker(true)}
-              className="rounded-xl bg-white px-5 py-2.5 text-amber-600 shadow-sm text-xl"
+              className="rounded-xl bg-white px-5 py-2.5 text-base text-[#ee8c2b] shadow-sm"
             >
               🗺 Select on Map
             </button>
           </div>
 
-          <label className="mt-5 block text-2xl text-amber-700">Cost</label>
+          <label className="mt-5 block text-[1.05rem] text-[#9a734c]">Cost</label>
           <select
             value={costRule}
             onChange={(e) => setCostRule(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-xl"
+            className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-[1.05rem]"
           >
             <option value="everyone_pays">Everyone pays their own</option>
             <option value="host_pays">Host will cover it</option>
@@ -403,7 +419,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
         </section>
 
         <section>
-          <h2 className="text-4xl font-semibold tracking-tight text-neutral-900">Ask a Question (Optional)</h2>
+          <h2 className="text-[2.1rem] font-bold tracking-tight text-neutral-900">Ask a Question (Optional)</h2>
           <div className="mt-3 space-y-3">
             {questions.map((q, index) => (
               <input
@@ -415,12 +431,12 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
                   updated[index] = e.target.value;
                   setQuestions(updated);
                 }}
-                className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-2xl text-neutral-700"
+                className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-[1.05rem] text-neutral-700 placeholder:text-slate-400"
               />
             ))}
           </div>
 
-          <button type="button" onClick={() => setQuestions([...questions, ""])} className="mt-4 text-2xl font-medium text-amber-500">
+          <button type="button" onClick={() => setQuestions([...questions, ""])} className="mt-4 text-[1.05rem] font-semibold text-[#ee8c2b]">
             + Add question
           </button>
         </section>
@@ -428,12 +444,12 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
         {formError ? <p className="text-base text-red-600">{formError}</p> : null}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-neutral-200 bg-neutral-100/95 px-4 py-4 backdrop-blur-sm sm:px-6">
-        <div className="mx-auto max-w-3xl">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-neutral-200 bg-[#f4f4f5]/95 px-5 py-4 backdrop-blur-sm">
+        <div className="mx-auto max-w-[700px]">
           <button
             onClick={handleCreate}
             disabled={loading}
-            className="w-full rounded-2xl bg-amber-500 py-4 text-3xl font-semibold text-white disabled:opacity-70"
+            className="w-full rounded-2xl bg-[#ee8c2b] py-4 text-4xl font-bold text-white shadow-md shadow-orange-400/30 disabled:opacity-70 sm:text-3xl"
           >
             {loading ? "Posting..." : "Post Activity"}
           </button>
