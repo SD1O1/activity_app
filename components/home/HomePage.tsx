@@ -13,7 +13,6 @@ import AuthModal from "@/components/modals/AuthModal";
 import Sidebar from "@/components/layout/Sidebar";
 import { useClientAuthProfile } from "@/lib/useClientAuthProfile";
 import { useNotifications } from "@/components/notifications/NotificationContext";
-import { normalizeActivityTags } from "@/types/activity";
 
 type HomeActivity = {
   id: string;
@@ -24,9 +23,15 @@ type HomeActivity = {
   member_count: number | null;
   max_members: number | null;
   host_id: string;
-  activity_tag_relations: { activity_tags: { id: string; name: string } | { id: string; name: string }[] | null }[] | null;
-  host?: { id: string; name: string | null } | null;
 };
+
+function pseudoDistance(activityId: string) {
+  let hash = 0;
+  for (let i = 0; i < activityId.length; i++) {
+    hash = (hash * 31 + activityId.charCodeAt(i)) % 1000;
+  }
+  return (0.5 + (hash / 1000) * 2.5).toFixed(1);
+}
 
 export default function HomePage() {
   const router = useRouter();
@@ -36,6 +41,7 @@ export default function HomePage() {
   const [openAuthModal, setOpenAuthModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activities, setActivities] = useState<HomeActivity[]>([]);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const { user, profileCompleted, loading } = useClientAuthProfile();
 
@@ -47,7 +53,8 @@ export default function HomePage() {
 
       let query = supabase
         .from("activities")
-        .select(`
+        .select(
+          `
           id,
           title,
           type,
@@ -55,14 +62,9 @@ export default function HomePage() {
           location_name,
           member_count,
           max_members,
-          host_id,
-          activity_tag_relations (
-            activity_tags (
-              id,
-              name
-            )
-          )
-        `)
+          host_id
+        `
+        )
         .eq("status", "open")
         .order("created_at", { ascending: false })
         .limit(8);
@@ -77,29 +79,33 @@ export default function HomePage() {
         return;
       }
 
-      const hostIds = Array.from(new Set(activityRows.map((a) => a.host_id)));
-      const { data: hosts } = await supabase.from("profiles").select("id, name").in("id", hostIds);
-
-      const hostMap = Object.fromEntries((hosts || []).map((h) => [h.id, h]));
-
-      setActivities(
-        (activityRows as HomeActivity[]).map((a) => ({
-          ...a,
-          host: hostMap[a.host_id] || null,
-        }))
-      );
+      setActivities(activityRows as HomeActivity[]);
     };
 
     void fetchActivities();
   }, []);
 
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const fetchProfile = async () => {
+      const { data } = await supabase.from("profiles").select("avatar_url").eq("id", user.id).single();
+      setAvatarUrl((data?.avatar_url as string | null) ?? null);
+    };
+
+    void fetchProfile();
+  }, [user?.id]);
+
   const nearYou = useMemo(() => activities.slice(0, 3), [activities]);
 
   return (
-    <main className="min-h-screen bg-neutral-100 pb-6">
-      <section className="mx-auto max-w-5xl px-4 pt-6 sm:px-6">
+    <main className="min-h-screen bg-[#f5f5f6] pb-32">
+      <section className="mx-auto max-w-5xl px-4 pt-14 sm:px-6">
         <div className="flex items-center justify-between">
-          <button onClick={() => setSidebarOpen(true)} className="grid h-12 w-12 place-items-center rounded-full border border-neutral-200 bg-white text-2xl shadow-sm">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 bg-white text-2xl text-slate-700 shadow-sm"
+          >
             ☰
           </button>
 
@@ -109,28 +115,25 @@ export default function HomePage() {
                 setOpenAuthModal(true);
                 return;
               }
-              router.push("/notifications");
+              router.push("/profile");
             }}
-            className="relative grid h-12 w-12 place-items-center rounded-full border border-amber-500 bg-white text-xl"
-            aria-label="Notifications"
+            className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-full border-2 border-[#f97316] bg-white text-sm text-slate-700"
+            aria-label="Open profile"
           >
-            🏆
-            {unreadCount > 0 && (
-              <span className="absolute -right-1 -top-1 grid h-5 min-w-[20px] place-items-center rounded-full bg-red-500 px-1 text-xs text-white">
-                {unreadCount}
-              </span>
-            )}
+            {user && avatarUrl ? <img src={avatarUrl} alt="Your avatar" className="h-full w-full object-cover" /> : "👤"}
+            {unreadCount > 0 && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-red-500" />}
           </button>
         </div>
 
         <section className="mt-8">
-          <h1 className="text-6xl font-semibold leading-tight tracking-tight text-neutral-900 sm:text-7xl">
-            Find your next <span className="text-amber-500">adventure</span>
+          <h1 className="text-[3.2rem] font-bold leading-tight tracking-tight text-slate-900 sm:text-6xl">
+            Find your next <br />
+            <span className="text-[#f97316]">adventure</span>
           </h1>
 
           <button
             onClick={() => setOpenSearch(true)}
-            className="mt-5 flex w-full items-center gap-3 rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-left text-2xl text-neutral-400 shadow-sm"
+            className="mt-5 flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left text-xl text-slate-400 shadow-sm"
           >
             <span>🔎</span>
             <span>What do you want to do?</span>
@@ -143,14 +146,14 @@ export default function HomePage() {
       <section className="mt-8 px-4 sm:px-6">
         <div className="mx-auto max-w-5xl">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-4xl font-semibold tracking-tight text-neutral-900">Activities Near You</h2>
-            <button onClick={() => router.push("/activities")} className="text-2xl font-medium text-amber-500">See All</button>
+            <h2 className="text-[2.1rem] font-bold tracking-tight text-slate-900 sm:text-3xl">Activities Near You</h2>
+            <button onClick={() => router.push("/activities")} className="text-xl font-semibold text-[#f97316]">
+              See All
+            </button>
           </div>
 
           <div className="space-y-4">
             {nearYou.map((activity) => {
-              const tags = normalizeActivityTags(activity.activity_tag_relations);
-              const primaryTag = tags[0]?.name ?? (activity.type === "group" ? "Group" : "1-on-1");
               const timeLabel = new Date(activity.starts_at).toLocaleString(undefined, {
                 weekday: "short",
                 hour: "numeric",
@@ -158,24 +161,25 @@ export default function HomePage() {
               });
 
               const joined = typeof activity.member_count === "number" ? activity.member_count : 0;
+              const distanceKm = pseudoDistance(activity.id);
 
               return (
                 <button
                   key={activity.id}
                   onClick={() => router.push(`/activity/${activity.id}`)}
-                  className="w-full rounded-3xl border border-neutral-200 bg-white p-4 text-left shadow-sm"
+                  className="w-full rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="text-3xl font-semibold text-neutral-900">{activity.title}</h3>
-                      <p className="mt-1 text-xl text-neutral-500">{activity.location_name || "Location shared after joining"}</p>
+                      <h3 className="text-[1.95rem] font-bold text-slate-900 sm:text-2xl">{activity.title}</h3>
+                      <p className="mt-1 text-xl text-slate-500 sm:text-base">{activity.location_name || "Location shared after joining"}</p>
                     </div>
-                    <span className="rounded-full bg-neutral-100 px-3 py-1 text-sm text-neutral-500">{primaryTag}</span>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-400">{distanceKm} km</span>
                   </div>
 
-                  <div className="mt-4 flex items-center justify-between text-xl">
-                    <span className="text-amber-500">🕒 {timeLabel}</span>
-                    <span className="text-neutral-500">👥 {joined} joined</span>
+                  <div className="mt-4 flex items-center justify-between text-xl sm:text-base">
+                    <span className="text-[#f97316]">🕒 {timeLabel}</span>
+                    <span className="text-slate-500">👥 {joined} joined</span>
                   </div>
                 </button>
               );
@@ -195,10 +199,29 @@ export default function HomePage() {
       <TrySomethingNew />
       <Footer />
 
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/90 px-6 py-3 backdrop-blur-sm">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-around">
+          <button className="flex flex-col items-center gap-1 text-[#f97316]">
+            <span className="text-xl">🧭</span>
+            <span className="text-xs font-bold">Discover</span>
+          </button>
+          <button onClick={() => router.push("/activities")} className="flex flex-col items-center gap-1 text-slate-400">
+            <span className="text-xl">📅</span>
+            <span className="text-xs font-medium">My Plans</span>
+          </button>
+          <button onClick={() => router.push("/notifications")} className="flex flex-col items-center gap-1 text-slate-400">
+            <span className="text-xl">💬</span>
+            <span className="text-xs font-medium">Messages</span>
+          </button>
+          <button onClick={() => router.push("/profile")} className="flex flex-col items-center gap-1 text-slate-400">
+            <span className="text-xl">👤</span>
+            <span className="text-xs font-medium">Profile</span>
+          </button>
+        </div>
+      </nav>
+
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} isLoggedIn={Boolean(user)} />
-
       <SearchModal open={openSearch} onClose={() => setOpenSearch(false)} />
-
       <AuthModal open={openAuthModal} onClose={() => setOpenAuthModal(false)} />
     </main>
   );
