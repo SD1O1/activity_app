@@ -147,9 +147,6 @@ export default function HomePage() {
         <div className="mx-auto max-w-5xl">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-[2.1rem] font-bold tracking-tight text-slate-900 sm:text-3xl">Activities Near You</h2>
-            <button onClick={() => router.push("/activities")} className="text-xl font-semibold text-[#f97316]">
-              See All
-            </button>
           </div>
 
           <div className="space-y-4">
@@ -198,27 +195,6 @@ export default function HomePage() {
 
       <TrySomethingNew />
       <Footer />
-
-      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/90 px-6 py-3 backdrop-blur-sm">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-around">
-          <button className="flex flex-col items-center gap-1 text-[#f97316]">
-            <span className="text-xl">🧭</span>
-            <span className="text-xs font-bold">Discover</span>
-          </button>
-          <button onClick={() => router.push("/activities")} className="flex flex-col items-center gap-1 text-slate-400">
-            <span className="text-xl">📅</span>
-            <span className="text-xs font-medium">My Plans</span>
-          </button>
-          <button onClick={() => router.push("/notifications")} className="flex flex-col items-center gap-1 text-slate-400">
-            <span className="text-xl">💬</span>
-            <span className="text-xs font-medium">Messages</span>
-          </button>
-          <button onClick={() => router.push("/profile")} className="flex flex-col items-center gap-1 text-slate-400">
-            <span className="text-xl">👤</span>
-            <span className="text-xs font-medium">Profile</span>
-          </button>
-        </div>
-      </nav>
 
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} isLoggedIn={Boolean(user)} />
       <SearchModal open={openSearch} onClose={() => setOpenSearch(false)} />
