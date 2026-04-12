@@ -41,18 +41,20 @@ export default function CategoriesRow() {
   };
 
   return (
-    <section className="mt-8 px-4 sm:px-6">
-      <div className="mx-auto max-w-5xl">
-        <h2 className="mb-4 text-[2.1rem] font-bold tracking-tight text-neutral-900 sm:text-3xl">Browse Categories</h2>
+    <section>
+      <h2 className="mb-4 text-[2rem] font-bold tracking-tight text-neutral-900 sm:text-3xl">Browse Categories</h2>
 
-        <div className="flex gap-5 overflow-x-auto pb-2">
-          {categories.map((category) => (
-            <button key={category.name} onClick={() => handleCategoryClick(category.name)} className="flex min-w-[74px] flex-col items-center">
-              <div className={`grid h-16 w-16 place-items-center rounded-full text-2xl ${category.color}`}>{category.icon}</div>
-              <span className="mt-2 text-lg text-slate-700">{category.name}</span>
-            </button>
-          ))}
-        </div>
+      <div className="flex gap-4 overflow-x-auto pb-2">
+        {categories.map((category) => (
+          <button
+            key={category.name}
+            onClick={() => handleCategoryClick(category.name)}
+            className="flex min-w-[82px] flex-col items-center rounded-2xl border border-transparent px-1 py-2 transition-all hover:border-orange-100 hover:bg-orange-50/40"
+          >
+            <div className={`grid h-16 w-16 place-items-center rounded-full text-2xl shadow-sm ${category.color}`}>{category.icon}</div>
+            <span className="mt-2 text-base font-medium text-slate-700">{category.name}</span>
+          </button>
+        ))}
       </div>
     </section>
   );

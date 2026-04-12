@@ -15,12 +15,12 @@ export default function DiscoveryCard({ title, subtitle, meta, joined }: Discove
   return (
     <button
       onClick={() => router.push("/activities")}
-      className="min-w-[290px] rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm"
+      className="min-w-[290px] rounded-3xl border border-orange-100 bg-gradient-to-b from-white to-orange-50/45 p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md"
     >
-      <h4 className="text-[2rem] font-bold text-slate-900 sm:text-2xl">{title}</h4>
-      <p className="mt-1 text-xl text-slate-500 sm:text-lg">{subtitle}</p>
-      <div className="mt-4 flex items-center justify-between text-xl text-slate-600 sm:text-base">
-        <span>{meta}</span>
+      <h4 className="text-2xl font-bold text-slate-900">{title}</h4>
+      <p className="mt-1 text-base text-slate-500">{subtitle}</p>
+      <div className="mt-4 flex items-center justify-between text-sm text-slate-600 sm:text-base">
+        <span className="font-medium text-[#f97316]">{meta}</span>
         <span>👥 {joined}</span>
       </div>
     </button>

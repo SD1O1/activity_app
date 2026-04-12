@@ -99,54 +99,66 @@ export default function HomePage() {
   const nearYou = useMemo(() => activities.slice(0, 3), [activities]);
 
   return (
-    <main className="min-h-screen bg-[#f5f5f6] pb-32">
-      <section className="mx-auto max-w-5xl px-4 pt-14 sm:px-6">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 bg-white text-2xl text-slate-700 shadow-sm"
-          >
-            ☰
-          </button>
+    <main className="min-h-screen bg-gradient-to-b from-[#fff8f4] via-[#fffaf7] to-[#fffefe] pb-20">
+      <section className="mx-auto max-w-6xl px-4 pt-10 sm:px-6 lg:px-8">
+        <div className="rounded-[2rem] border border-orange-100/80 bg-white/95 px-5 py-5 shadow-[0_18px_40px_-30px_rgba(249,115,22,0.55)] sm:px-7 sm:py-6">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="grid h-11 w-11 place-items-center rounded-full border border-orange-100 bg-white text-2xl text-slate-700 shadow-sm transition-colors hover:bg-orange-50"
+            >
+              ☰
+            </button>
 
-          <button
-            onClick={() => {
-              if (!user) {
-                setOpenAuthModal(true);
-                return;
-              }
-              router.push("/profile");
-            }}
-            className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-full border-2 border-[#f97316] bg-white text-sm text-slate-700"
-            aria-label="Open profile"
-          >
-            {user && avatarUrl ? <img src={avatarUrl} alt="Your avatar" className="h-full w-full object-cover" /> : "👤"}
-            {unreadCount > 0 && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-red-500" />}
-          </button>
+            <button
+              onClick={() => {
+                if (!user) {
+                  setOpenAuthModal(true);
+                  return;
+                }
+                router.push("/profile");
+              }}
+              className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-full border-2 border-[#f97316] bg-white text-sm text-slate-700 shadow-sm"
+              aria-label="Open profile"
+            >
+              {user && avatarUrl ? <img src={avatarUrl} alt="Your avatar" className="h-full w-full object-cover" /> : "👤"}
+              {unreadCount > 0 && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-red-500" />}
+            </button>
+          </div>
+
+          <section className="mt-8">
+            <h1 className="max-w-3xl text-[2.8rem] font-bold leading-[1.05] tracking-tight text-slate-900 sm:text-[3.55rem]">
+              Find your next <br />
+              <span className="text-[#f97316]">adventure</span>
+            </h1>
+
+            <button
+              onClick={() => setOpenSearch(true)}
+              className="mt-6 flex w-full items-center gap-3 rounded-2xl border border-orange-200 bg-orange-50/55 px-5 py-4 text-left text-lg text-slate-500 shadow-sm transition-all duration-200 hover:border-orange-300 hover:bg-orange-50 sm:text-xl"
+            >
+              <span className="text-xl">🔎</span>
+              <span>What do you want to do?</span>
+            </button>
+          </section>
         </div>
-
-        <section className="mt-8">
-          <h1 className="text-[3.2rem] font-bold leading-tight tracking-tight text-slate-900 sm:text-6xl">
-            Find your next <br />
-            <span className="text-[#f97316]">adventure</span>
-          </h1>
-
-          <button
-            onClick={() => setOpenSearch(true)}
-            className="mt-5 flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left text-xl text-slate-400 shadow-sm"
-          >
-            <span>🔎</span>
-            <span>What do you want to do?</span>
-          </button>
-        </section>
       </section>
 
-      <CategoriesRow />
+      <section className="mx-auto mt-6 max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="rounded-[1.75rem] border border-orange-100/80 bg-white/90 px-3 py-5 shadow-[0_18px_35px_-32px_rgba(15,23,42,0.55)] sm:px-5">
+          <CategoriesRow />
+        </div>
+      </section>
 
-      <section className="mt-8 px-4 sm:px-6">
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-[2.1rem] font-bold tracking-tight text-slate-900 sm:text-3xl">Activities Near You</h2>
+      <section className="mx-auto mt-6 max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="rounded-[1.75rem] border border-orange-100/80 bg-white/95 px-4 py-5 shadow-[0_18px_35px_-32px_rgba(15,23,42,0.55)] sm:px-5 sm:py-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-[2rem] font-bold tracking-tight text-slate-900 sm:text-3xl">Activities Near You</h2>
+            <button
+              onClick={() => router.push("/activities")}
+              className="rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5 text-base font-semibold text-[#f97316] transition-colors hover:border-orange-300 hover:bg-orange-100"
+            >
+              See All
+            </button>
           </div>
 
           <div className="space-y-4">
@@ -164,18 +176,18 @@ export default function HomePage() {
                 <button
                   key={activity.id}
                   onClick={() => router.push(`/activity/${activity.id}`)}
-                  className="w-full rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm"
+                  className="w-full rounded-3xl border border-orange-100 bg-gradient-to-r from-white to-orange-50/45 p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="text-[1.95rem] font-bold text-slate-900 sm:text-2xl">{activity.title}</h3>
-                      <p className="mt-1 text-xl text-slate-500 sm:text-base">{activity.location_name || "Location shared after joining"}</p>
+                      <h3 className="text-2xl font-bold text-slate-900">{activity.title}</h3>
+                      <p className="mt-1 text-base text-slate-500">{activity.location_name || "Location shared after joining"}</p>
                     </div>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-400">{distanceKm} km</span>
+                    <span className="rounded-full border border-orange-100 bg-white px-3 py-1 text-sm font-medium text-slate-500">{distanceKm} km</span>
                   </div>
 
-                  <div className="mt-4 flex items-center justify-between text-xl sm:text-base">
-                    <span className="text-[#f97316]">🕒 {timeLabel}</span>
+                  <div className="mt-4 flex items-center justify-between text-sm sm:text-base">
+                    <span className="font-medium text-[#f97316]">🕒 {timeLabel}</span>
                     <span className="text-slate-500">👥 {joined} joined</span>
                   </div>
                 </button>
@@ -185,20 +197,28 @@ export default function HomePage() {
         </div>
       </section>
 
-      <HomeActions
-        user={user}
-        profileCompleted={profileCompleted}
-        loading={loading}
-        openAuthModal={() => setOpenAuthModal(true)}
-        onOpenSearch={() => setOpenSearch(true)}
-      />
+      <section className="mx-auto mt-6 max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="rounded-[1.75rem] border border-orange-100/80 bg-white/95 px-3 py-5 shadow-[0_18px_35px_-32px_rgba(15,23,42,0.55)] sm:px-5 sm:py-6">
+          <HomeActions
+            user={user}
+            profileCompleted={profileCompleted}
+            loading={loading}
+            openAuthModal={() => setOpenAuthModal(true)}
+            onOpenSearch={() => setOpenSearch(true)}
+          />
+        </div>
+      </section>
 
-      <TrySomethingNew />
-      <Footer />
+      <section className="mx-auto mt-6 max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="rounded-[1.75rem] border border-orange-100/80 bg-white/95 px-3 py-5 shadow-[0_18px_35px_-32px_rgba(15,23,42,0.55)] sm:px-5 sm:py-6">
+          <TrySomethingNew />
+        </div>
+      </section>
 
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} isLoggedIn={Boolean(user)} />
       <SearchModal open={openSearch} onClose={() => setOpenSearch(false)} />
       <AuthModal open={openAuthModal} onClose={() => setOpenAuthModal(false)} />
+      <Footer />
     </main>
   );
 }
