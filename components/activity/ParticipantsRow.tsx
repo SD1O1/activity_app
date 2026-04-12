@@ -27,11 +27,11 @@ export default function ParticipantsRow({ participants, currentUserId, isHost, i
 
   return (
     <section className="mt-10 px-4 pb-36 sm:px-5">
-      <p className="mb-4 text-4xl font-semibold tracking-tight text-neutral-900 sm:text-[2rem]">
-        Participants <span className="text-neutral-400">({participants.length})</span>
+      <p className="mb-4 text-4xl font-semibold tracking-tight text-slate-900 sm:text-[2rem]">
+        Participants <span className="text-slate-400">({participants.length})</span>
       </p>
 
-      <div className="flex gap-7 overflow-x-auto pb-3">
+      <div className="flex gap-7 overflow-x-auto rounded-3xl border border-orange-100/80 bg-white px-4 py-4 pb-3 shadow-[0_16px_30px_-24px_rgba(15,23,42,0.5)]">
         {orderedParticipants.map((participant) => {
           const isYou = participant.id === currentUserId;
           const isHostUser = participant.role === "host";
@@ -51,11 +51,11 @@ export default function ParticipantsRow({ participants, currentUserId, isHost, i
                 <img
                   src={participant.avatar_url ?? "/avatar-placeholder.png"}
                   alt={displayName}
-                  className="h-14 w-14 rounded-full object-cover ring-2 ring-neutral-200"
+                  className="h-14 w-14 rounded-full object-cover ring-2 ring-orange-100"
                 />
               </button>
 
-              <div className="mt-2 flex items-center text-base font-medium text-neutral-800">
+              <div className="mt-2 flex items-center text-base font-medium text-slate-800">
                 <span>{displayName}</span>
                 {participant.verified && <span className="ml-1 text-blue-500">✔</span>}
               </div>

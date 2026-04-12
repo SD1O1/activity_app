@@ -21,37 +21,24 @@ export default function NotificationItem({
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <div
+    <button
       onClick={onClick}
-      className={`flex gap-3 px-4 py-3 cursor-pointer ${
-        isRead ? "bg-white" : "bg-gray-100"
+      className={`flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 ${
+        isRead
+          ? "border-orange-100/80 bg-white shadow-[0_14px_30px_-28px_rgba(15,23,42,0.8)] hover:border-orange-200 hover:bg-orange-50/30"
+          : "border-orange-200 bg-gradient-to-r from-white to-orange-50/70 shadow-[0_16px_34px_-28px_rgba(249,115,22,0.8)] hover:border-orange-300 hover:from-white hover:to-orange-100/70"
       }`}
     >
-      {/* AVATAR */}
-      <div className="h-10 w-10 rounded-full bg-gray-300 overflow-hidden flex-shrink-0 flex items-center justify-center text-sm font-medium text-gray-700">
-        {actorAvatar ? (
-          <img
-            src={actorAvatar}
-            alt={displayName}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <span>{initial}</span>
-        )}
+      <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-orange-100 bg-orange-50 text-sm font-semibold text-slate-700">
+        {actorAvatar ? <img src={actorAvatar} alt={displayName} className="h-full w-full object-cover" /> : <span>{initial}</span>}
       </div>
 
-      {/* CONTENT */}
       <div className="flex-1">
-        <p className="text-sm text-gray-900">
-          <span className="font-medium">
-            {displayName}
-          </span>{" "}
-          {message}
+        <p className="text-sm text-slate-700 sm:text-[0.95rem]">
+          <span className="font-semibold text-slate-900">{displayName}</span> {message}
         </p>
-        <p className="mt-1 text-xs text-gray-500">
-          {time}
-        </p>
+        <p className="mt-1 text-xs font-medium text-slate-500">{time}</p>
       </div>
-    </div>
+    </button>
   );
 }

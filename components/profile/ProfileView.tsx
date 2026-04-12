@@ -107,6 +107,7 @@ export default function ProfileView() {
   const loadJoinedActivities = useCallback(async () => {
     if (!userId) return;
 
+    const currentUserId = userId;
     const { data } = await supabase
       .from("activity_members")
       .select(
@@ -129,7 +130,7 @@ export default function ProfileView() {
         )
       `
       )
-      .eq("user_id", userId)
+      .eq("user_id", currentUserId)
       .eq("status", "active")
       .not("activities.status", "eq", "deleted")
       .limit(PROFILE_ACTIVITY_PAGE_SIZE);
@@ -139,9 +140,12 @@ export default function ProfileView() {
     const joined = (data as ActivityMemberWithRelation[])
       .map((member) => {
         const relation = member.activities;
-        return Array.isArray(relation) ? relation[0] : relation;
+        return (Array.isArray(relation) ? relation[0] : relation) ?? null;
       })
-      .filter((activity): activity is ActivitySummary => Boolean(activity) && activity.status !== "deleted" && activity.host_id !== userId);
+      .filter((activity): activity is ActivitySummary => {
+        if (!activity) return false;
+        return activity.status !== "deleted" && activity.host_id !== currentUserId;
+      });
 
     setJoinedActivities(joined);
   }, [userId]);
@@ -175,133 +179,138 @@ export default function ProfileView() {
   const activeActivities = activityTab === "hosted" ? hostedActivities : joinedActivities;
 
   if (loading) {
-    return <p className="p-6 text-sm text-gray-500">Loading profile…</p>;
+    return <p className="p-6 text-sm text-slate-500">Loading profile…</p>;
   }
 
   return (
-    <main className="min-h-screen bg-neutral-100 pb-28">
-      <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-neutral-200 bg-neutral-100/95 px-5 backdrop-blur-sm">
+    <main className="min-h-screen bg-gradient-to-b from-[#fff8f4] via-[#fffaf7] to-[#fffefe] pb-28">
+      <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-orange-100/80 bg-white/95 px-5 backdrop-blur-sm">
         <h1 className="text-[2.65rem] font-bold tracking-tight text-slate-900 sm:text-[2.1rem]">My Profile</h1>
         {userId && <ProfileActionsMenu isSelf profileId={userId} username={profile?.username ?? ""} />}
       </header>
 
       <section className="mx-auto w-full max-w-3xl px-5 py-6">
-        <div className="flex flex-col items-center text-center">
-          <div className="relative h-40 w-40 overflow-hidden rounded-full border-4 border-white bg-gray-300 shadow sm:h-44 sm:w-44">
-            {profile?.avatar_url ? (
-              <Image src={profile.avatar_url} alt="Profile" fill className="object-cover" unoptimized />
-            ) : (
-              <div className="grid h-full w-full place-items-center text-4xl text-neutral-500">{(profile?.name ?? "U").charAt(0)}</div>
-            )}
-            {profile?.verified && (
-              <span className="absolute bottom-1 right-1 grid h-10 w-10 place-items-center rounded-full border-2 border-white bg-[#1d9bf0] text-lg text-white">
-                ✪
-              </span>
-            )}
-          </div>
-
-          <h2 className="mt-5 text-6xl font-bold tracking-tight text-slate-900 sm:text-5xl">
-            {profile?.name || "Your name"}, {getAge(profile?.dob)}
-          </h2>
-
-          {profile?.city && <p className="mt-2 text-4xl font-medium text-slate-500 sm:text-2xl">📍 {profile.city}</p>}
-
-          <div className="mt-5 flex flex-wrap justify-center gap-2">
-            {profile?.interests?.length ? (
-              profile.interests.map((interest, i) => (
-                <span key={interest} className={`rounded-full px-4 py-1.5 text-sm font-bold ${INTEREST_STYLES[i % INTEREST_STYLES.length]}`}>
-                  {interest}
+        <div className="rounded-[1.75rem] border border-orange-100/80 bg-white/95 p-5 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.55)] sm:p-6">
+          <div className="flex flex-col items-center text-center">
+            <div className="relative h-40 w-40 overflow-hidden rounded-full border-4 border-orange-100 bg-orange-50 shadow-[0_18px_34px_-24px_rgba(249,115,22,0.55)] sm:h-44 sm:w-44">
+              {profile?.avatar_url ? (
+                <Image src={profile.avatar_url} alt="Profile" fill className="object-cover" unoptimized />
+              ) : (
+                <div className="grid h-full w-full place-items-center text-4xl text-slate-500">{(profile?.name ?? "U").charAt(0)}</div>
+              )}
+              {profile?.verified && (
+                <span className="absolute bottom-1 right-1 grid h-10 w-10 place-items-center rounded-full border-2 border-white bg-[#1d9bf0] text-lg text-white">
+                  ✪
                 </span>
-              ))
-            ) : (
-              <span className="rounded-full bg-neutral-200 px-4 py-1.5 text-sm text-neutral-500">Add interests</span>
-            )}
-          </div>
-
-          <p className="mt-4 max-w-2xl text-[2rem] leading-relaxed text-slate-600 sm:text-2xl">
-            {profile?.bio || "Tell people something about you"}
-          </p>
-        </div>
-
-        <div className="mt-8 grid grid-cols-2 gap-4">
-          <div className="rounded-3xl border border-neutral-200 bg-white p-6 text-center shadow-sm">
-            <p className="text-6xl font-bold text-slate-900 sm:text-5xl">{hostedCount}</p>
-            <p className="mt-1 text-sm font-bold tracking-wider text-slate-500">HOSTED</p>
-          </div>
-          <div className="rounded-3xl border border-neutral-200 bg-white p-6 text-center shadow-sm">
-            <p className="text-6xl font-bold text-slate-900 sm:text-5xl">{joinedCount}</p>
-            <p className="mt-1 text-sm font-bold tracking-wider text-slate-500">JOINED</p>
-          </div>
-        </div>
-
-        <button onClick={() => setIsEditOpen(true)} className="mt-5 w-full rounded-2xl bg-neutral-200 px-4 py-3 text-xl font-bold text-slate-900">
-          Edit Profile Details
-        </button>
-
-        <section className="mt-8 border-b border-neutral-200">
-          <div className="grid grid-cols-2">
-            <button
-              onClick={() => setActivityTab("hosted")}
-              className={`border-b-[3px] py-3 text-[2rem] font-bold transition sm:text-[1.6rem] ${activityTab === "hosted" ? "border-[#ee8c2b] text-slate-900" : "border-transparent text-slate-400"}`}
-            >
-              Hosting
-            </button>
-            <button
-              onClick={() => setActivityTab("joined")}
-              className={`border-b-[3px] py-3 text-[2rem] font-bold transition sm:text-[1.6rem] ${activityTab === "joined" ? "border-[#ee8c2b] text-slate-900" : "border-transparent text-slate-400"}`}
-            >
-              Joined
-            </button>
-          </div>
-        </section>
-
-        <section className="mt-5 space-y-4">
-          {activeActivities.length === 0 ? (
-            <div className="rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-500">
-              {activityTab === "hosted" ? "You haven’t created any activities yet." : "You haven’t joined any activities yet."}
+              )}
             </div>
-          ) : (
-            activeActivities.map((activity) => {
-              const activityTheme = getActivityIcon(activity.type, activity.status);
-              const isDone = activity.status === "completed";
 
-              return (
+            <h2 className="mt-5 text-5xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+              {profile?.name || "Your name"}, {getAge(profile?.dob)}
+            </h2>
+
+            {profile?.city && <p className="mt-2 text-2xl font-medium text-slate-500 sm:text-2xl">📍 {profile.city}</p>}
+
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              {profile?.interests?.length ? (
+                profile.interests.map((interest, i) => (
+                  <span key={interest} className={`rounded-full px-4 py-1.5 text-sm font-bold ${INTEREST_STYLES[i % INTEREST_STYLES.length]}`}>
+                    {interest}
+                  </span>
+                ))
+              ) : (
+                <span className="rounded-full bg-neutral-200 px-4 py-1.5 text-sm text-neutral-500">Add interests</span>
+              )}
+            </div>
+
+            <p className="mt-4 max-w-2xl text-xl leading-relaxed text-slate-600 sm:text-2xl">
+              {profile?.bio || "Tell people something about you"}
+            </p>
+
+            <div className="mt-8 grid w-full grid-cols-2 gap-4">
+              <div className="rounded-3xl border border-orange-100/80 bg-white p-6 text-center shadow-[0_16px_32px_-28px_rgba(15,23,42,0.55)]">
+                <p className="text-6xl font-bold text-slate-900 sm:text-5xl">{hostedCount}</p>
+                <p className="mt-1 text-sm font-bold tracking-wider text-slate-500">HOSTED</p>
+              </div>
+              <div className="rounded-3xl border border-orange-100/80 bg-white p-6 text-center shadow-[0_16px_32px_-28px_rgba(15,23,42,0.55)]">
+                <p className="text-6xl font-bold text-slate-900 sm:text-5xl">{joinedCount}</p>
+                <p className="mt-1 text-sm font-bold tracking-wider text-slate-500">JOINED</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsEditOpen(true)}
+              className="mt-5 w-full rounded-2xl border border-orange-200 bg-orange-50/70 px-4 py-3 text-xl font-bold text-slate-900 transition-colors hover:bg-orange-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+            >
+              Edit Profile Details
+            </button>
+
+            <section className="mt-8 w-full border-b border-orange-100/80">
+              <div className="grid grid-cols-2">
                 <button
-                  key={activity.id}
-                  onClick={() => router.push(`/activity/${activity.id}`)}
-                  className="w-full rounded-3xl border border-neutral-200 bg-white p-4 text-left shadow-sm"
+                  onClick={() => setActivityTab("hosted")}
+                  className={`border-b-[3px] py-3 text-[2rem] font-bold transition sm:text-[1.6rem] ${activityTab === "hosted" ? "border-[#f97316] text-slate-900" : "border-transparent text-slate-400"}`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className={`grid h-16 w-16 place-items-center rounded-2xl text-2xl ${activityTheme.box}`}>{activityTheme.icon}</div>
-                      <div>
-                        <h3 className="text-[2rem] font-bold leading-tight text-slate-900 sm:text-[1.8rem]">{activity.title}</h3>
-                        <p className="mt-1 text-xl text-slate-500 sm:text-base">🕒 {formatActivityTime(activity.starts_at)}</p>
-                      </div>
-                    </div>
-                    {isDone && <span className="rounded-xl bg-neutral-100 px-3 py-1 text-xs font-bold uppercase text-neutral-500">Done</span>}
-                  </div>
-
-                  <p className="mt-3 pl-[4.8rem] text-xl text-slate-500 sm:text-base">📍 {activity.location_name || "Location TBD"}</p>
-
-                  <div className="mt-4 flex items-center gap-2 pl-[4.8rem]">
-                    <span className={`flex-1 rounded-xl py-2 text-center text-2xl font-bold sm:text-xl ${isDone ? "bg-neutral-200 text-neutral-500" : "bg-[#ee8c2b] text-white"}`}>
-                      {isDone ? "View Recap" : activityTab === "hosted" ? "Manage" : "View"}
-                    </span>
-                    {!isDone && (
-                      <span className="grid h-11 w-11 place-items-center rounded-xl bg-neutral-100 text-xl text-slate-600">💬</span>
-                    )}
-                  </div>
+                  Hosting
                 </button>
-              );
-            })
-          )}
-        </section>
+                <button
+                  onClick={() => setActivityTab("joined")}
+                  className={`border-b-[3px] py-3 text-[2rem] font-bold transition sm:text-[1.6rem] ${activityTab === "joined" ? "border-[#f97316] text-slate-900" : "border-transparent text-slate-400"}`}
+                >
+                  Joined
+                </button>
+              </div>
+            </section>
+
+            <section className="mt-5 w-full space-y-4">
+              {activeActivities.length === 0 ? (
+                <div className="rounded-2xl border border-orange-100/80 bg-orange-50/40 p-4 text-sm text-slate-500">
+                  {activityTab === "hosted" ? "You haven’t created any activities yet." : "You haven’t joined any activities yet."}
+                </div>
+              ) : (
+                activeActivities.map((activity) => {
+                  const activityTheme = getActivityIcon(activity.type, activity.status);
+                  const isDone = activity.status === "completed";
+
+                  return (
+                    <button
+                      key={activity.id}
+                      onClick={() => router.push(`/activity/${activity.id}`)}
+                      className="w-full rounded-3xl border border-orange-100/80 bg-white p-4 text-left shadow-[0_18px_34px_-30px_rgba(15,23,42,0.6)] transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-200"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                          <div className={`grid h-16 w-16 place-items-center rounded-2xl text-2xl ${activityTheme.box}`}>{activityTheme.icon}</div>
+                          <div>
+                            <h3 className="text-[2rem] font-bold leading-tight text-slate-900 sm:text-[1.8rem]">{activity.title}</h3>
+                            <p className="mt-1 text-xl text-slate-500 sm:text-base">🕒 {formatActivityTime(activity.starts_at)}</p>
+                          </div>
+                        </div>
+                        {isDone && <span className="rounded-xl border border-orange-100 bg-orange-50 px-3 py-1 text-xs font-bold uppercase text-slate-500">Done</span>}
+                      </div>
+
+                      <p className="mt-3 pl-[4.8rem] text-xl text-slate-500 sm:text-base">📍 {activity.location_name || "Location TBD"}</p>
+
+                      <div className="mt-4 flex items-center gap-2 pl-[4.8rem]">
+                        <span className={`flex-1 rounded-xl py-2 text-center text-2xl font-bold sm:text-xl ${isDone ? "bg-orange-100 text-slate-500" : "bg-[#f97316] text-white"}`}>
+                          {isDone ? "View Recap" : activityTab === "hosted" ? "Manage" : "View"}
+                        </span>
+                        {!isDone && (
+                          <span className="grid h-11 w-11 place-items-center rounded-xl border border-orange-100 bg-orange-50 text-xl text-slate-600">💬</span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </section>
+          </div>
+        </div>
       </section>
 
       <button
         onClick={() => router.push("/create")}
-        className="fixed bottom-6 right-5 grid h-16 w-16 place-items-center rounded-full bg-[#ee8c2b] text-4xl text-white shadow-lg shadow-orange-400/30"
+        className="fixed bottom-6 right-5 grid h-16 w-16 place-items-center rounded-full bg-[#f97316] text-4xl text-white shadow-lg shadow-orange-400/30 transition-transform duration-200 hover:-translate-y-0.5 hover:bg-[#ea580c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2"
         aria-label="Create activity"
       >
         +

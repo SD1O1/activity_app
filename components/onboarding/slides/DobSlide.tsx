@@ -13,15 +13,15 @@ export default function DobSlide({ value, onChange }: DobSlideProps) {
   const isMinor = age !== null && age < 18;
 
   return (
-    <div className="w-full max-w-sm text-center">
+    <div className="w-full max-w-sm rounded-3xl border border-orange-100/80 bg-white p-5 text-center shadow-[0_16px_30px_-26px_rgba(15,23,42,0.45)]">
       <h2 className="text-lg font-semibold mb-2">
         What’s your date of birth?
       </h2>
 
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="mb-4 text-sm text-slate-500">
         This helps us show your correct age.
         <br />
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-slate-400">
           We only show your age to others, not your full birth date.
         </span>
       </p>
@@ -30,7 +30,7 @@ export default function DobSlide({ value, onChange }: DobSlideProps) {
         type="date"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full border rounded px-3 py-2 text-sm"
+        className="w-full rounded-2xl border border-orange-200 bg-orange-50/40 px-3 py-2 text-sm text-slate-700 focus:border-orange-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-200"
         max={new Date().toISOString().split("T")[0]}
       />
       

@@ -45,35 +45,31 @@ export default function ActivitiesPageView({ activities, loading, timeFilter = "
   );
 
   return (
-    <main className="min-h-screen bg-[#f3f3f4] pb-8">
+    <main className="min-h-screen bg-gradient-to-b from-[#fff8f4] via-[#fffaf7] to-[#fffefe] pb-8">
       <section className="mx-auto w-full max-w-3xl px-4 pt-6 sm:px-6">
-        <header className="mb-4 flex items-center justify-between gap-3">
+        <header className="mb-4 flex items-center justify-between gap-3 rounded-[1.75rem] border border-orange-100/80 bg-white/95 px-4 py-4 shadow-[0_16px_34px_-30px_rgba(249,115,22,0.6)]">
           <div className="flex items-center gap-3">
-            <div className="grid h-12 w-12 place-items-center rounded-full bg-[#ee8c2b]/10 text-[#ee8c2b] text-xl">⭐</div>
+            <div className="grid h-12 w-12 place-items-center rounded-full bg-orange-100 text-[#f97316] text-xl">⭐</div>
             <div>
               <h1 className="text-[2.5rem] font-bold leading-tight tracking-tight text-slate-900 sm:text-[2.1rem]">Walking</h1>
               <p className="text-xl text-slate-500 sm:text-sm font-medium">Find partners nearby</p>
             </div>
           </div>
+        </header>
 
+        <div>
           <button
             onClick={() => setShowMap((prev) => !prev)}
-            className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 bg-white text-xl text-slate-600 shadow-sm"
+            className="grid h-11 w-11 place-items-center rounded-full border border-orange-100 bg-white text-xl text-slate-600 shadow-sm transition-colors hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
             aria-label="Toggle filters map"
             title="Toggle map"
           >
             ⚙️
-          </button>
-        </header>
-
-        <div className="mb-4 flex flex-wrap gap-2 text-xs text-slate-500">
-          <span className="rounded-full bg-white px-3 py-1 shadow-sm">Time: {timeFilter}</span>
-          {distanceFilter ? <span className="rounded-full bg-white px-3 py-1 shadow-sm">Distance: {distanceFilter} km</span> : null}
-          <span className="rounded-full bg-white px-3 py-1 shadow-sm">Results: {activities.length}</span>
+          </button>          
         </div>
 
         {showMap && (
-          <div className="mb-4 h-[220px] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm sm:h-[260px]">
+          <div className="mb-4 h-[220px] overflow-hidden rounded-3xl border border-orange-100/80 bg-white shadow-[0_16px_34px_-30px_rgba(15,23,42,0.6)] sm:h-[260px]">
             <ActivitiesMap
               activities={visibleMapActivities}
               activeId={activeId}
@@ -95,18 +91,18 @@ export default function ActivitiesPageView({ activities, loading, timeFilter = "
               const tags = normalizeActivityTags(activity.activity_tag_relations);
               const label = tags[0]?.name ?? (activity.type === "group" ? "Social" : "Wellness");
               const joined = typeof activity.member_count === "number" && typeof activity.max_members === "number";
-              const isFull = joined && activity.member_count >= activity.max_members;
+              const isFull = joined && activity.member_count && activity.max_members && activity.member_count >= activity.max_members;
 
               return (
                 <article
                   key={activity.id}
                   id={`activity-${activity.id}`}
-                  className={`rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition ${activeId === activity.id ? "ring-2 ring-[#ee8c2b]/50" : ""} ${isFull ? "opacity-85" : ""}`}
+                  className={`rounded-3xl border border-orange-100/80 bg-white p-4 shadow-[0_16px_34px_-30px_rgba(15,23,42,0.6)] transition-all duration-200 ${activeId === activity.id ? "ring-2 ring-[#f97316]/40" : ""} ${isFull ? "opacity-85" : "hover:-translate-y-0.5 hover:border-orange-200"}`}
                   onMouseEnter={() => setActiveId(activity.id)}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 overflow-hidden rounded-full bg-slate-200">
+                      <div className="h-12 w-12 overflow-hidden rounded-full bg-orange-50 ring-2 ring-orange-100">
                         {activity.host?.avatar_url ? (
                           <img src={activity.host.avatar_url} alt={activity.host?.name ?? "Host"} className="h-full w-full object-cover" />
                         ) : (
@@ -130,7 +126,7 @@ export default function ActivitiesPageView({ activities, loading, timeFilter = "
                       </p>
 
                       <p className="mt-3 text-[1.9rem] text-slate-500 sm:text-base">📍 {activity.location_name || "Location shared after joining"}</p>
-                      <p className={`mt-1 text-[1.9rem] sm:text-base ${isFull ? "text-[#ee8c2b]" : "text-slate-500"}`}>
+                      <p className={`mt-1 text-[1.9rem] sm:text-base ${isFull ? "text-[#f97316]" : "text-slate-500"}`}>
                         👥 {joined ? `${activity.member_count}/${activity.max_members} joined${isFull ? " (Full)" : ""}` : "Spots available"}
                       </p>
                     </div>
@@ -138,7 +134,7 @@ export default function ActivitiesPageView({ activities, loading, timeFilter = "
                     <img src={coverForActivity(activity)} alt={activity.title} className={`h-32 w-32 shrink-0 rounded-2xl object-cover sm:h-24 sm:w-24 ${isFull ? "grayscale-[50%]" : ""}`} />
                   </div>
 
-                  <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-3">
+                  <div className="mt-4 flex items-center justify-between border-t border-orange-100/80 pt-3">
                     <div className="flex -space-x-2">
                       {[0, 1, 2].map((idx) => (
                         <span key={idx} className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-slate-200 text-xs text-slate-500">
@@ -152,7 +148,7 @@ export default function ActivitiesPageView({ activities, loading, timeFilter = "
 
                     <button
                       onClick={() => router.push(`/activity/${activity.id}`)}
-                      className={`rounded-xl px-6 py-2 text-[1.9rem] font-bold sm:text-xl ${isFull ? "bg-slate-100 text-slate-400" : index === 0 ? "bg-[#ee8c2b]/10 text-[#ee8c2b]" : "bg-[#ee8c2b] text-white shadow-md shadow-orange-400/30"}`}
+                      className={`rounded-xl px-6 py-2 text-[1.9rem] font-bold sm:text-xl transition-all duration-200 ${isFull ? "bg-orange-100 text-slate-400" : index === 0 ? "bg-orange-100 text-[#f97316]" : "bg-[#f97316] text-white shadow-md shadow-orange-400/30 hover:bg-[#ea580c]"}`}
                     >
                       {isFull ? "Full" : "Join"}
                     </button>

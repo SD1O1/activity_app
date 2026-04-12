@@ -51,12 +51,12 @@ export default function InterestSlide({
   const isValid = value.length >= MIN && value.length <= MAX;
 
   return (
-    <div className="w-full max-w-sm mx-auto">
+    <div className="mx-auto w-full max-w-sm rounded-3xl border border-orange-100/80 bg-white p-5 shadow-[0_16px_30px_-26px_rgba(15,23,42,0.45)]">
       <h2 className="text-lg font-semibold mb-1 text-center">
         Select your interests
       </h2>
 
-      <p className="text-sm text-gray-500 text-center mb-4">
+      <p className="mb-4 text-center text-sm text-slate-500">
         Choose {MIN}–{MAX} interests that describe you
       </p>
 
@@ -71,8 +71,8 @@ export default function InterestSlide({
               className={`px-4 py-2 rounded-full text-sm border transition
                 ${
                   selected
-                    ? "bg-black text-white border-black"
-                    : "bg-white text-gray-700 border-gray-300"
+                    ? "bg-[#f97316] text-white border-[#f97316]"
+                    : "bg-orange-50/50 text-slate-700 border-orange-200 hover:bg-orange-100"
                 }
               `}
             >
@@ -85,7 +85,7 @@ export default function InterestSlide({
       <div className="mt-4 text-center">
         <p
           className={`text-xs ${
-            isValid ? "text-green-600" : "text-gray-500"
+            isValid ? "text-green-600" : "text-slate-500"
           }`}
         >
           {value.length} selected

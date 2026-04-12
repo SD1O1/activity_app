@@ -69,12 +69,12 @@ export default function PhotoVerificationSlide({
   }, [onCapture]);
 
   return (
-    <div className="w-full max-w-sm mx-auto text-center">
+    <div className="mx-auto w-full max-w-sm rounded-3xl border border-orange-100/80 bg-white p-5 text-center shadow-[0_16px_30px_-26px_rgba(15,23,42,0.45)]">
       <h2 className="text-lg font-semibold mb-2">
         Verify your identity
       </h2>
 
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="mb-4 text-sm text-slate-500">
         {isRecording
           ? "Hold still and look at the camera"
           : "Verification recorded successfully"}
@@ -86,13 +86,13 @@ export default function PhotoVerificationSlide({
           autoPlay
           muted
           playsInline
-          className="w-full rounded-lg mb-3"
+          className="mb-3 w-full rounded-2xl border border-orange-100"
         />
       )}
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-      <p className="text-xs text-gray-500">This video is used only for identity verification and is never public.</p>
+      <p className="text-xs text-slate-500">This video is used only for identity verification and is never public.</p>
 
       {!isRecording && (
         <p className="text-green-600 font-semibold text-sm">

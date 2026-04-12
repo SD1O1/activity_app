@@ -135,13 +135,17 @@ export default function ActivityDetail({ activity }: Props) {
   const lng = showExactMap && activity.exact_lng != null ? activity.exact_lng : activity.public_lng ?? activity.exact_lng;
 
   return (
-    <main className="min-h-screen bg-[#f3f3f4]">
-      <header className="sticky top-0 z-30 border-b border-neutral-200 bg-[#f7f7f7]/95 backdrop-blur-sm">
+    <main className="min-h-screen bg-gradient-to-b from-[#fff8f4] via-[#fffaf7] to-[#fffefe]">
+      <header className="sticky top-0 z-30 border-b border-orange-100/80 bg-white/95 backdrop-blur-sm">
         <div className="mx-auto flex h-16 w-full max-w-3xl items-center justify-between px-4 sm:px-5">
-          <button onClick={() => router.back()} aria-label="Go back" className="text-2xl text-neutral-900">
+          <button
+            onClick={() => router.back()}
+            aria-label="Go back"
+            className="grid h-10 w-10 place-items-center rounded-full border border-orange-100 bg-white text-2xl text-slate-700 shadow-sm transition-colors hover:bg-orange-50"
+          >
             ←
           </button>
-          <h2 className="text-2xl font-semibold text-neutral-900 sm:text-3xl">Activity Details</h2>
+          <h2 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Activity Details</h2>
           <ActivityActionsMenu
             isHost={viewerRole === "host"}
             onEdit={() => setOpenEdit(true)}

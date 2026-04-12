@@ -22,7 +22,7 @@ export default function CreatePage() {
   if (!userId) return null;
 
   return (
-    <main className="min-h-screen bg-neutral-100">
+    <main className="min-h-screen bg-gradient-to-b from-[#fff8f4] via-[#fffaf7] to-[#fffefe] pb-28">
       <CreateActivityForm userId={userId} />
     </main>
   );

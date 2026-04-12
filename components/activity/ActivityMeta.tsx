@@ -57,7 +57,7 @@ export default function ActivityMeta({ startsAt, costRule, memberCount, maxMembe
       </div>
 
       {lat != null && lng != null && (
-        <p className="mt-2 text-sm text-neutral-500">
+        <p className="mt-2 text-sm text-slate-500">
           {distanceKm != null
             ? `About ${distanceKm.toFixed(1)} km away from your location`
             : distanceError
@@ -77,10 +77,10 @@ type CardProps = {
 
 function InfoCard({ icon, label, value }: CardProps) {
   return (
-    <div className="rounded-2xl bg-neutral-100 p-4">
-      <div className="mb-2 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-sm">{icon}</div>
-      <p className="text-base text-neutral-500">{label}</p>
-      <p className="text-[1.75rem] font-semibold leading-tight text-neutral-900">{value}</p>
+    <div className="rounded-2xl border border-orange-100/80 bg-white p-4 shadow-[0_16px_30px_-28px_rgba(15,23,42,0.55)]">
+      <div className="mb-2 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 text-sm">{icon}</div>
+      <p className="text-base text-slate-500">{label}</p>
+      <p className="text-[1.75rem] font-semibold leading-tight text-slate-900">{value}</p>
     </div>
   );
 }

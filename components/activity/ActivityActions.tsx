@@ -26,49 +26,49 @@ export default function ActivityActions({ viewerRole, joinStatus, activityStatus
   let ctaLabel = "Join Activity";
   let disabled = false;
   let ctaAction: (() => void) | undefined = onRequestJoin;
-  let buttonClass = "bg-[#ee8c2b] text-white";
+  let buttonClass = "bg-[#f97316] text-white shadow-[0_14px_24px_-16px_rgba(249,115,22,0.85)]";
 
   if (viewerRole === "host") {
     ctaLabel = isCompleted ? "Activity completed" : "Review Requests";
     ctaAction = isCompleted ? undefined : onOpenReview;
     disabled = isCompleted;
-    buttonClass = isCompleted ? "bg-neutral-300 text-neutral-600" : "bg-[#ee8c2b] text-white";
+    buttonClass = isCompleted ? "bg-orange-100 text-slate-500" : "bg-[#f97316] text-white shadow-[0_14px_24px_-16px_rgba(249,115,22,0.85)]";
   } else if (joinStatus === "pending") {
     ctaLabel = "Review Request";
     ctaAction = undefined;
     disabled = true;
-    buttonClass = "bg-[#ee8c2b] text-white";
+    buttonClass = "bg-[#f97316] text-white shadow-[0_14px_24px_-16px_rgba(249,115,22,0.85)]";
   } else if (joinStatus === "approved") {
     ctaLabel = isCompleted ? "Activity completed" : "Joined";
     ctaAction = undefined;
     disabled = true;
-    buttonClass = "bg-neutral-300 text-neutral-600";
+    buttonClass = "bg-orange-100 text-slate-500";
   } else if (joinStatus === "rejected") {
     ctaLabel = "Request declined";
     ctaAction = undefined;
     disabled = true;
-    buttonClass = "bg-neutral-300 text-neutral-600";
+    buttonClass = "bg-orange-100 text-slate-500";
   } else if (activityStatus === "full") {
     ctaLabel = "Activity is full";
     ctaAction = undefined;
     disabled = true;
-    buttonClass = "bg-neutral-300 text-neutral-600";
+    buttonClass = "bg-orange-100 text-slate-500";
   } else if (isCompleted && isLoggedIn) {
     ctaLabel = "Activity completed";
     ctaAction = undefined;
     disabled = true;
-    buttonClass = "bg-neutral-300 text-neutral-600";
+    buttonClass = "bg-orange-100 text-slate-500";
   }
 
   const canOpenChat = (viewerRole === "host" || isGuestParticipant) && !isCompleted;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-neutral-200 bg-white/95 px-4 py-3 backdrop-blur-sm sm:px-5">
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-orange-100/80 bg-white/95 px-4 py-3 backdrop-blur-sm sm:px-5">
       <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
         <button
           onClick={ctaAction}
           disabled={disabled}
-          className={`h-14 flex-1 rounded-full px-5 text-xl font-semibold transition ${buttonClass} disabled:cursor-not-allowed`}
+          className={`h-14 flex-1 rounded-full px-5 text-xl font-semibold transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 ${buttonClass} disabled:cursor-not-allowed`}
         >
           {ctaLabel}
         </button>
@@ -76,7 +76,7 @@ export default function ActivityActions({ viewerRole, joinStatus, activityStatus
         <button
           onClick={onOpenChat}
           disabled={!canOpenChat}
-          className="relative grid h-14 w-14 place-items-center rounded-full bg-neutral-100 text-xl text-neutral-700 disabled:opacity-60"
+          className="relative grid h-14 w-14 place-items-center rounded-full border border-orange-100 bg-orange-50 text-xl text-slate-700 transition-colors hover:bg-orange-100 disabled:opacity-60"
           aria-label="Open chat"
           title={canOpenChat ? "Open chat" : "Chat available after joining"}
         >

@@ -273,11 +273,12 @@ export default function OnboardingProfile() {
   /* -------------------- render -------------------- */
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4">
-      <h1 className="text-xl font-semibold mb-4">Profile Onboarding</h1>
+    <div className="min-h-screen px-4 py-10">
+      <div className="mx-auto flex w-full max-w-xl flex-col items-center rounded-[1.75rem] border border-orange-100/80 bg-white/95 p-6 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.55)] sm:p-7">
+      <h1 className="mb-4 text-center text-2xl font-bold tracking-tight text-slate-900">Profile Onboarding</h1>
 
       {globalError ? (
-        <p className="mb-3 max-w-sm text-center text-sm text-red-600" role="alert">
+        <p className="mb-3 text-center text-sm text-red-600" role="alert">
           {globalError}
         </p>
       ) : null}
@@ -365,11 +366,14 @@ export default function OnboardingProfile() {
         />
       )}
 
-      <p className="text-sm text-gray-500 mt-4">Step {step + 1} of {TOTAL_STEPS}</p>
+<p className="mt-5 text-center text-sm text-slate-500">Step {step + 1} of {TOTAL_STEPS}</p>
 
-      <div className="mt-6 flex w-full max-w-sm justify-between">
-        {step > 0 ? (
-          <button onClick={() => setStep((s) => s - 1)} className="text-sm text-gray-600">
+<div className="mt-6 flex w-full justify-between">
+  {step > 0 ? (
+    <button
+      onClick={() => setStep((s) => s - 1)}
+      className="rounded-full border border-orange-200 bg-orange-50/70 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-orange-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+    >
             Back
           </button>
         ) : (
@@ -380,19 +384,24 @@ export default function OnboardingProfile() {
           <button
             disabled={!isStepValid() || photoUploading}
             onClick={() => setStep((s) => s + 1)}
-            className={`text-sm font-semibold ${
+            className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 ${
               !isStepValid() || photoUploading
-                ? "text-gray-400 cursor-not-allowed"
-                : "text-black"
+                ? "cursor-not-allowed bg-orange-100 text-slate-400"
+                : "bg-[#f97316] text-white hover:bg-[#ea580c]"
             }`}
           >
             {photoUploading && step === 7 ? "Uploading…" : "Next"}
           </button>
         ) : (
-          <button disabled={submitting} onClick={handleSubmit} className="text-sm font-semibold text-black disabled:text-gray-400">
+          <button
+            disabled={submitting}
+            onClick={handleSubmit}
+            className="rounded-full bg-[#f97316] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#ea580c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 disabled:bg-orange-100 disabled:text-slate-400"
+          >
             {submitting ? "Saving..." : "Save & Continue"}
           </button>
         )}
+      </div>
       </div>
     </div>
   );

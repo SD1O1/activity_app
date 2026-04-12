@@ -232,29 +232,29 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[700px] pb-32">
-      <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-neutral-200 bg-[#f4f4f5]/95 px-5 backdrop-blur-sm">
-        <button onClick={() => router.back()} className="text-[1.05rem] font-medium text-[#9a734c]">Cancel</button>
-        <h1 className="text-[2rem] font-bold text-neutral-900 sm:text-[2.1rem]">Create Activity</h1>
-        <button onClick={resetForm} className="text-[1.05rem] font-medium text-[#9a734c]">Reset</button>
+    <div className="mx-auto w-full max-w-4xl px-4 pb-36 pt-8 sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-20 flex h-16 items-center justify-between rounded-t-[1.75rem] border border-orange-100/80 border-b-orange-100/80 bg-white/95 px-5 shadow-[0_12px_30px_-28px_rgba(249,115,22,0.8)] backdrop-blur-sm">
+        <button onClick={() => router.back()} className="text-[1.02rem] font-semibold text-[#c2611a] transition-colors hover:text-[#f97316]">Cancel</button>
+        <h1 className="text-[1.9rem] font-bold tracking-tight text-slate-900 sm:text-[1.95rem]">Create Activity</h1>
+        <button onClick={resetForm} className="text-[1.02rem] font-semibold text-[#c2611a] transition-colors hover:text-[#f97316]">Reset</button>
       </header>
 
-      <div className="space-y-8 px-5 py-6">
-        <section>
-          <h2 className="text-[2.75rem] font-bold tracking-tight text-neutral-900">Category</h2>
+      <div className="space-y-6 rounded-b-[1.75rem] border border-t-0 border-orange-100/80 bg-white/95 px-5 py-6 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.55)]">
+        <section className="rounded-3xl border border-orange-100/80 bg-white p-4 shadow-[0_16px_34px_-30px_rgba(15,23,42,0.45)] sm:p-5">
+          <h2 className="text-[2.35rem] font-bold tracking-tight text-slate-900">Category</h2>
           <div className="relative mt-4">
             <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400">🔍</span>
             <input
               value={tagQuery}
               onChange={(e) => handleTagSearch(e.target.value)}
               placeholder="Search category"
-              className="w-full rounded-2xl border border-neutral-200 bg-white py-4 pl-11 pr-4 text-[1.05rem] text-neutral-700 placeholder:text-slate-400"
+              className="w-full rounded-2xl border border-orange-200 bg-orange-50/40 py-4 pl-11 pr-4 text-[1.05rem] text-slate-700 placeholder:text-slate-400 transition-colors focus:border-orange-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-200"
               disabled={selectedTags.length >= 2}
             />
           </div>
 
           {filteredTags.length > 0 && (
-            <div className="mt-2 rounded-2xl border border-neutral-200 bg-white shadow-sm">
+            <div className="mt-2 rounded-2xl border border-orange-200 bg-orange-50/40 shadow-sm">
               {filteredTags.map((tag) => (
                 <button
                   key={tag.id}
@@ -264,7 +264,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
                     setTagQuery("");
                     setFilteredTags([]);
                   }}
-                  className="block w-full px-4 py-3 text-left text-base hover:bg-neutral-50"
+                  className="block w-full px-4 py-3 text-left text-base hover:bg-orange-50/70"
                 >
                   {tag.name}
                 </button>
@@ -274,75 +274,75 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
 
           <div className="mt-3 flex flex-wrap gap-2">
             {selectedTags.map((tag) => (
-              <span key={tag.id} className="flex items-center gap-2 rounded-full bg-[#ee8c2b] px-3 py-1 text-sm font-semibold text-white">
+              <span key={tag.id} className="flex items-center gap-2 rounded-full bg-[#f97316] px-3 py-1 text-sm font-semibold text-white">
                 {tag.name}
                 <button onClick={() => removeTag(tag.id)}>✕</button>
               </span>
             ))}
           </div>
           {tagError ? <p className="mt-2 text-sm text-red-600">{tagError}</p> : null}
-          {isSearchingTags && filteredTags.length === 0 && <p className="mt-2 text-sm text-neutral-500">No matching tags found</p>}
+          {isSearchingTags && filteredTags.length === 0 && <p className="mt-2 text-sm text-slate-500">No matching tags found</p>}
         </section>
 
-        <section>
-          <h2 className="text-[2.1rem] font-bold tracking-tight text-neutral-900">Details</h2>
-          <label className="mt-4 block text-[1.05rem] text-[#9a734c]">Activity Title</label>
+        <section className="rounded-3xl border border-orange-100/80 bg-white p-4 shadow-[0_16px_34px_-30px_rgba(15,23,42,0.45)] sm:p-5">
+          <h2 className="text-[1.95rem] font-bold tracking-tight text-slate-900">Details</h2>
+          <label className="mt-4 block text-[1.05rem] text-[#c2611a]">Activity Title</label>
           <div className="relative mt-2">
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Give it a catchy title"
-              className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 pr-11 text-[1.05rem] text-neutral-700 placeholder:text-slate-400"
+              className="w-full rounded-2xl border border-orange-200 bg-orange-50/40 px-4 py-4 pr-11 text-[1.05rem] text-slate-700 placeholder:text-slate-400 transition-colors focus:border-orange-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-200"
             />
             <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">✎</span>
           </div>
 
-          <label className="mt-5 block text-[1.05rem] text-[#9a734c]">Description</label>
+          <label className="mt-5 block text-[1.05rem] text-[#c2611a]">Description</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Describe the plan..."
             rows={4}
-            className="mt-2 w-full resize-none rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-[1.05rem] text-neutral-700 placeholder:text-slate-400"
+            className="mt-2 w-full resize-none rounded-2xl border border-orange-200 bg-orange-50/40 px-4 py-4 text-[1.05rem] text-slate-700 placeholder:text-slate-400 transition-colors focus:border-orange-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-200"
           />
         </section>
 
-        <section>
-          <h2 className="text-[2.1rem] font-bold tracking-tight text-neutral-900">Logistics</h2>
+        <section className="rounded-3xl border border-orange-100/80 bg-white p-4 shadow-[0_16px_34px_-30px_rgba(15,23,42,0.45)] sm:p-5">
+          <h2 className="text-[1.95rem] font-bold tracking-tight text-slate-900">Logistics</h2>
 
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-[1.05rem] text-[#9a734c]">Date</label>
+              <label className="block text-[1.05rem] text-[#c2611a]">Date</label>
               <div className="relative mt-2">
                 <input
                   type="date"
                   value={datePart}
                   onChange={(e) => setDatePart(e.target.value)}
                   min={new Date().toISOString().slice(0, 10)}
-                  className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 pl-10 text-[1.05rem]"
+                  className="w-full rounded-2xl border border-orange-200 bg-orange-50/40 px-4 py-4 pl-10 text-[1.05rem]"
                 />
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#ee8c2b]">📅</span>
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#f97316]">📅</span>
               </div>
             </div>
             <div>
-              <label className="block text-[1.05rem] text-[#9a734c]">Time</label>
+              <label className="block text-[1.05rem] text-[#c2611a]">Time</label>
               <div className="relative mt-2">
                 <input
                   type="time"
                   value={timePart}
                   onChange={(e) => setTimePart(e.target.value)}
-                  className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 pl-10 text-[1.05rem]"
+                  className="w-full rounded-2xl border border-orange-200 bg-orange-50/40 px-4 py-4 pl-10 text-[1.05rem]"
                 />
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#ee8c2b]">🕒</span>
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#f97316]">🕒</span>
               </div>
             </div>
           </div>
 
-          <label className="mt-5 block text-[1.05rem] text-[#9a734c]">Activity Type</label>
+          <label className="mt-5 block text-[1.05rem] text-[#c2611a]">Activity Type</label>
           <div className="mt-2 grid grid-cols-2 gap-3">
             <button
               onClick={() => setType("one-on-one")}
-              className={`rounded-2xl border px-4 py-3 text-lg font-semibold ${type === "one-on-one" ? "border-[#ee8c2b] bg-[#ee8c2b] text-white" : "border-neutral-200 bg-white text-neutral-900"}`}
+              className={`rounded-2xl border px-4 py-3 text-lg font-semibold ${type === "one-on-one" ? "border-[#f97316] bg-[#f97316] text-white" : "border-orange-200 bg-orange-50/40 text-slate-900"}`}
             >
               1-on-1
             </button>
@@ -351,7 +351,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
                 setType("group");
                 setMaxMembers((prev) => Math.max(prev, 2));
               }}
-              className={`rounded-2xl border px-4 py-3 text-lg font-semibold ${type === "group" ? "border-[#ee8c2b] bg-[#ee8c2b] text-white" : "border-neutral-200 bg-white text-neutral-900"}`}
+              className={`rounded-2xl border px-4 py-3 text-lg font-semibold ${type === "group" ? "border-[#f97316] bg-[#f97316] text-white" : "border-orange-200 bg-orange-50/40 text-slate-900"}`}
             >
               Group Activity
             </button>
@@ -359,7 +359,7 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
 
           {type === "group" && (
             <>
-              <label className="mt-5 block text-[1.05rem] text-[#9a734c]">Number of Participants</label>
+              <label className="mt-5 block text-[1.05rem] text-[#c2611a]">Number of Participants</label>
               <div className="relative mt-2">
                 <input
                   type="number"
@@ -376,41 +376,41 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
                     setMaxMembers(nextValue);
                     if (formError?.startsWith("Switched to one-on-one")) setFormError(null);
                   }}
-                  className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 pl-10 text-[1.05rem]"
+                  className="w-full rounded-2xl border border-orange-200 bg-orange-50/40 px-4 py-4 pl-10 text-[1.05rem]"
                   placeholder="How many people?"
                 />
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#ee8c2b]">👥</span>
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#f97316]">👥</span>
               </div>
-              <p className="mt-1 text-sm text-neutral-500">Excluding you (host)</p>
+              <p className="mt-1 text-sm text-slate-500">Excluding you (host)</p>
             </>
           )}
 
-          <label className="mt-5 block text-[1.05rem] text-[#9a734c]">Location</label>
+          <label className="mt-5 block text-[1.05rem] text-[#c2611a]">Location</label>
           <button
             type="button"
             onClick={() => setShowLocationPicker(true)}
-            className="relative mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 pl-10 text-left text-[1.05rem] text-neutral-600"
+            className="relative mt-2 w-full rounded-2xl border border-orange-200 bg-orange-50/40 px-4 py-4 pl-10 text-left text-[1.05rem] text-neutral-600"
           >
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#ee8c2b]">📍</span>
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#f97316]">📍</span>
             {location ? location.name : "Where are we meeting?"}
           </button>
-          <p className="mt-1 text-sm text-neutral-500">Exact location is shared only after approval</p>
+          <p className="mt-1 text-sm text-slate-500">Exact location is shared only after approval</p>
 
-          <div className="mt-4 rounded-2xl border border-neutral-200 bg-lime-100/30 p-6 text-center">
+          <div className="mt-4 rounded-2xl border border-orange-200 bg-orange-50/50 p-6 text-center">
             <button
               type="button"
               onClick={() => setShowLocationPicker(true)}
-              className="rounded-xl bg-white px-5 py-2.5 text-base text-[#ee8c2b] shadow-sm"
+              className="rounded-xl bg-white px-5 py-2.5 text-base text-[#f97316] shadow-sm"
             >
               🗺 Select on Map
             </button>
           </div>
 
-          <label className="mt-5 block text-[1.05rem] text-[#9a734c]">Cost</label>
+          <label className="mt-5 block text-[1.05rem] text-[#c2611a]">Cost</label>
           <select
             value={costRule}
             onChange={(e) => setCostRule(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-[1.05rem]"
+            className="mt-2 w-full rounded-2xl border border-orange-200 bg-orange-50/40 px-4 py-4 text-[1.05rem]"
           >
             <option value="everyone_pays">Everyone pays their own</option>
             <option value="host_pays">Host will cover it</option>
@@ -418,8 +418,8 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
           </select>
         </section>
 
-        <section>
-          <h2 className="text-[2.1rem] font-bold tracking-tight text-neutral-900">Ask a Question (Optional)</h2>
+        <section className="rounded-3xl border border-orange-100/80 bg-white p-4 shadow-[0_16px_34px_-30px_rgba(15,23,42,0.45)] sm:p-5">
+          <h2 className="text-[1.95rem] font-bold tracking-tight text-slate-900">Ask a Question (Optional)</h2>
           <div className="mt-3 space-y-3">
             {questions.map((q, index) => (
               <input
@@ -431,12 +431,12 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
                   updated[index] = e.target.value;
                   setQuestions(updated);
                 }}
-                className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-[1.05rem] text-neutral-700 placeholder:text-slate-400"
+                className="w-full rounded-2xl border border-orange-200 bg-orange-50/40 px-4 py-4 text-[1.05rem] text-slate-700 placeholder:text-slate-400"
               />
             ))}
           </div>
 
-          <button type="button" onClick={() => setQuestions([...questions, ""])} className="mt-4 text-[1.05rem] font-semibold text-[#ee8c2b]">
+          <button type="button" onClick={() => setQuestions([...questions, ""])} className="mt-4 text-[1.05rem] font-semibold text-[#f97316]">
             + Add question
           </button>
         </section>
@@ -444,12 +444,12 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
         {formError ? <p className="text-base text-red-600">{formError}</p> : null}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-neutral-200 bg-[#f4f4f5]/95 px-5 py-4 backdrop-blur-sm">
-        <div className="mx-auto max-w-[700px]">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-orange-100/80 bg-white/95 px-5 py-4 backdrop-blur-sm">
+        <div className="mx-auto max-w-4xl">
           <button
             onClick={handleCreate}
             disabled={loading}
-            className="w-full rounded-2xl bg-[#ee8c2b] py-4 text-4xl font-bold text-white shadow-md shadow-orange-400/30 disabled:opacity-70 sm:text-3xl"
+            className="w-full rounded-2xl bg-[#f97316] py-4 text-4xl font-bold text-white shadow-md shadow-orange-400/30 disabled:opacity-70 sm:text-3xl"
           >
             {loading ? "Posting..." : "Post Activity"}
           </button>

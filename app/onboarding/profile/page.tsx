@@ -20,14 +20,14 @@ export default function OnboardingProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#fff8f4] via-[#fffaf7] to-[#fffefe] text-sm text-slate-500">
         Checking onboarding status…
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-gradient-to-b from-[#fff8f4] via-[#fffaf7] to-[#fffefe]">
       <Header />
       {user ? <OnboardingProfile /> : null}
       <AuthModal open={shouldOpenAuth} onClose={() => router.push("/")} />
