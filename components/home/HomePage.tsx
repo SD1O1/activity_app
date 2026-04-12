@@ -218,7 +218,11 @@ export default function HomePage() {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} isLoggedIn={Boolean(user)} />
       <SearchModal open={openSearch} onClose={() => setOpenSearch(false)} />
       <AuthModal open={openAuthModal} onClose={() => setOpenAuthModal(false)} />
-      <Footer />
+      <section className="mx-auto mt-auto w-full max-w-6xl px-4 pt-6 sm:px-6 lg:px-8">
+        <div className="rounded-[1.75rem] border border-orange-100/80 bg-white/95 px-3 py-5 shadow-[0_18px_35px_-32px_rgba(15,23,42,0.55)] sm:px-5 sm:py-6">
+          <Footer />
+        </div>
+      </section>
     </main>
   );
 }
