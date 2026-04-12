@@ -70,10 +70,20 @@ export default function EditActivityModal({
     setSaving(false);
   };
 
+  const typeButtonClass = (active: boolean) =>
+    `flex-1 rounded-2xl border py-3 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 ${
+      active
+        ? "border-[#f97316] bg-[#f97316] text-white shadow-[0_12px_24px_-16px_rgba(249,115,22,0.75)]"
+        : "border-orange-200 bg-white text-slate-700 hover:border-orange-300 hover:bg-orange-50"
+    }`;
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-end">
-      <div className="w-full bg-white rounded-t-2xl p-4 space-y-4">
-        <h2 className="font-semibold text-lg">
+    <div className="fixed inset-0 z-50 flex items-end bg-black/35 backdrop-blur-[2px]">
+      <div className="w-full space-y-4 rounded-t-[2rem] border border-orange-100/80 bg-gradient-to-b from-[#fff8f4] via-[#fffaf7] to-[#fffefe] p-4 sm:mx-auto sm:mb-4 sm:max-w-2xl sm:rounded-[1.75rem] sm:p-6 sm:shadow-[0_28px_50px_-34px_rgba(15,23,42,0.6)]">
+        <div className="flex justify-center pb-1">
+          <div className="h-1.5 w-10 rounded-full bg-orange-200" />
+        </div>
+        <h2 className="text-lg font-semibold tracking-tight text-slate-900">
           Edit Activity
         </h2>
 
@@ -81,7 +91,7 @@ export default function EditActivityModal({
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full border rounded-xl px-4 py-3"
+          className="w-full rounded-2xl border border-orange-200 bg-orange-50/45 px-4 py-3 text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:border-orange-300 focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
           placeholder="Activity title"
         />
 
@@ -90,7 +100,7 @@ export default function EditActivityModal({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={4}
-          className="w-full border rounded-xl px-4 py-3"
+          className="w-full rounded-2xl border border-orange-200 bg-orange-50/45 px-4 py-3 text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:border-orange-300 focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
           placeholder="Description"
         />
 
@@ -98,21 +108,13 @@ export default function EditActivityModal({
         <div className="flex gap-2">
           <button
             onClick={() => setType("one-on-one")}
-            className={`flex-1 border rounded-xl py-3 ${
-              type === "one-on-one"
-                ? "bg-black text-white"
-                : ""
-            }`}
+            className={typeButtonClass(type === "one-on-one")}
           >
             One-on-One
           </button>
           <button
             onClick={() => setType("group")}
-            className={`flex-1 border rounded-xl py-3 ${
-              type === "group"
-                ? "bg-black text-white"
-                : ""
-            }`}
+            className={typeButtonClass(type === "group")}
           >
             Group
           </button>
@@ -127,7 +129,7 @@ export default function EditActivityModal({
             onChange={(e) =>
               setMaxMembers(Number(e.target.value))
             }
-            className="w-full border rounded-xl px-4 py-3"
+            className="w-full rounded-2xl border border-orange-200 bg-orange-50/45 px-4 py-3 text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:border-orange-300 focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
             placeholder="Max members"
           />
         )}
@@ -136,7 +138,7 @@ export default function EditActivityModal({
         <select
           value={costRule}
           onChange={(e) => setCostRule(e.target.value)}
-          className="w-full border rounded-xl px-4 py-3"
+          className="w-full rounded-2xl border border-orange-200 bg-orange-50/45 px-4 py-3 text-slate-900 transition-all duration-200 focus:border-orange-300 focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
         >
           <option value="everyone_pays">
             Everyone pays
@@ -159,14 +161,14 @@ export default function EditActivityModal({
         <button
           onClick={handleSave}
           disabled={saving}
-          className="w-full bg-black text-white rounded-xl py-3"
+          className="w-full rounded-2xl border border-[#f97316] bg-[#f97316] py-3 font-semibold text-white shadow-[0_18px_30px_-20px_rgba(249,115,22,0.8)] transition-all duration-200 hover:bg-[#ea6a11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 disabled:opacity-60"
         >
           {saving ? "Saving..." : "Save changes"}
         </button>
 
         <button
           onClick={onClose}
-          className="w-full text-sm text-gray-500"
+          className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm font-medium text-slate-500 transition-colors hover:border-orange-300 hover:bg-orange-50 hover:text-slate-700"
         >
           Cancel
         </button>

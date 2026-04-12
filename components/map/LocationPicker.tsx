@@ -213,7 +213,7 @@ export default function LocationPicker({ onSelect }: LocationPickerProps) {
       {/* STEP 1: CITY */}
       {step === "city" && (
         <>
-          <h2 className="text-sm font-medium">
+          <h2 className="text-sm font-medium text-slate-600">
             Choose city
           </h2>
 
@@ -221,16 +221,16 @@ export default function LocationPicker({ onSelect }: LocationPickerProps) {
             value={cityQuery}
             onChange={(e) => setCityQuery(e.target.value)}
             placeholder="Search city (e.g. Pune)"
-            className="w-full rounded-xl border px-4 py-3"
+            className="w-full rounded-2xl border border-orange-200 bg-orange-50/50 px-4 py-3 text-base text-slate-700 placeholder:text-slate-400 shadow-sm transition-all duration-200 focus:border-orange-300 focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
           />
 
           {cityResults.length > 0 && (
-            <div className="rounded-xl border bg-white shadow">
+            <div className="rounded-2xl border border-orange-100/80 bg-white/95 p-2 shadow-[0_18px_35px_-32px_rgba(15,23,42,0.55)]">
               {cityResults.map((city) => (
                 <button
                   key={city.id}
                   onClick={() => selectCity(city)}
-                  className="block w-full px-4 py-2 text-left hover:bg-gray-100"
+                  className="block w-full rounded-xl border border-transparent px-4 py-2 text-left text-sm font-medium text-slate-700 transition-all duration-200 hover:border-orange-200 hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
                 >
                   {city.place_name}
                 </button>
@@ -243,7 +243,7 @@ export default function LocationPicker({ onSelect }: LocationPickerProps) {
       {/* STEP 2: AREA + PIN */}
       {step === "area" && selectedCity && (
         <>
-          <h2 className="text-sm font-medium">
+          <h2 className="text-sm font-medium text-slate-600">
             Select area in {selectedCity.place_name}
           </h2>
 
@@ -254,20 +254,20 @@ export default function LocationPicker({ onSelect }: LocationPickerProps) {
               setAreaSelected(false); // 👈 allow list again
             }}
             placeholder="Search local area (optional)"
-            className="w-full rounded-xl border px-4 py-3"
+            className="w-full rounded-2xl border border-orange-200 bg-orange-50/50 px-4 py-3 text-base text-slate-700 placeholder:text-slate-400 shadow-sm transition-all duration-200 focus:border-orange-300 focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
           />
 
-          <p className="text-xs text-gray-500">
+          <p className="text-xs font-medium text-slate-500">
             Adjust the pin to choose exact meeting point
           </p>
 
           {!areaSelected && areaResults.length > 0 && (
-            <div className="rounded-xl border bg-white shadow">
+            <div className="rounded-2xl border border-orange-100/80 bg-white/95 p-2 shadow-[0_18px_35px_-32px_rgba(15,23,42,0.55)]">
               {areaResults.map((area) => (
                 <button
                   key={area.id}
                   onClick={() => selectArea(area)}
-                  className="block w-full px-4 py-2 text-left hover:bg-gray-100"
+                  className="block w-full rounded-xl border border-transparent px-4 py-2 text-left text-sm font-medium text-slate-700 transition-all duration-200 hover:border-orange-200 hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
                 >
                   {area.place_name}
                 </button>
@@ -278,10 +278,10 @@ export default function LocationPicker({ onSelect }: LocationPickerProps) {
       )}
 
       {/* MAP */}
-      <div className="relative h-[300px] rounded-xl overflow-hidden">
+      <div className="relative h-[300px] overflow-hidden rounded-[1.5rem] border border-orange-100/80 shadow-[0_18px_35px_-32px_rgba(15,23,42,0.55)]">
         <div ref={mapRef} className="h-full w-full" />
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="h-4 w-4 rounded-full bg-black" />
+          <div className="h-4 w-4 rounded-full bg-[#f97316] shadow-[0_0_0_3px_rgba(255,255,255,0.95)]" />
         </div>
       </div>
 
@@ -289,7 +289,7 @@ export default function LocationPicker({ onSelect }: LocationPickerProps) {
       {step === "area" && (
         <button
           onClick={confirmLocation}
-          className="w-full rounded-xl bg-black py-3 text-white font-medium"
+          className="w-full rounded-2xl border border-[#f97316] bg-[#f97316] py-3 text-base font-semibold text-white shadow-[0_18px_30px_-20px_rgba(249,115,22,0.8)] transition-all duration-200 hover:bg-[#ea6a11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
         >
           Confirm location
         </button>

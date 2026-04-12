@@ -7,5 +7,5 @@ type Props = {
 export default function TypingIndicator({ show }: Props) {
   if (!show) return null;
 
-  return <div className="px-5 pb-1 text-xs italic text-gray-500">Someone is typing…</div>;
+  return <div className="px-5 pb-1 text-xs italic text-slate-500">Someone is typing…</div>;
 }

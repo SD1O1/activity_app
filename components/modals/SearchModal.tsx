@@ -9,6 +9,13 @@ type Tag = {
   name: string;
 };
 
+const timeOptions: Array<"anytime" | "today" | "tomorrow" | "weekend"> = [
+  "anytime",
+  "today",
+  "tomorrow",
+  "weekend",
+];
+
 export default function SearchModal({
   open,
   onClose,
@@ -28,12 +35,10 @@ export default function SearchModal({
   );
   const [distance, setDistance] = useState(10);
   const [sort, setSort] = useState<"soonest" | "distance">("soonest");
+  const distancePercent = ((distance - 1) / (50 - 1)) * 100;
 
   useEffect(() => {
-    if (!query.trim()) {
-      setTags([]);
-      return;
-    }
+    if (!query.trim()) return;
 
     const fetchTags = async () => {
       setLoadingTags(true);
@@ -51,6 +56,8 @@ export default function SearchModal({
     fetchTags();
   }, [query]);
 
+  const visibleTags = query.trim() ? tags : [];
+
   if (!open) return null;
 
   const handleSearch = () => {
@@ -66,14 +73,17 @@ export default function SearchModal({
   };
 
   const pill = (active: boolean) =>
-    `px-3 py-2 rounded-full text-sm border ${
-      active ? "bg-black text-white" : "bg-white"
+    `rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 ${
+      active
+        ? "border-[#f97316] bg-[#f97316] text-white shadow-[0_12px_24px_-16px_rgba(249,115,22,0.75)]"
+        : "border-orange-200 bg-white text-slate-700 hover:border-orange-300 hover:bg-orange-50"
     }`;
 
   return (
-    <div className="fixed inset-0 z-50 bg-white flex flex-col">
+    <div className="fixed inset-0 z-50 flex flex-col bg-gradient-to-b from-[#fff8f4] via-[#fffaf7] to-[#fffefe] text-slate-900">
       {/* Header */}
-      <div className="flex items-center px-4 py-4 border-b">
+      <div className="border-b border-orange-100/80 bg-white/85 px-4 py-4 backdrop-blur-sm">
+        <div className="mx-auto flex w-full max-w-6xl items-center">
         <input
           autoFocus
           value={query}
@@ -82,20 +92,26 @@ export default function SearchModal({
             setSelectedTag(null);
           }}
           placeholder="What do you want to do?"
-          className="flex-1 rounded-xl border px-4 py-2"
+          className="flex-1 rounded-2xl border border-orange-200 bg-orange-50/50 px-4 py-3 text-base text-slate-700 placeholder:text-slate-400 shadow-sm transition-all duration-200 focus:border-orange-300 focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
         />
-        <button onClick={onClose} className="ml-3 text-xl">
+        <button
+          onClick={onClose}
+          className="ml-3 grid h-11 w-11 place-items-center rounded-full border border-orange-200 bg-white text-xl text-slate-500 shadow-sm transition-colors hover:border-orange-300 hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+          aria-label="Close search modal"
+        >
           ✕
         </button>
       </div>
+      </div>
 
       {/* Tag results */}
-      <div className="px-4 py-3 space-y-2">
+      <div className="mx-auto w-full max-w-6xl px-4 py-3">
+        <div className="space-y-2 rounded-2xl border border-orange-100/80 bg-white/90 p-2 shadow-[0_18px_35px_-32px_rgba(15,23,42,0.55)]">
         {loadingTags && (
-          <p className="text-sm text-gray-400">Searching…</p>
+          <p className="px-2 py-1 text-sm text-slate-400">Searching…</p>
         )}
 
-        {tags.map((tag) => (
+        {visibleTags.map((tag) => (
           <button
             key={tag.id}
             onClick={() => {
@@ -103,27 +119,29 @@ export default function SearchModal({
               setQuery(tag.name);
               setTags([]);
             }}
-            className={`block w-full text-left px-4 py-2 rounded-lg ${
+            className={`block w-full rounded-xl px-4 py-2 text-left text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 ${
               selectedTag?.id === tag.id
-                ? "bg-black text-white"
-                : "hover:bg-gray-100"
+                ? "border border-[#f97316] bg-[#f97316] text-white shadow-[0_12px_24px_-16px_rgba(249,115,22,0.75)]"
+                : "border border-transparent text-slate-700 hover:border-orange-200 hover:bg-orange-50"
             }`}
           >
             {tag.name}
           </button>
         ))}
+        </div>
       </div>
 
       {/* Filters */}
-      <div className="px-4 py-4 space-y-6">
+      <div className="mx-auto w-full max-w-6xl px-4 py-4">
+        <div className="space-y-6 rounded-[1.75rem] border border-orange-100/80 bg-white/95 p-4 shadow-[0_18px_35px_-32px_rgba(15,23,42,0.55)] sm:p-6">
         {/* Time */}
         <div>
-          <p className="text-xs text-gray-500 mb-2">Time</p>
-          <div className="flex gap-2 flex-wrap">
-            {["anytime", "today", "tomorrow", "weekend"].map((t) => (
+          <p className="mb-2 text-sm font-medium text-slate-500">Time</p>
+          <div className="flex flex-wrap gap-2">
+            {timeOptions.map((t) => (
               <button
                 key={t}
-                onClick={() => setTime(t as any)}
+                onClick={() => setTime(t)}
                 className={pill(time === t)}
               >
                 {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -134,7 +152,7 @@ export default function SearchModal({
 
         {/* Distance */}
         <div>
-          <p className="text-xs text-gray-500 mb-2">
+          <p className="mb-2 text-sm font-medium text-slate-500">
             Distance (up to {distance} km)
           </p>
           <input
@@ -143,13 +161,16 @@ export default function SearchModal({
             max={50}
             value={distance}
             onChange={(e) => setDistance(Number(e.target.value))}
-            className="w-full"
+            className="h-2 w-full cursor-pointer appearance-none rounded-full"
+            style={{
+              background: `linear-gradient(to right, #f97316 0%, #f97316 ${distancePercent}%, #fed7aa ${distancePercent}%, #fed7aa 100%)`,
+            }}
           />
         </div>
 
         {/* Sort */}
         <div>
-          <p className="text-xs text-gray-500 mb-2">Sort by</p>
+          <p className="mb-2 text-sm font-medium text-slate-500">Sort by</p>
           <div className="flex gap-2">
             <button
               onClick={() => setSort("soonest")}
@@ -166,15 +187,18 @@ export default function SearchModal({
           </div>
         </div>
       </div>
+      </div>
 
       {/* CTA */}
-      <div className="mt-auto p-4 border-t">
+      <div className="mt-auto border-t border-orange-100/80 bg-white/90 p-4 backdrop-blur-sm">
+        <div className="mx-auto w-full max-w-6xl">
         <button
           onClick={handleSearch}
-          className="w-full rounded-xl bg-black py-3 text-white font-medium disabled:opacity-40"
+          className="w-full rounded-2xl border border-[#f97316] bg-[#f97316] py-3 text-base font-semibold text-white shadow-[0_18px_30px_-20px_rgba(249,115,22,0.8)] transition-all duration-200 hover:bg-[#ea6a11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 disabled:opacity-40"
         >
           Search
         </button>
+      </div>
       </div>
     </div>
   );

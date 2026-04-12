@@ -13,20 +13,20 @@ export default function EmailSecuritySection() {
     <div className="mt-4">
       <button
         onClick={() => setShow((v) => !v)}
-        className="text-sm font-medium"
+        className="text-sm font-semibold text-slate-700 transition-colors hover:text-[#f97316]"
       >
         Change email
       </button>
 
       {show && (
-        <div className="mt-2">
-          <p className="text-xs text-gray-500">Your email is private and only used for login and recovery.</p>
+        <div className="mt-2 space-y-2">
+          <p className="text-xs text-slate-500">Your email is private and only used for login and recovery.</p>
           <input
             type="email"
             placeholder="New email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full border rounded px-3 py-2 text-sm"
+            className="w-full rounded-xl border border-orange-200 bg-orange-50/45 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 transition-all duration-200 focus:border-orange-300 focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
           />
 
           {message && (
@@ -75,7 +75,7 @@ export default function EmailSecuritySection() {
               );
             }}
             disabled={submitting}
-            className="mt-2 text-sm font-semibold disabled:opacity-60"
+            className="rounded-full border border-[#f97316] bg-[#f97316] px-4 py-1.5 text-sm font-semibold text-white shadow-[0_14px_26px_-18px_rgba(249,115,22,0.85)] transition-all duration-200 hover:bg-[#ea6a11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 disabled:opacity-60"
           >
             {submitting ? "Updating…" : "Update email"}
           </button>

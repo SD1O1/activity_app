@@ -119,17 +119,28 @@ export default function EditProfileModal({
   /* -------------------- loading -------------------- */
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-        <div className="bg-white p-6 rounded-lg">Loading…</div>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+        <div className="rounded-2xl border border-orange-100/80 bg-white px-6 py-4 text-slate-700 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.55)]">
+          Loading…
+        </div>
       </div>
     );
   }
 
   /* -------------------- render -------------------- */
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 overflow-y-auto px-4 py-6 flex items-start sm:items-center justify-center">
-      <div className="bg-white w-full max-w-md rounded-xl p-6 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-lg font-semibold mb-4">Edit profile</h2>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-gradient-to-b from-[#fff8f4] via-[#fffaf7] to-[#fffefe] px-4 py-6">
+      <div className="mx-auto w-full max-w-xl rounded-[1.75rem] border border-orange-100/80 bg-white/95 p-6 shadow-[0_20px_45px_-32px_rgba(15,23,42,0.55)] sm:p-7">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Edit profile</h2>
+          <button
+            onClick={onClose}
+            className="grid h-10 w-10 place-items-center rounded-full border border-orange-200 bg-white text-lg text-slate-500 shadow-sm transition-colors hover:border-orange-300 hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+            aria-label="Close edit profile modal"
+          >
+            ✕
+          </button>
+        </div>
 
         <ProfileBasicsSection
           avatarUrl={form.avatar_url}
@@ -153,7 +164,7 @@ export default function EditProfileModal({
           onVerified={() => updateForm({ phone_verified: true })}
         />
 
-        <div className="mt-6 border-t pt-4">
+        <div className="mt-6 border-t border-orange-100 pt-4">
           <EmailSecuritySection />
           <PasswordSecuritySection />
         </div>
@@ -161,7 +172,10 @@ export default function EditProfileModal({
         {saveError ? <p className="mt-4 text-sm text-red-600">{saveError}</p> : null}
 
         <div className="mt-6 flex justify-between">
-          <button onClick={onClose} className="text-sm text-gray-500">
+          <button
+            onClick={onClose}
+            className="rounded-full border border-orange-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-orange-300 hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+          >
             Cancel
           </button>
 
@@ -227,9 +241,9 @@ export default function EditProfileModal({
 
               onSaved();
             }}
-            className="text-sm font-semibold text-black"
+            className="rounded-full border border-[#f97316] bg-[#f97316] px-5 py-2 text-sm font-semibold text-white shadow-[0_14px_26px_-18px_rgba(249,115,22,0.85)] transition-all duration-200 hover:bg-[#ea6a11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 disabled:opacity-60"
           >
-            Save
+            {saving ? "Saving..." : "Save"}
           </button>
 
         </div>

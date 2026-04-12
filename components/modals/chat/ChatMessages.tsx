@@ -52,11 +52,11 @@ export default function ChatMessages({ messages, myId, participants, bottomRef, 
               )}
 
               <div className={`max-w-[78%] ${isMe ? "items-end" : "items-start"} flex flex-col`}>
-                <div className={`rounded-2xl px-4 py-3 text-[15px] leading-relaxed ${isMe ? "rounded-tr-none bg-[#ff6b00] text-white" : "rounded-tl-none bg-gray-100 text-gray-800"}`}>
+                <div className={`rounded-2xl px-4 py-3 text-[15px] leading-relaxed ${isMe ? "rounded-tr-none bg-[#f97316] text-white shadow-[0_12px_24px_-18px_rgba(249,115,22,0.8)]" : "rounded-tl-none border border-orange-100 bg-white/95 text-slate-800"}`}>
                   {m.content}
                 </div>
 
-                {isLastMessageFromMe && <span className="mt-1 px-1 text-[11px] text-gray-400">{getMessageStatusText(m)}</span>}
+                {isLastMessageFromMe && <span className="mt-1 px-1 text-[11px] text-slate-400">{getMessageStatusText(m)}</span>}
               </div>
             </div>
           </div>

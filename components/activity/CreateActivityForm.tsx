@@ -457,13 +457,21 @@ export default function CreateActivityForm({ userId }: { userId: string }) {
       </div>
 
       {showLocationPicker && (
-        <div className="fixed inset-0 z-50 bg-white">
-          <div className="flex items-center justify-between border-b px-4 py-4">
-            <h2 className="text-2xl font-semibold">Choose location</h2>
-            <button onClick={() => setShowLocationPicker(false)} className="text-3xl">✕</button>
+        <div className="fixed inset-0 z-50 bg-gradient-to-b from-[#fff8f4] via-[#fffaf7] to-[#fffefe] text-slate-900">
+          <div className="border-b border-orange-100/80 bg-white/85 px-4 py-4 backdrop-blur-sm">
+            <div className="mx-auto flex w-full max-w-6xl items-center justify-between">
+              <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Choose location</h2>
+              <button
+                onClick={() => setShowLocationPicker(false)}
+                className="grid h-11 w-11 place-items-center rounded-full border border-orange-200 bg-white text-2xl text-slate-500 shadow-sm transition-colors hover:border-orange-300 hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                aria-label="Close location picker"
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
-          <div className="p-4">
+          <div className="mx-auto w-full max-w-6xl p-4">
             <LocationPicker
               onSelect={(loc) => {
                 setLocation(loc);

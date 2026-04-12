@@ -128,31 +128,35 @@ export default function HostReviewModal({ open, onClose, onResolved }: Props) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-black/40 backdrop-blur-[2px]">
-      <div className="flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-white sm:mx-auto sm:max-w-md">
+    <div className="fixed inset-0 z-50 flex items-end bg-black/35 backdrop-blur-[2px]">
+      <div className="flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] border border-orange-100/80 bg-gradient-to-b from-[#fff8f4] via-[#fffaf7] to-[#fffefe] sm:mx-auto sm:max-w-md sm:rounded-[1.75rem] sm:shadow-[0_28px_50px_-34px_rgba(15,23,42,0.6)]">
         <div className="flex justify-center pt-3 pb-1">
-          <div className="h-1.5 w-10 rounded-full bg-gray-300" />
+          <div className="h-1.5 w-10 rounded-full bg-orange-200" />
         </div>
 
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-xl font-semibold text-gray-900">Review Request</h2>
-          <button onClick={onClose} className="rounded-full p-1 text-gray-500 transition hover:bg-gray-100" aria-label="Close review modal">
+        <div className="flex items-center justify-between border-b border-orange-100/80 bg-white/85 px-6 py-4 backdrop-blur-sm">
+          <h2 className="text-xl font-semibold tracking-tight text-slate-900">Review Request</h2>
+          <button
+            onClick={onClose}
+            className="grid h-9 w-9 place-items-center rounded-full border border-orange-200 bg-white text-slate-500 shadow-sm transition-colors hover:border-orange-300 hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+            aria-label="Close review modal"
+          >
             ✕
           </button>
         </div>
 
         <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
-          {requests.length === 0 && <p className="text-sm text-gray-500">No pending requests</p>}
+          {requests.length === 0 && <p className="text-sm text-slate-500">No pending requests</p>}
 
           {requests.map((r) => {
             const answers = normalizeAnswers(r.answers);
             const age = r.profile?.dob ? Math.max(0, new Date().getFullYear() - new Date(r.profile.dob).getFullYear()) : null;
 
             return (
-              <article key={r.id} className="space-y-5 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+              <article key={r.id} className="space-y-5 rounded-2xl border border-orange-100/80 bg-white/95 p-4 shadow-[0_18px_35px_-32px_rgba(15,23,42,0.55)]">
                 <div className="flex items-start gap-4">
-                  <div className="h-16 w-16 overflow-hidden rounded-full border-2 border-[#ff6b00]/20 bg-neutral-200">
+                  <div className="h-16 w-16 overflow-hidden rounded-full border-2 border-orange-200 bg-orange-50">
                     {r.profile?.avatar_url ? (
                       <Image src={r.profile.avatar_url} alt={r.profile?.name ?? "Requester"} width={64} height={64} className="h-full w-full object-cover" unoptimized />
                     ) : (
@@ -161,43 +165,43 @@ export default function HostReviewModal({ open, onClose, onResolved }: Props) {
                   </div>
 
                   <div className="flex-1">
-                    <p className="text-lg font-bold text-gray-900">
-                      {r.profile?.name ?? "Requester"} {age ? <span className="font-medium text-gray-500">{age}</span> : null}
+                    <p className="text-lg font-bold text-slate-900">
+                      {r.profile?.name ?? "Requester"} {age ? <span className="font-medium text-slate-500">{age}</span> : null}
                     </p>
-                    <p className="mt-1 text-sm leading-relaxed text-gray-600">
+                    <p className="mt-1 text-sm leading-relaxed text-slate-600">
                       {r.profile?.username ? `@${r.profile.username}` : "Sent a join request for your activity."}
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="text-base font-semibold text-gray-900">Responses to your questions</h3>
+                  <h3 className="text-base font-semibold text-slate-900">Responses to your questions</h3>
 
                   {questions.length === 0 ? (
-                    <p className="text-sm text-gray-500">This request has no required question responses.</p>
+                    <p className="text-sm text-slate-500">This request has no required question responses.</p>
                   ) : (
                     questions.map((question, index) => (
-                      <div key={index} className="rounded-2xl border border-gray-100 bg-white p-4">
-                        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[#ff6b00]">Question {index + 1}</p>
-                        <p className="mb-2 text-sm font-semibold text-gray-800">{question}</p>
-                        <p className="text-sm leading-relaxed text-gray-600">{answers[index] || "No response provided."}</p>
+                      <div key={index} className="rounded-2xl border border-orange-100 bg-orange-50/40 p-4">
+                        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[#f97316]">Question {index + 1}</p>
+                        <p className="mb-2 text-sm font-semibold text-slate-800">{question}</p>
+                        <p className="text-sm leading-relaxed text-slate-600">{answers[index] || "No response provided."}</p>
                       </div>
                     ))
                   )}
                 </div>
 
-                <div className="flex flex-col gap-3 border-t border-gray-100 pt-3">
+                <div className="flex flex-col gap-3 border-t border-orange-100 pt-3">
                   <button
                     onClick={() => handleApprove(r.id)}
                     disabled={resolving}
-                    className="w-full rounded-2xl bg-[#ff6b00] py-3.5 font-bold text-white shadow-lg shadow-orange-500/20 transition active:scale-[0.98] disabled:opacity-60"
+                    className="w-full rounded-2xl border border-[#f97316] bg-[#f97316] py-3.5 font-bold text-white shadow-[0_18px_30px_-20px_rgba(249,115,22,0.8)] transition-all duration-200 hover:bg-[#ea6a11] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 disabled:opacity-60"
                   >
                     Accept Request
                   </button>
                   <button
                     onClick={() => handleReject(r.id)}
                     disabled={resolving}
-                    className="w-full rounded-2xl border-2 border-[#ff6b00] py-3.5 font-bold text-[#ff6b00] transition hover:bg-orange-50 active:scale-[0.98] disabled:opacity-60"
+                    className="w-full rounded-2xl border border-orange-200 bg-white py-3.5 font-bold text-[#f97316] transition-all duration-200 hover:border-orange-300 hover:bg-orange-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 disabled:opacity-60"
                   >
                     Decline Request
                   </button>

@@ -153,12 +153,6 @@ export default function HomePage() {
         <div className="rounded-[1.75rem] border border-orange-100/80 bg-white/95 px-4 py-5 shadow-[0_18px_35px_-32px_rgba(15,23,42,0.55)] sm:px-5 sm:py-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-[2rem] font-bold tracking-tight text-slate-900 sm:text-3xl">Activities Near You</h2>
-            <button
-              onClick={() => router.push("/activities")}
-              className="rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5 text-base font-semibold text-[#f97316] transition-colors hover:border-orange-300 hover:bg-orange-100"
-            >
-              See All
-            </button>
           </div>
 
           <div className="space-y-4">

@@ -13,19 +13,19 @@ export default function PasswordSecuritySection() {
     <div className="mt-4">
       <button
         onClick={() => setShow((v) => !v)}
-        className="text-sm font-medium"
+        className="text-sm font-semibold text-slate-700 transition-colors hover:text-[#f97316]"
       >
         Change password
       </button>
 
       {show && (
-        <div className="mt-2">
+        <div className="mt-2 space-y-2">
           <input
             type="password"
             placeholder="New password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full border rounded px-3 py-2 text-sm mb-2"
+            className="w-full rounded-xl border border-orange-200 bg-orange-50/45 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 transition-all duration-200 focus:border-orange-300 focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
           />
 
           <input
@@ -33,7 +33,7 @@ export default function PasswordSecuritySection() {
             placeholder="Confirm password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            className="w-full border rounded px-3 py-2 text-sm"
+            className="w-full rounded-xl border border-orange-200 bg-orange-50/45 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 transition-all duration-200 focus:border-orange-300 focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
           />
 
           {message && (
@@ -77,7 +77,7 @@ export default function PasswordSecuritySection() {
               );
             }}
             disabled={submitting}
-            className="mt-2 text-sm font-semibold disabled:opacity-60"
+            className="rounded-full border border-[#f97316] bg-[#f97316] px-4 py-1.5 text-sm font-semibold text-white shadow-[0_14px_26px_-18px_rgba(249,115,22,0.85)] transition-all duration-200 hover:bg-[#ea6a11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 disabled:opacity-60"
           >
             {submitting ? "Updating…" : "Update password"}
           </button>
