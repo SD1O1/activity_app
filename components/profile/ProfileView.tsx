@@ -12,10 +12,10 @@ import { PublicUser } from "@/types/publicUser";
 const PROFILE_ACTIVITY_PAGE_SIZE = 50;
 const INTEREST_STYLES = [
   "bg-orange-100 text-orange-600",
-  "bg-blue-100 text-blue-600",
-  "bg-purple-100 text-purple-600",
-  "bg-pink-100 text-pink-600",
-  "bg-green-100 text-green-600",
+  "bg-amber-100 text-amber-700",
+  "bg-rose-100 text-rose-700",
+  "bg-orange-200 text-orange-800",
+  "bg-orange-50 text-orange-700",
 ];
 
 type ActivityTag = { id: string; name: string };
@@ -49,10 +49,10 @@ function formatActivityTime(startsAt: string) {
 }
 
 function getActivityIcon(type: "group" | "one-on-one", status: string) {
-  if (status === "completed") return { icon: "🎬", box: "bg-purple-100 text-purple-600" };
+  if (status === "completed") return { icon: "🎬", box: "bg-orange-100 text-orange-700" };
   return type === "group"
     ? { icon: "☕", box: "bg-orange-100 text-[#ee8c2b]" }
-    : { icon: "🏋️", box: "bg-blue-100 text-blue-600" };
+    : { icon: "🏋️", box: "bg-amber-100 text-amber-700" };
 }
 
 export default function ProfileView() {

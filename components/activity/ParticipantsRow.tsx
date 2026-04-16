@@ -57,11 +57,11 @@ export default function ParticipantsRow({ participants, currentUserId, isHost, i
 
               <div className="mt-2 flex items-center text-base font-medium text-slate-800">
                 <span>{displayName}</span>
-                {participant.verified && <span className="ml-1 text-blue-500">✔</span>}
+                {participant.verified && <span className="ml-1 text-[#f97316]">✔</span>}
               </div>
 
               {isHost && !isYou && participant.role === "member" && onRemove && (
-                <button onClick={() => onRemove(participant.id)} className="mt-1 text-xs text-red-500 hover:underline">
+                <button onClick={() => onRemove(participant.id)} className="mt-1 text-xs font-medium text-[#c2410c] hover:underline">
                   Remove
                 </button>
               )}

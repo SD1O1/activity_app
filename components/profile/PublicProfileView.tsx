@@ -7,10 +7,10 @@ import { ProfileCredibility } from "./ProfileCredibility";
 const PUBLIC_HOSTED_ACTIVITY_PAGE_SIZE = 50;
 const INTEREST_STYLES = [
   "bg-orange-100 text-orange-600",
-  "bg-blue-100 text-blue-600",
-  "bg-purple-100 text-purple-600",
-  "bg-pink-100 text-pink-600",
-  "bg-green-100 text-green-600",
+  "bg-amber-100 text-amber-700",
+  "bg-rose-100 text-rose-700",
+  "bg-orange-200 text-orange-800",
+  "bg-orange-50 text-orange-700",
 ];
 
 function getAge(dob: string | null) {
@@ -26,10 +26,10 @@ function getAge(dob: string | null) {
 }
 
 function getActivityIcon(type: "group" | "one-on-one", status: string) {
-  if (status === "completed") return { icon: "🎬", box: "bg-purple-100 text-purple-600" };
+  if (status === "completed") return { icon: "🎬", box: "bg-orange-100 text-orange-700" };
   return type === "group"
     ? { icon: "☕", box: "bg-orange-100 text-[#ee8c2b]" }
-    : { icon: "🏋️", box: "bg-blue-100 text-blue-600" };
+    : { icon: "🏋️", box: "bg-amber-100 text-amber-700" };
 }
 
 interface PublicProfileViewProps {
@@ -106,7 +106,7 @@ export async function PublicProfileView({ username }: PublicProfileViewProps) {
     .limit(PUBLIC_HOSTED_ACTIVITY_PAGE_SIZE);
 
   return (
-    <main className="min-h-screen bg-neutral-100 pb-12">
+    <main className="min-h-screen bg-gradient-to-b from-[#fff8f4] via-[#fffaf7] to-[#fffefe] pb-12">
       <section className="mx-auto w-full max-w-3xl px-4 pb-8 sm:px-6">
         <PublicProfileHeader
           name={profile.name}
@@ -136,7 +136,7 @@ export async function PublicProfileView({ username }: PublicProfileViewProps) {
           <ProfileCredibility hostedCount={hostedCount ?? 0} joinedCount={joinedCount ?? 0} />
         </div>
 
-        <section className="mt-8 border-b border-neutral-200">
+        <section className="mt-8 border-b border-orange-100/80">
           <div className="grid grid-cols-2">
             <div className="border-b-[3px] border-[#ee8c2b] py-3 text-center text-[2rem] font-bold text-slate-900 sm:text-[1.6rem]">Hosting</div>
             <div className="border-b-[3px] border-transparent py-3 text-center text-[2rem] font-bold text-slate-400 sm:text-[1.6rem]">Joined</div>
@@ -145,14 +145,18 @@ export async function PublicProfileView({ username }: PublicProfileViewProps) {
 
         <section className="mt-4 space-y-4">
           {!hostedActivities || hostedActivities.length === 0 ? (
-            <p className="rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-500">No activities hosted yet.</p>
+            <p className="rounded-2xl border border-orange-100/80 bg-orange-50/50 p-4 text-sm text-slate-500">No activities hosted yet.</p>
           ) : (
             hostedActivities.map((activity) => {
               const activityTheme = getActivityIcon(activity.type, activity.status);
               const isDone = activity.status === "completed";
 
               return (
-                <Link key={activity.id} href={`/activity/${activity.id}`} className="block rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <Link
+                  key={activity.id}
+                  href={`/activity/${activity.id}`}
+                  className="block rounded-3xl border border-orange-100/80 bg-white p-4 shadow-[0_18px_34px_-30px_rgba(15,23,42,0.6)]"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3">
                       <div className={`grid h-16 w-16 place-items-center rounded-2xl text-2xl ${activityTheme.box}`}>{activityTheme.icon}</div>
@@ -163,16 +167,16 @@ export async function PublicProfileView({ username }: PublicProfileViewProps) {
                         </p>
                       </div>
                     </div>
-                    {isDone && <span className="rounded-xl bg-neutral-100 px-3 py-1 text-xs font-bold uppercase text-neutral-500">Done</span>}
+                    {isDone && <span className="rounded-xl border border-orange-100 bg-orange-50 px-3 py-1 text-xs font-bold uppercase text-slate-500">Done</span>}
                   </div>
 
                   <p className="mt-3 pl-[4.8rem] text-xl text-slate-500 sm:text-base">📍 {activity.location_name || "Location TBD"}</p>
 
                   <div className="mt-4 flex items-center gap-2 pl-[4.8rem]">
-                    <span className={`flex-1 rounded-xl py-2 text-center text-2xl font-bold sm:text-xl ${isDone ? "bg-neutral-200 text-neutral-500" : "bg-[#ee8c2b] text-white"}`}>
+                    <span className={`flex-1 rounded-xl py-2 text-center text-2xl font-bold sm:text-xl ${isDone ? "bg-orange-100 text-slate-500" : "bg-[#ee8c2b] text-white"}`}>
                       {isDone ? "View Recap" : "Manage"}
                     </span>
-                    {!isDone && <span className="grid h-11 w-11 place-items-center rounded-xl bg-neutral-100 text-xl text-slate-600">💬</span>}
+                    {!isDone && <span className="grid h-11 w-11 place-items-center rounded-xl border border-orange-100 bg-orange-50 text-xl text-slate-600">💬</span>}
                   </div>
                 </Link>
               );

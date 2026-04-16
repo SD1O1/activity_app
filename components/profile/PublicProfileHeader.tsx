@@ -28,21 +28,21 @@ export function PublicProfileHeader({
 
   return (
     <>
-      <header className="sticky top-0 z-20 -mx-4 flex h-16 items-center justify-between border-b border-neutral-200 bg-neutral-100/95 px-5 backdrop-blur-sm sm:-mx-6 sm:px-6">
+      <header className="sticky top-0 z-20 -mx-4 flex h-16 items-center justify-between border-b border-orange-100/80 bg-white/95 px-5 backdrop-blur-sm sm:-mx-6 sm:px-6">
         <h1 className="text-[2.65rem] font-bold tracking-tight text-slate-900 sm:text-[2.1rem]">{isSelf ? "My Profile" : "Public Profile"}</h1>
         <ProfileActionsMenu isSelf={isSelf} profileId={profileId} username={username} />
       </header>
 
       <div className="mt-7 flex flex-col items-center text-center">
-        <div className="relative h-40 w-40 overflow-hidden rounded-full border-4 border-white bg-gray-200 shadow sm:h-44 sm:w-44">
+        <div className="relative h-40 w-40 overflow-hidden rounded-full border-4 border-orange-100 bg-orange-50 shadow-[0_18px_34px_-24px_rgba(249,115,22,0.55)] sm:h-44 sm:w-44">
           {avatarUrl ? (
             <Image src={avatarUrl} alt={displayName} fill className="object-cover" unoptimized />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-3xl text-gray-500">{displayName.charAt(0).toUpperCase()}</div>
+            <div className="flex h-full w-full items-center justify-center text-3xl text-slate-500">{displayName.charAt(0).toUpperCase()}</div>
           )}
 
           {(verified || phoneVerified) && (
-            <span className="absolute bottom-1 right-1 grid h-10 w-10 place-items-center rounded-full border-2 border-white bg-[#1d9bf0] text-lg text-white">
+            <span className="absolute bottom-1 right-1 grid h-10 w-10 place-items-center rounded-full border-2 border-white bg-[#f97316] text-lg text-white">
               ✪
             </span>
           )}

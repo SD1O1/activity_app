@@ -14,10 +14,10 @@ type Props = {
 
 function tagClass(tag: string) {
   const t = tag.toLowerCase();
-  if (t.includes("well")) return "bg-blue-100 text-blue-700";
+  if (t.includes("well")) return "bg-amber-100 text-amber-700";
   if (t.includes("social")) return "bg-orange-100 text-orange-700";
-  if (t.includes("entertain")) return "bg-purple-100 text-purple-700";
-  return "bg-slate-100 text-slate-600";
+  if (t.includes("entertain")) return "bg-rose-100 text-rose-700";
+  return "bg-orange-50 text-orange-700";
 }
 
 function coverForActivity(activity: ActivityListItem) {
@@ -137,11 +137,11 @@ export default function ActivitiesPageView({ activities, loading, timeFilter = "
                   <div className="mt-4 flex items-center justify-between border-t border-orange-100/80 pt-3">
                     <div className="flex -space-x-2">
                       {[0, 1, 2].map((idx) => (
-                        <span key={idx} className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-slate-200 text-xs text-slate-500">
+                        <span key={idx} className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-orange-100 text-xs text-orange-700">
                           👤
                         </span>
                       ))}
-                      <span className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-slate-100 text-xs font-bold text-slate-500">
+                      <span className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-orange-50 text-xs font-bold text-orange-700">
                         +{Math.max(1, (activity.member_count ?? 1) - 2)}
                       </span>
                     </div>

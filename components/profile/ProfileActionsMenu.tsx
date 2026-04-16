@@ -41,18 +41,22 @@ export function ProfileActionsMenu({ isSelf, profileId, username }: ProfileActio
 
   return (
     <div className="relative">
-      <button onClick={() => setOpen((v) => !v)} className="px-1 text-3xl text-slate-500 hover:text-[#ee8c2b]" aria-label="Profile actions">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="rounded-full px-2 py-1 text-3xl text-[#c97a2b] transition-colors hover:bg-orange-50 hover:text-[#ee8c2b]"
+        aria-label="Profile actions"
+      >
         ⋮
       </button>
 
       {open && (
-        <div className="absolute right-0 top-10 z-50 w-44 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg">
+        <div className="absolute right-0 top-10 z-50 w-44 overflow-hidden rounded-xl border border-orange-100/90 bg-gradient-to-b from-[#fffaf6] to-white shadow-[0_20px_30px_-22px_rgba(249,115,22,0.7)]">
           <button
             onClick={() => {
               navigator.clipboard.writeText(`${window.location.origin}/u/${username}`);
               setOpen(false);
             }}
-            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
+            className="w-full px-4 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-orange-50"
           >
             Share profile
           </button>
@@ -64,12 +68,15 @@ export function ProfileActionsMenu({ isSelf, profileId, username }: ProfileActio
                   setReportOpen(true);
                   setOpen(false);
                 }}
-                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
+                className="w-full px-4 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-orange-50"
               >
                 Report user
               </button>
 
-              <button onClick={handleBlock} className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100">
+              <button
+                onClick={handleBlock}
+                className="w-full px-4 py-2 text-left text-sm font-medium text-[#c2410c] transition-colors hover:bg-orange-100/70"
+              >
                 Block user
               </button>
             </>

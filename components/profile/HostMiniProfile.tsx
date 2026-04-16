@@ -14,23 +14,23 @@ export default function HostMiniProfile({ host, clickable = false, size = "md" }
 
   const content = (
     <>
-      <div className={`relative overflow-hidden rounded-full bg-gray-200 ${size === "sm" ? "h-12 w-12" : "h-14 w-14"}`}>
+      <div className={`relative overflow-hidden rounded-full bg-orange-50 ${size === "sm" ? "h-12 w-12" : "h-14 w-14"}`}>
         {host.avatar_url && <img src={host.avatar_url} alt={host.name ?? "User"} className="h-full w-full object-cover" />}
         {host.verified && (
-          <span className="absolute bottom-0 right-0 grid h-5 w-5 place-items-center rounded-full bg-blue-500 text-xs text-white ring-2 ring-neutral-100">
+          <span className="absolute bottom-0 right-0 grid h-5 w-5 place-items-center rounded-full bg-[#f97316] text-xs text-white ring-2 ring-orange-100">
             ✓
           </span>
         )}
       </div>
 
       <div className="text-left">
-        <div className="text-2xl font-semibold leading-tight text-neutral-900">{host.name ?? "Unknown"}</div>
-        <p className="text-lg text-neutral-500">Host{host.username ? ` · @${host.username}` : ""}</p>
+        <div className="text-2xl font-semibold leading-tight text-slate-900">{host.name ?? "Unknown"}</div>
+        <p className="text-lg text-slate-500">Host{host.username ? ` · @${host.username}` : ""}</p>
       </div>
     </>
   );
 
-  const cardClass = "flex items-center gap-4 rounded-2xl bg-neutral-100 p-4";
+  const cardClass = "flex items-center gap-4 rounded-2xl border border-orange-100/80 bg-orange-50/60 p-4";
 
   if (canNavigate) {
     return (
