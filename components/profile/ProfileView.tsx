@@ -12,10 +12,10 @@ import { PublicUser } from "@/types/publicUser";
 const PROFILE_ACTIVITY_PAGE_SIZE = 50;
 const INTEREST_STYLES = [
   "bg-orange-100 text-orange-600",
-  "bg-blue-100 text-blue-600",
-  "bg-purple-100 text-purple-600",
-  "bg-pink-100 text-pink-600",
-  "bg-green-100 text-green-600",
+  "bg-amber-100 text-amber-700",
+  "bg-rose-100 text-rose-700",
+  "bg-orange-200 text-orange-800",
+  "bg-orange-50 text-orange-700",
 ];
 
 type ActivityTag = { id: string; name: string };
@@ -49,10 +49,10 @@ function formatActivityTime(startsAt: string) {
 }
 
 function getActivityIcon(type: "group" | "one-on-one", status: string) {
-  if (status === "completed") return { icon: "🎬", box: "bg-purple-100 text-purple-600" };
+  if (status === "completed") return { icon: "🎬", box: "bg-orange-100 text-orange-700" };
   return type === "group"
     ? { icon: "☕", box: "bg-orange-100 text-[#ee8c2b]" }
-    : { icon: "🏋️", box: "bg-blue-100 text-blue-600" };
+    : { icon: "🏋️", box: "bg-amber-100 text-amber-700" };
 }
 
 export default function ProfileView() {
@@ -185,7 +185,7 @@ export default function ProfileView() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#fff8f4] via-[#fffaf7] to-[#fffefe] pb-28">
       <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-orange-100/80 bg-white/95 px-5 backdrop-blur-sm">
-        <h1 className="text-[2.65rem] font-bold tracking-tight text-slate-900 sm:text-[2.1rem]">My Profile</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-4xl">My Profile</h1>
         {userId && <ProfileActionsMenu isSelf profileId={userId} username={profile?.username ?? ""} />}
       </header>
 
@@ -205,11 +205,11 @@ export default function ProfileView() {
               )}
             </div>
 
-            <h2 className="mt-5 text-5xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+            <h2 className="mt-5 text-3xl font-bold tracking-tight text-slate-900 sm:text-5xl">
               {profile?.name || "Your name"}, {getAge(profile?.dob)}
             </h2>
 
-            {profile?.city && <p className="mt-2 text-2xl font-medium text-slate-500 sm:text-2xl">📍 {profile.city}</p>}
+            {profile?.city && <p className="mt-2 text-lg font-medium text-slate-500 sm:text-2xl">📍 {profile.city}</p>}
 
             <div className="mt-5 flex flex-wrap justify-center gap-2">
               {profile?.interests?.length ? (
@@ -223,17 +223,17 @@ export default function ProfileView() {
               )}
             </div>
 
-            <p className="mt-4 max-w-2xl text-xl leading-relaxed text-slate-600 sm:text-2xl">
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-slate-600 sm:text-xl">
               {profile?.bio || "Tell people something about you"}
             </p>
 
             <div className="mt-8 grid w-full grid-cols-2 gap-4">
               <div className="rounded-3xl border border-orange-100/80 bg-white p-6 text-center shadow-[0_16px_32px_-28px_rgba(15,23,42,0.55)]">
-                <p className="text-6xl font-bold text-slate-900 sm:text-5xl">{hostedCount}</p>
+                <p className="text-4xl font-bold text-slate-900 sm:text-5xl">{hostedCount}</p>
                 <p className="mt-1 text-sm font-bold tracking-wider text-slate-500">HOSTED</p>
               </div>
               <div className="rounded-3xl border border-orange-100/80 bg-white p-6 text-center shadow-[0_16px_32px_-28px_rgba(15,23,42,0.55)]">
-                <p className="text-6xl font-bold text-slate-900 sm:text-5xl">{joinedCount}</p>
+                <p className="text-4xl font-bold text-slate-900 sm:text-5xl">{joinedCount}</p>
                 <p className="mt-1 text-sm font-bold tracking-wider text-slate-500">JOINED</p>
               </div>
             </div>
@@ -249,13 +249,13 @@ export default function ProfileView() {
               <div className="grid grid-cols-2">
                 <button
                   onClick={() => setActivityTab("hosted")}
-                  className={`border-b-[3px] py-3 text-[2rem] font-bold transition sm:text-[1.6rem] ${activityTab === "hosted" ? "border-[#f97316] text-slate-900" : "border-transparent text-slate-400"}`}
+                  className={`border-b-[3px] py-3 text-lg font-bold transition sm:text-2xl ${activityTab === "hosted" ? "border-[#f97316] text-slate-900" : "border-transparent text-slate-400"}`}
                 >
                   Hosting
                 </button>
                 <button
                   onClick={() => setActivityTab("joined")}
-                  className={`border-b-[3px] py-3 text-[2rem] font-bold transition sm:text-[1.6rem] ${activityTab === "joined" ? "border-[#f97316] text-slate-900" : "border-transparent text-slate-400"}`}
+                  className={`border-b-[3px] py-3 text-lg font-bold transition sm:text-2xl ${activityTab === "joined" ? "border-[#f97316] text-slate-900" : "border-transparent text-slate-400"}`}
                 >
                   Joined
                 </button>
@@ -282,17 +282,17 @@ export default function ProfileView() {
                         <div className="flex items-start gap-3">
                           <div className={`grid h-16 w-16 place-items-center rounded-2xl text-2xl ${activityTheme.box}`}>{activityTheme.icon}</div>
                           <div>
-                            <h3 className="text-[2rem] font-bold leading-tight text-slate-900 sm:text-[1.8rem]">{activity.title}</h3>
-                            <p className="mt-1 text-xl text-slate-500 sm:text-base">🕒 {formatActivityTime(activity.starts_at)}</p>
+                            <h3 className="text-xl font-bold leading-tight text-slate-900 sm:text-2xl">{activity.title}</h3>
+                            <p className="mt-1 text-sm text-slate-500 sm:text-base">🕒 {formatActivityTime(activity.starts_at)}</p>
                           </div>
                         </div>
                         {isDone && <span className="rounded-xl border border-orange-100 bg-orange-50 px-3 py-1 text-xs font-bold uppercase text-slate-500">Done</span>}
                       </div>
 
-                      <p className="mt-3 pl-[4.8rem] text-xl text-slate-500 sm:text-base">📍 {activity.location_name || "Location TBD"}</p>
+                      <p className="mt-3 pl-[4.8rem] text-sm text-slate-500 sm:text-base">📍 {activity.location_name || "Location TBD"}</p>
 
                       <div className="mt-4 flex items-center gap-2 pl-[4.8rem]">
-                        <span className={`flex-1 rounded-xl py-2 text-center text-2xl font-bold sm:text-xl ${isDone ? "bg-orange-100 text-slate-500" : "bg-[#f97316] text-white"}`}>
+                        <span className={`flex-1 rounded-xl py-2 text-center text-base font-bold sm:text-xl ${isDone ? "bg-orange-100 text-slate-500" : "bg-[#f97316] text-white"}`}>
                           {isDone ? "View Recap" : activityTab === "hosted" ? "Manage" : "View"}
                         </span>
                         {!isDone && (

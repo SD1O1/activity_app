@@ -14,10 +14,10 @@ type Props = {
 
 function tagClass(tag: string) {
   const t = tag.toLowerCase();
-  if (t.includes("well")) return "bg-blue-100 text-blue-700";
+  if (t.includes("well")) return "bg-amber-100 text-amber-700";
   if (t.includes("social")) return "bg-orange-100 text-orange-700";
-  if (t.includes("entertain")) return "bg-purple-100 text-purple-700";
-  return "bg-slate-100 text-slate-600";
+  if (t.includes("entertain")) return "bg-rose-100 text-rose-700";
+  return "bg-orange-50 text-orange-700";
 }
 
 function coverForActivity(activity: ActivityListItem) {
@@ -51,8 +51,8 @@ export default function ActivitiesPageView({ activities, loading, timeFilter = "
           <div className="flex items-center gap-3">
             <div className="grid h-12 w-12 place-items-center rounded-full bg-orange-100 text-[#f97316] text-xl">⭐</div>
             <div>
-              <h1 className="text-[2.5rem] font-bold leading-tight tracking-tight text-slate-900 sm:text-[2.1rem]">Walking</h1>
-              <p className="text-xl text-slate-500 sm:text-sm font-medium">Find partners nearby</p>
+              <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-900 sm:text-3xl">Walking</h1>
+              <p className="text-sm font-medium text-slate-500 sm:text-base">Find partners nearby</p>
             </div>
           </div>
         </header>
@@ -110,23 +110,23 @@ export default function ActivitiesPageView({ activities, loading, timeFilter = "
                         )}
                       </div>
                       <div>
-                        <p className="text-4xl font-semibold leading-none text-slate-900 sm:text-3xl">{activity.host?.name ?? "Host"}</p>
-                        <p className="mt-1 text-2xl text-slate-500 sm:text-sm">{relativeFromStart(activity.starts_at)}</p>
+                        <p className="text-lg font-semibold leading-none text-slate-900 sm:text-2xl">{activity.host?.name ?? "Host"}</p>
+                        <p className="mt-1 text-sm text-slate-500 sm:text-base">{relativeFromStart(activity.starts_at)}</p>
                       </div>
                     </div>
 
-                    <span className={`rounded-full px-3 py-1 text-[1rem] font-semibold sm:text-xs ${tagClass(label)}`}>{label}</span>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold sm:text-sm ${tagClass(label)}`}>{label}</span>
                   </div>
 
                   <div className="mt-4 flex gap-4">
                     <div className="min-w-0 flex-1">
-                      <h2 className="text-[2.5rem] font-bold leading-tight text-slate-900 sm:text-[2rem]">{activity.title}</h2>
-                      <p className="mt-2 line-clamp-2 text-[1.9rem] leading-snug text-slate-600 sm:text-lg">
+                      <h2 className="text-2xl font-bold leading-tight text-slate-900 sm:text-3xl">{activity.title}</h2>
+                      <p className="mt-2 line-clamp-2 text-base leading-snug text-slate-600 sm:text-lg">
                         {activity.category ?? "Looking for people to join this activity. Come along if this sounds like your vibe!"}
                       </p>
 
-                      <p className="mt-3 text-[1.9rem] text-slate-500 sm:text-base">📍 {activity.location_name || "Location shared after joining"}</p>
-                      <p className={`mt-1 text-[1.9rem] sm:text-base ${isFull ? "text-[#f97316]" : "text-slate-500"}`}>
+                      <p className="mt-3 text-sm text-slate-500 sm:text-base">📍 {activity.location_name || "Location shared after joining"}</p>
+                      <p className={`mt-1 text-sm sm:text-base ${isFull ? "text-[#f97316]" : "text-slate-500"}`}>
                         👥 {joined ? `${activity.member_count}/${activity.max_members} joined${isFull ? " (Full)" : ""}` : "Spots available"}
                       </p>
                     </div>
@@ -137,18 +137,18 @@ export default function ActivitiesPageView({ activities, loading, timeFilter = "
                   <div className="mt-4 flex items-center justify-between border-t border-orange-100/80 pt-3">
                     <div className="flex -space-x-2">
                       {[0, 1, 2].map((idx) => (
-                        <span key={idx} className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-slate-200 text-xs text-slate-500">
+                        <span key={idx} className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-orange-100 text-xs text-orange-700">
                           👤
                         </span>
                       ))}
-                      <span className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-slate-100 text-xs font-bold text-slate-500">
+                      <span className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-orange-50 text-xs font-bold text-orange-700">
                         +{Math.max(1, (activity.member_count ?? 1) - 2)}
                       </span>
                     </div>
 
                     <button
                       onClick={() => router.push(`/activity/${activity.id}`)}
-                      className={`rounded-xl px-6 py-2 text-[1.9rem] font-bold sm:text-xl transition-all duration-200 ${isFull ? "bg-orange-100 text-slate-400" : index === 0 ? "bg-orange-100 text-[#f97316]" : "bg-[#f97316] text-white shadow-md shadow-orange-400/30 hover:bg-[#ea580c]"}`}
+                      className={`rounded-xl px-6 py-2 text-base font-bold sm:text-lg transition-all duration-200 ${isFull ? "bg-orange-100 text-slate-400" : index === 0 ? "bg-orange-100 text-[#f97316]" : "bg-[#f97316] text-white shadow-md shadow-orange-400/30 hover:bg-[#ea580c]"}`}
                     >
                       {isFull ? "Full" : "Join"}
                     </button>

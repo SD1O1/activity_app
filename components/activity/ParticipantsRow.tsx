@@ -27,7 +27,7 @@ export default function ParticipantsRow({ participants, currentUserId, isHost, i
 
   return (
     <section className="mt-10 px-4 pb-36 sm:px-5">
-      <p className="mb-4 text-4xl font-semibold tracking-tight text-slate-900 sm:text-[2rem]">
+      <p className="mb-4 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
         Participants <span className="text-slate-400">({participants.length})</span>
       </p>
 
@@ -57,11 +57,11 @@ export default function ParticipantsRow({ participants, currentUserId, isHost, i
 
               <div className="mt-2 flex items-center text-base font-medium text-slate-800">
                 <span>{displayName}</span>
-                {participant.verified && <span className="ml-1 text-blue-500">✔</span>}
+                {participant.verified && <span className="ml-1 text-[#f97316]">✔</span>}
               </div>
 
               {isHost && !isYou && participant.role === "member" && onRemove && (
-                <button onClick={() => onRemove(participant.id)} className="mt-1 text-xs text-red-500 hover:underline">
+                <button onClick={() => onRemove(participant.id)} className="mt-1 text-xs font-medium text-[#c2410c] hover:underline">
                   Remove
                 </button>
               )}
