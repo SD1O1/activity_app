@@ -112,7 +112,8 @@ export default function HostReviewModal({ open, onClose, onResolved }: Props) {
     setError(null);
     setResolving(true);
 
-    const { error: rejectError } = await supabase.from("join_requests").update({ status: "rejected" }).eq("id", joinRequestId);
+    const { error: rejectError } = await supabase.from("join_requests").update({ status: "declined" }).eq("id", joinRequestId);
+
 
     if (rejectError) {
       setError(rejectError.message || "Failed to decline join request");

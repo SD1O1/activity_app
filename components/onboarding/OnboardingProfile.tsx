@@ -195,7 +195,7 @@ export default function OnboardingProfile() {
     }
 
     await supabase
-      .from("profiles")
+      .from("profile_private")
       .update({
         verification_status: "pending",
         verification_video_path: path,
@@ -233,7 +233,6 @@ export default function OnboardingProfile() {
       bio: form.bio,
       avatar_url: form.photo || null,
       city: form.city || null,
-      phone: fullPhone,
       phone_verified: form.phoneVerified,
       interests: form.interests,
     };
@@ -243,9 +242,30 @@ export default function OnboardingProfile() {
       .upsert(payload, { onConflict: "id" });
 
     if (profileError) {
+      console.error("Profile upsert failed:", profileError);
+      setGlobalError(
+        profileError.message ||
+          "Failed to save your profile. Please try again."
+      );
+      setSubmitting(false);
+      return;
+    }
+
+    const { error: privateProfileError } = await supabase
+      .from("profile_private")
+      .upsert(
+        {
+          id: auth.user.id,
+          phone: fullPhone,
+          phone_verified: form.phoneVerified,
+        },
+        { onConflict: "id" }
+      );
+
+    if (privateProfileError) {
       if (
-        profileError.code === "23505" ||
-        profileError.message?.includes("profiles_phone_unique")
+        privateProfileError.code === "23505" ||
+        privateProfileError.message?.includes("profile_private_phone_unique")
       ) {
         setPhoneError(
           "This phone number is already associated with another account."
@@ -255,10 +275,10 @@ export default function OnboardingProfile() {
         return;
       }
 
-      console.error("Profile upsert failed:", profileError);
+      console.error("Private profile upsert failed:", privateProfileError);
       setGlobalError(
-        profileError.message ||
-          "Failed to save your profile. Please try again."
+        privateProfileError.message ||
+          "Failed to save your private profile details. Please try again."
       );
       setSubmitting(false);
       return;
