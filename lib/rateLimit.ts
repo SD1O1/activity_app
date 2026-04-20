@@ -1,4 +1,6 @@
 import { errorResponse } from "@/lib/apiResponses";
+import { createSupabaseAdmin } from "@/lib/supabaseServer";
+import { logger } from "@/lib/logger";
 
 type RateLimitOptions = {
   routeKey: string;
@@ -40,14 +42,49 @@ function checkAndIncrement(key: string, limit: number, windowMs: number) {
   return false;
 }
 
-export function enforceRateLimit(options: RateLimitOptions) {
+async function checkDbRateLimit(
+  key: string,
+  limit: number,
+  windowMs: number
+): Promise<boolean> {
+  try {
+    const admin = createSupabaseAdmin();
+    const { data, error } = await admin.rpc("consume_rate_limit_atomic", {
+      p_key: key,
+      p_limit: limit,
+      p_window_ms: windowMs,
+    });
+
+    if (error) {
+      logger.warn("rate_limit.rpc_failed", {
+        key,
+        limit,
+        windowMs,
+        error,
+      });
+      return checkAndIncrement(key, limit, windowMs);
+    }
+
+    return Boolean(data);
+  } catch (error) {
+    logger.warn("rate_limit.rpc_exception", {
+      key,
+      limit,
+      windowMs,
+      error,
+    });
+    return checkAndIncrement(key, limit, windowMs);
+  }
+}
+
+export async function enforceRateLimit(options: RateLimitOptions) {
   const ip = getIp(options.request);
-  const userLimited = checkAndIncrement(
+  const userLimited = await checkDbRateLimit(
     `${options.routeKey}:user:${options.userId}`,
     options.limit,
     options.windowMs
   );
-  const ipLimited = checkAndIncrement(
+  const ipLimited = await checkDbRateLimit(
     `${options.routeKey}:ip:${ip}`,
     options.limit,
     options.windowMs

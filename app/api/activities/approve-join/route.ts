@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     }
     const { user } = auth;
 
-    const rateLimitResponse = enforceRateLimit({
+    const rateLimitResponse = await enforceRateLimit({
       routeKey: "approve-join",
       userId: user.id,
       request,

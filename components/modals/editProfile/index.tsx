@@ -49,15 +49,8 @@ export default function EditProfileModal({
         .eq("id", userId)
         .single();
 
-        const { data: privateData, error: privateError } = await supabase
-        .from("profile_private")
-        .select("phone, phone_verified")
-        .eq("id", userId)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error("Failed to load profile", profileError);
-
+      if (error) {
+        console.error("Failed to load profile", error);
         setLoading(false);
         return;
       }
@@ -249,6 +242,24 @@ export default function EditProfileModal({
                     },
                     { onConflict: "id" }
                   );
+
+              if (profileError) {
+                setSaving(false);
+                console.error("Profile update failed", profileError);
+                setSaveError("Failed to save profile. Please try again.");
+                return;
+              }
+
+              const { error: privateProfileError } = await supabase
+                .from("profile_private")
+                .upsert(
+                  {
+                    id: userId,
+                    phone: form.phone,
+                    phone_verified: form.phone_verified,
+                  },
+                  { onConflict: "id" }
+                );
 
               setSaving(false);
 
