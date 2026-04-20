@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   }
   const { user } = auth;
 
-  const rateLimitResponse = enforceRateLimit({
+  const rateLimitResponse = await enforceRateLimit({
     routeKey: "chat-notify",
     userId: user.id,
     request: req,
