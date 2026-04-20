@@ -48,23 +48,23 @@ export default function EditProfileModal({
         .select("avatar_url, name, bio, city, phone_verified, interests")
         .eq("id", userId)
         .single();
-    
+
       const { data: privateData, error: privateError } = await supabase
         .from("profile_private")
         .select("phone, phone_verified")
         .eq("id", userId)
         .maybeSingle();
-    
+
       if (profileError) {
         console.error("Failed to load profile", profileError);
         setLoading(false);
         return;
       }
-    
+
       if (privateError) {
         console.error("Failed to load private profile", privateError);
       }
-    
+
       setForm({
         avatar_url: profileData?.avatar_url ?? "",
         name: profileData?.name ?? "",
@@ -75,7 +75,7 @@ export default function EditProfileModal({
           privateData?.phone_verified ?? profileData?.phone_verified ?? false,
         interests: profileData?.interests ?? [],
       });
-    
+
       setLoading(false);
     };
 
@@ -230,40 +230,42 @@ export default function EditProfileModal({
                   interests: form.interests,
                 })
                 .eq("id", userId);
-              
-                if (profileError) {
-                  setSaving(false);
-                  console.error("Profile update failed", profileError);
-                  setSaveError("Failed to save profile. Please try again.");
-                  return;
-                }
-  
-                const { error: privateProfileError } = await supabase
-                  .from("profile_private")
-                  .upsert(
-                    {
-                      id: userId,
-                      phone: form.phone,
-                      phone_verified: form.phone_verified,
-                    },
-                    { onConflict: "id" }
-                  );
 
+              if (profileError) {
                 setSaving(false);
+                console.error("Profile update failed", profileError);
+                setSaveError("Failed to save profile. Please try again.");
+                return;
+              }
 
-                if (privateProfileError) {
-                  if (
-                    privateProfileError.code === "23505" ||
-                    privateProfileError.message?.includes("profile_private_phone_unique")
-                  ) {
-                    setPhoneError("This phone number is already associated with another account.");
-                    return;
-                  }
+              const { error: privateProfileError } = await supabase
+                .from("profile_private")
+                .upsert(
+                  {
+                    id: userId,
+                    phone: form.phone,
+                    phone_verified: form.phone_verified,
+                  },
+                  { onConflict: "id" }
+                );
 
-                  console.error("Private profile update failed", privateProfileError);
-                  setSaveError("Failed to save profile. Please try again.");
+              setSaving(false);
+
+              if (privateProfileError) {
+                if (
+                  privateProfileError.code === "23505" ||
+                  privateProfileError.message?.includes("profile_private_phone_unique")
+                ) {
+                  setPhoneError(
+                    "This phone number is already associated with another account."
+                  );
                   return;
                 }
+
+                console.error("Private profile update failed", privateProfileError);
+                setSaveError("Failed to save profile. Please try again.");
+                return;
+              }
 
               onSaved();
             }}
