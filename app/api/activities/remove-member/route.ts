@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     }
     const { user } = auth;
 
-    const rateLimitResponse = enforceRateLimit({
+    const rateLimitResponse = await enforceRateLimit({
       routeKey: "remove-member",
       userId: user.id,
       request: req,
@@ -144,7 +144,7 @@ export async function POST(req: Request) {
         .eq("activity_id", activityId)
         .maybeSingle();
 
-      let removedConversationParticipant: Record<string, any> | null = null;
+      let removedConversationParticipant: Record<string, unknown> | null = null;
       if (conversation?.id) {
         const { data: existingConversationParticipant } = await admin
           .from("conversation_participants")
@@ -154,7 +154,7 @@ export async function POST(req: Request) {
           .maybeSingle();
 
         removedConversationParticipant =
-          (existingConversationParticipant as Record<string, any> | null) ?? null;
+          (existingConversationParticipant as Record<string, unknown> | null) ?? null;
       }
 
       const rollbackMembership = async () => {
