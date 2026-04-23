@@ -6,6 +6,9 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   INTERNAL_API_SECRET: z.string().min(1),
   CRON_SECRET: z.string().min(1),
+  ADMIN_USER_IDS: z.string().optional(),
+  LOG_EVENTS_ENABLED: z.string().optional(),
+  LOG_EVENTS_MIN_LEVEL: z.string().optional(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

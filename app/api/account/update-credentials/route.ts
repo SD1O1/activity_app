@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     }
     const { user } = auth;
 
-    const rateLimitResponse = enforceRateLimit({
+    const rateLimitResponse = await enforceRateLimit({
       routeKey: "update-credentials",
       userId: user.id,
       request: req,
