@@ -11,7 +11,7 @@ export async function requireCompletedProfile() {
 
   // Not logged in → homepage
   if (!user) {
-    return { user: null };
+    redirect("/");
   }
 
   const { data: profile } = await supabase
