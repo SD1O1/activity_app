@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     if (rateLimitResponse) return rateLimitResponse;
 
     if (!resolvedJoinRequestId) {
-      const { data: joinRequest, error: joinRequestLookupError } = await supabase
+      const { data: joinRequest, error: joinRequestLookupError } = await admin
         .from("join_requests")
         .select("id")
         .eq("activity_id", resolvedActivityId)
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const { data: rpcResult, error: rpcError } = await supabase.rpc(
+    const { data: rpcResult, error: rpcError } = await admin.rpc(
       "approve_join_request_atomic",
       {
         p_join_request_id: resolvedJoinRequestId,

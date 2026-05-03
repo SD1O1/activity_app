@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
 import {
   createSupabaseAdmin,
   createSupabaseServer,
 } from "@/lib/supabaseServer";
+import { requireApiUser } from "@/lib/apiAuth";
+import { enforceRateLimit } from "@/lib/rateLimit";
+import { errorResponse, successResponse } from "@/lib/apiResponses";
 
 export async function POST(
   _req: Request,
@@ -13,14 +15,20 @@ export async function POST(
     const supabase = await createSupabaseServer();
     const admin = createSupabaseAdmin();
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const auth = await requireApiUser(supabase);
+    if ("response" in auth) {
+      return auth.response;
     }
+    const { user } = auth;
+
+    const rateLimitResponse = await enforceRateLimit({
+      routeKey: "complete-activity",
+      userId: user.id,
+      request: _req,
+      limit: 10,
+      windowMs: 60_000,
+    });
+    if (rateLimitResponse) return rateLimitResponse;
 
     const { data: activity, error: activityError } = await admin
       .from("activities")
@@ -30,11 +38,11 @@ export async function POST(
       .single();
 
     if (activityError) {
-      return NextResponse.json({ success: false, error: "Failed to load activity" }, { status: 500 });
+      return errorResponse("Failed to load activity", 500, "INTERNAL");
     }
 
     if (!activity || activity.host_id !== user.id) {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      return errorResponse("Forbidden", 403, "FORBIDDEN");
     }
 
     const { error: updateError } = await admin
@@ -43,12 +51,12 @@ export async function POST(
       .eq("id", id);
 
     if (updateError) {
-      return NextResponse.json({ success: false, error: "Failed to complete activity" }, { status: 500 });
+      return errorResponse("Failed to complete activity", 500, "INTERNAL");
     }
 
-    return NextResponse.json({ success: true });
+    return successResponse();
   } catch (error) {
     console.error("complete activity error", { error });
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+    return errorResponse("Internal server error", 500, "INTERNAL");
   }
 }

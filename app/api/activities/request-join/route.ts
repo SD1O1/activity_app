@@ -133,11 +133,20 @@ export async function POST(req: Request) {
           .eq("status", "pending");
 
         if (answersError) {
-          logger.warn("request_join.answers_update_failed", {
+          logger.error("request_join.answers_update_failed_partial_success", {
             activityId,
             requesterId: user.id,
             answersError,
           });
+
+          return successResponse(
+            {
+              message: result.message || "Join request sent",
+              duplicatePending: Boolean(result.duplicatePending),
+              answerssaved: false,
+            },
+            200
+          );
         }
       }
 
