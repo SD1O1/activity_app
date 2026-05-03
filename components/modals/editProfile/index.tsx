@@ -202,7 +202,7 @@ export default function EditProfileModal({
               }
 
               if (!form.city.trim()) {
-                alert("City cannot be empty");
+                setSaveError("City cannot be empty");
                 return;
               }
 

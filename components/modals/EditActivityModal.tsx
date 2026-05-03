@@ -48,7 +48,6 @@ export default function EditActivityModal({
           type,
           cost_rule: costRule,
           max_members: type === "group" ? maxMembers : 2,
-          host_id: activity.host_id,
         }),
       }
     );

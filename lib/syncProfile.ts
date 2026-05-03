@@ -1,12 +1,13 @@
-import { User } from "@supabase/supabase-js";
-import { supabase } from "./supabaseClient";
+import { SupabaseClient, User } from "@supabase/supabase-js";
 
-export async function syncProfile(user: User | null) {
+export async function syncProfile(
+  supabaseClient: SupabaseClient,
+  user: User | null
+) {
   if (!user) return;
 
-  await supabase.from("profiles").upsert({
-    id: user.id,
-    email: user.email,
-    created_at: new Date().toISOString(),
-  });
+  await supabaseClient.from("profiles").upsert(
+    { id: user.id, email: user.email },
+    { onConflict: "id", ignoreDuplicates: false }
+  );
 }
