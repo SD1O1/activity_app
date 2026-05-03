@@ -41,14 +41,23 @@ export async function POST(req: Request) {
     });
     if (rateLimitResponse) return rateLimitResponse;
 
-    const { error: updateError } = await admin.auth.admin.updateUserById(user.id, {
-      ...(email ? { email } : {}),
-      ...(password ? { password } : {}),
-    });
+    if (email) {
+      const { error: emailUpdateError } = await supabase.auth.updateUser({ email });
+      if (emailUpdateError) {
+        logger.warn("update_credentials.email_update_failed", { userId: user.id, emailUpdateError });
+        return errorResponse("Failed to update credentials.", 400, "BAD_REQUEST");
+      }
+    }
 
-    if (updateError) {
-      logger.warn("update_credentials.update_failed", { userId: user.id, updateError });
-      return errorResponse("Failed to update credentials.", 400, "BAD_REQUEST");
+    if (password) {
+      const { error: passwordUpdateError } = await admin.auth.admin.updateUserById(user.id, {
+        password,
+      });
+
+      if (passwordUpdateError) {
+        logger.warn("update_credentials.password_update_failed", { userId: user.id, passwordUpdateError });
+        return errorResponse("Failed to update credentials.", 400, "BAD_REQUEST");
+      }
     }
 
     return successResponse(undefined, 200);

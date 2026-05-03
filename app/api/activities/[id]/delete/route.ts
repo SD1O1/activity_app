@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { errorResponse, successResponse } from "@/lib/apiResponses";
 import {
   createSupabaseAdmin,
@@ -6,6 +5,7 @@ import {
 } from "@/lib/supabaseServer";
 import { requireApiUser } from "@/lib/apiAuth";
 import { insertNotifications } from "@/lib/notifications";
+import { enforceRateLimit } from "@/lib/rateLimit";
 
 type DeleteActivityRpcResult = {
   ok: boolean;
@@ -26,6 +26,15 @@ export async function POST(
     return auth.response;
   }
   const { user } = auth;
+
+  const rateLimitResponse = await enforceRateLimit({
+    routeKey: "delete-activity",
+    userId: user.id,
+    request: _req,
+    limit: 10,
+    windowMs: 60_000,
+  });
+  if (rateLimitResponse) return rateLimitResponse;
 
   const { data: activity, error: activityError } = await admin
     .from("activities")
@@ -62,13 +71,10 @@ export async function POST(
       userId: user.id,
       rpcError,
     });
-    return NextResponse.json(
-      {
-        success: false,
-        error:
-          "Failed to delete activity atomically. Ensure delete_activity_cascade_atomic() exists and cleanup constraints/indexes are applied.",
-      },
-      { status: 500 }
+    return errorResponse(
+      "Failed to delete activity atomically. Ensure delete_activity_cascade_atomic() exists and cleanup constraints/indexes are applied.",
+      500,
+      "INTERNAL"
     );
   }
 

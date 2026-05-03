@@ -2,6 +2,7 @@ import { createSupabaseAdmin, createSupabaseServer } from "@/lib/supabaseServer"
 import { errorResponse, successResponse } from "@/lib/apiResponses";
 import { isAdminUserId } from "@/lib/adminAuth";
 import { logger } from "@/lib/logger";
+import { enforceRateLimit } from "@/lib/rateLimit";
 
 const ALLOWED_STATUSES = new Set([
   "open",
@@ -29,6 +30,15 @@ export async function PATCH(
     if (!isAdminUserId(user.id)) {
       return errorResponse("Forbidden", 403, "FORBIDDEN");
     }
+
+    const rateLimitResponse = await enforceRateLimit({
+      routeKey: "admin-report-status",
+      userId: user.id,
+      request: req,
+      limit: 30,
+      windowMs: 60_000,
+    });
+    if (rateLimitResponse) return rateLimitResponse;
 
     const body = (await req.json().catch(() => null)) as
       | { status?: string; reviewNote?: string | null }

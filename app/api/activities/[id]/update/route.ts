@@ -3,6 +3,8 @@ import { createSupabaseAdmin, createSupabaseServer } from "@/lib/supabaseServer"
 import { errorResponse, successResponse } from "@/lib/apiResponses";
 import { parseJsonBody, uuidSchema } from "@/lib/validation";
 import { logger } from "@/lib/logger";
+import { requireApiUser } from "@/lib/apiAuth";
+import { enforceRateLimit } from "@/lib/rateLimit";
 
 const activityTypeSchema = z.enum(["group", "one-on-one"]).optional();
 
@@ -28,14 +30,20 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
   const supabase = await createSupabaseServer();
   const admin = createSupabaseAdmin();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return errorResponse("Unauthorized", 401, "UNAUTHORIZED");
+  const auth = await requireApiUser(supabase);
+  if ("response" in auth) {
+    return auth.response;
   }
+  const { user } = auth;
+
+  const rateLimitResponse = await enforceRateLimit({
+    routeKey: "update-activity",
+    userId: user.id,
+    request: req,
+    limit: 20,
+    windowMs: 60_000,
+  });
+  if (rateLimitResponse) return rateLimitResponse;
 
   const { data: activity, error: fetchError } = await admin
     .from("activities")

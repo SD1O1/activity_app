@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
 import {
   createSupabaseAdmin,
   createSupabaseServer,
 } from "@/lib/supabaseServer";
+import { requireApiUser } from "@/lib/apiAuth";
+import { enforceRateLimit } from "@/lib/rateLimit";
+import { errorResponse, successResponse } from "@/lib/apiResponses";
 
 export async function POST(
   _req: Request,
@@ -13,14 +15,20 @@ export async function POST(
     const supabase = await createSupabaseServer();
     const admin = createSupabaseAdmin();
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const auth = await requireApiUser(supabase);
+    if ("response" in auth) {
+      return auth.response;
     }
+    const { user } = auth;
+
+    const rateLimitResponse = await enforceRateLimit({
+      routeKey: "notify-update",
+      userId: user.id,
+      request: _req,
+      limit: 20,
+      windowMs: 60_000,
+    });
+    if (rateLimitResponse) return rateLimitResponse;
 
     const { data: activity, error: activityError } = await admin
       .from("activities")
@@ -30,11 +38,11 @@ export async function POST(
       .single();
 
     if (activityError || !activity) {
-      return NextResponse.json({ success: false, error: "Activity not found" }, { status: 404 });
+      return errorResponse("Activity not found", 404, "NOT_FOUND");
     }
 
     if (activity.host_id !== user.id) {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      return errorResponse("Forbidden", 403, "FORBIDDEN");
     }
 
     const { data: members, error: membersError } = await admin
@@ -44,14 +52,11 @@ export async function POST(
       .neq("user_id", activity.host_id);
 
     if (membersError || !members) {
-      return NextResponse.json(
-        { success: false, error: "Failed to load members" },
-        { status: 500 }
-      );
+      return errorResponse("Failed to load members", 500, "INTERNAL");
     }
 
     if (members.length === 0) {
-      return NextResponse.json({ success: true });
+      return successResponse();
     }
 
     const notifications = members.map((m) => ({
@@ -72,15 +77,12 @@ export async function POST(
         userId: user.id,
         notifyError,
       });
-      return NextResponse.json(
-        { success: false, error: "Failed to notify participants" },
-        { status: 500 }
-      );
+      return errorResponse("Failed to notify participants", 500, "INTERNAL");
     }
 
-    return NextResponse.json({ success: true });
+    return successResponse();
   } catch (error) {
     console.error("notify-update error", { error });
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+    return errorResponse("Internal server error", 500, "INTERNAL");
   }
 }

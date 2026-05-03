@@ -2,8 +2,9 @@ import { createSupabaseAdmin, createSupabaseServer } from "@/lib/supabaseServer"
 import { errorResponse, successResponse } from "@/lib/apiResponses";
 import { isAdminUserId } from "@/lib/adminAuth";
 import { logger } from "@/lib/logger";
+import { enforceRateLimit } from "@/lib/rateLimit";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const supabase = await createSupabaseServer();
     const {
@@ -17,6 +18,15 @@ export async function GET() {
     if (!isAdminUserId(user.id)) {
       return errorResponse("Forbidden", 403, "FORBIDDEN");
     }
+
+    const rateLimitResponse = await enforceRateLimit({
+      routeKey: "admin-reports",
+      userId: user.id,
+      request: req,
+      limit: 30,
+      windowMs: 60_000,
+    });
+    if (rateLimitResponse) return rateLimitResponse;
 
     const admin = createSupabaseAdmin();
     const { data: reports, error } = await admin
