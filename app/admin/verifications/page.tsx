@@ -83,7 +83,7 @@ export default function AdminVerificationsPage() {
     setUpdatingId(id);
     setError(null);
 
-    const res = await fetch(`/api/admin/verifications/${id}`, {
+    const res = await fetch(`/api/admin/verifications?id=${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action }),

@@ -23,6 +23,12 @@ type ProfileRow = {
   verified: boolean | null;
 };
 
+type VerificationAction = "approve" | "reject";
+
+function toStatus(action: VerificationAction) {
+  return action === "approve" ? "approved" : "rejected";
+}
+
 export async function GET(req: Request) {
   try {
     const supabase = await createSupabaseServer();
@@ -48,10 +54,6 @@ export async function GET(req: Request) {
       .not("verification_video_path", "is", null)
       .order("id", { ascending: true })
       .limit(200);
-
-    if (ALLOWED_STATUSES.has(status)) {
-      verificationQuery = verificationQuery.eq("verification_status", status);
-    }
 
     const { data: verificationRows, error: verificationError } =
       await verificationQuery;
@@ -131,5 +133,82 @@ export async function GET(req: Request) {
   } catch (error) {
     logger.error("admin_verifications.unhandled", { error });
     return errorResponse("Failed to fetch verification queue", 500, "INTERNAL");
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const supabase = await createSupabaseServer();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return errorResponse("Unauthorized", 401, "UNAUTHORIZED");
+    }
+
+    if (!isAdminUserId(user.id)) {
+      return errorResponse("Forbidden", 403, "FORBIDDEN");
+    }
+
+    const url = new URL(req.url);
+    const id = url.searchParams.get("id")?.trim();
+
+    if (!id) {
+      return errorResponse("Missing verification id", 400, "BAD_REQUEST");
+    }
+
+    const body = (await req.json().catch(() => null)) as
+      | { action?: VerificationAction }
+      | null;
+
+    if (!body?.action || (body.action !== "approve" && body.action !== "reject")) {
+      return errorResponse("Invalid action", 400, "BAD_REQUEST");
+    }
+
+    const admin = createSupabaseAdmin();
+    const nextStatus = toStatus(body.action);
+
+    const { error: privateError } = await admin
+      .from("profile_private")
+      .update({ verification_status: nextStatus })
+      .eq("id", id);
+
+    if (privateError) {
+      logger.error("admin_verifications.update_private_failed", {
+        error: privateError,
+        userId: user.id,
+        profileId: id,
+        action: body.action,
+      });
+      return errorResponse("Failed to update verification", 500, "INTERNAL");
+    }
+
+    const { error: profileError } = await admin
+      .from("profiles")
+      .update({ verified: body.action === "approve" })
+      .eq("id", id);
+
+    if (profileError) {
+      logger.error("admin_verifications.update_profile_failed", {
+        error: profileError,
+        userId: user.id,
+        profileId: id,
+        action: body.action,
+      });
+      return errorResponse("Failed to update verification", 500, "INTERNAL");
+    }
+
+    return successResponse({
+      message:
+        body.action === "approve"
+          ? "Profile verified successfully"
+          : "Profile verification rejected",
+      verificationStatus: nextStatus,
+      verified: body.action === "approve",
+    });
+  } catch (error) {
+    logger.error("admin_verifications.update_unhandled", { error });
+    return errorResponse("Failed to update verification", 500, "INTERNAL");
   }
 }
